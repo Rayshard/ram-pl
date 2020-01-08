@@ -1,0 +1,17 @@
+def Animal = {
+	name : string;
+	alive : bool
+};
+
+def Student = {
+	name : string;
+	age : int;
+	school : string;
+	pet : Animal;
+	parent : Student;
+};
+
+func PrintNum(num:int) : string =
+{
+	print(<string>num);
+};

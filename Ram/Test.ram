@@ -1,1 +1,39 @@
-Tet
+#include "Includes.ram";
+
+def Animal = {
+	name : string;
+	alive : bool
+};
+
+def Student = {
+	name : string;
+	age : int;
+	school : string;
+	pet : Animal;
+	parent : Student;
+};
+
+func PrintNum(num:int) : string =
+{
+	print(<string>num);
+};
+
+let name = "Ray";
+let age = 21;
+let school = "Cornell University";
+
+let student = {
+	name = name;
+	age = age;
+	school = school;
+	pet = { name = "Sidney"; alive = true };
+	parent = <Student>void
+};
+
+let isTrue = <bool>student;
+let dog = student.pet;
+
+print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");
+print("My pet's name is " + student.pet.name + "\n");
+
+PrintNum(1579);

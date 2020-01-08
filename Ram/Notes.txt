@@ -1,0 +1,27 @@
+TODO:
+	-  Get Rid of bool _membered in Environment.AddVariable
+	- Copying Values from env? Necessary? Copy on site
+	- scrlines per file
+	- dll stuff
+	- create right exceptions
+	- make some variables in the environement unchangable (ie so user cant change)
+	- operators
+	- equals operators
+	- add arrays and lists
+	- membered value member assignment
+	- while loops
+	- functions definitions
+	- stack trace
+	- has definition operator
+
+Optimizations:
+	- After Parsing is complete, change all binops that have their left and right
+	has values already to that value
+
+Ram Language Documentation:
+	- Code files are marked with .ram
+	- Include files are marked with .iram
+
+	- Note that functions have access to all the symbols (including variables) in the scope in which they
+	are defined. This includes symbols defined after the function definition but still in the same scope. It
+	is good practice to use include bracke

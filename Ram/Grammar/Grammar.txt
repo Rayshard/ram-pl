@@ -1,0 +1,48 @@
+program = (statement SEMICOLON)*
+
+assignment = IDENTIFIER EQUAL expr 
+codeblock = LBRACKET (statement SEMICOLON)* RBRACKET
+typeDef = LBRACKET (memberDef SEMICOLON)+ RBRACKET
+memberDef = IDENTIFIER COLON IDENTIFIER
+argDefList = LPAREN (memberDef (COMMA memberDef)*) RPAREN
+argInList = LPAREN (expr (COMMA expr)*) RPAREN
+
+statement =
+	| expr 
+	| assignment
+	| LET IDENTIFIER EQUALS expr
+	| codeblock
+	| FOR assignment IF expr THEN statement FINALLY assignment
+	| DEFINE IDENTIFIER EQUALS typeDef
+	| FUNC IDENTIFIER argDefList COLON IDENTIFIER statement
+
+expr = 
+	| binop_expr (BINOP_REL expr)?
+
+binop_expr =
+	| term
+	| term BINOP_ADD expr
+
+BINOP_REL = LT LTEQ GT GTEQ 
+BINOP_ADD = PLUS | MINUS
+BINOP_MULTIPLY = TIMES | DIVIDE
+
+term = factor (BINOP_MULTIPLY term)
+
+factor =
+	| (MINUS)? singular ((PERIOD IDENTIFIER) | argInlist)*
+	| LT IDENTIFIER GT factor
+
+singular =
+	| LPAREN expr RPAREN
+	| IDENTIFIER
+	| membered
+	| INT_LIT
+	| FLOAT_LIT
+	| STRING_LIT
+	| "true"
+	| "false"
+
+membered = <LBRACKET (assigment SEMICOLON)+ RBRACKET>
+
+func_call = singular LPAREN argList? RPAREN
