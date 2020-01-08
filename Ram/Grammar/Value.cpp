@@ -25,15 +25,15 @@ Environment * IValue::GetIntrinsicEnv()
 	intrinsicEnv = new Environment(Environment::GLOBAL, "<" + typeName + ">");
 
 	// Adding Intrinsic Members
-	IStatement* func_body = 0;
+	FuncValue::built_in func_body = 0;
 	FuncValue* func = 0;
 	DefinitionList func_argDefs;
 
-	func_body = new BuiltInStatement([this](Environment* _env, Position _execPos) { return new StringValue(this->ToString(_env), Position()); });
+	func_body = [this](Environment* _env, Position _execPos) { return new StringValue(this->ToString(_env), Position()); };
 	func = new FuncValue(intrinsicEnv, func_body, func_argDefs, "string", Position());
 	delete intrinsicEnv->AddVariable("__string__", func, Position(), false, true);
 
-	func_body = new BuiltInStatement([this](Environment* _env, Position _execPos) { return new BoolValue(this->ToBool(_env), Position()); });
+	func_body = [this](Environment* _env, Position _execPos) { return new BoolValue(this->ToBool(_env), Position()); };
 	func = new FuncValue(intrinsicEnv, func_body, func_argDefs, "bool", Position());
 	delete intrinsicEnv->AddVariable("__bool__", func, Position(), false, true);
 
@@ -143,7 +143,7 @@ IValue* MemberedValue::Create(Environment* _creationEnv, AssignmentMap& _memAssi
 	auto searchCastStr = memberDefs.find("__string__");
 	if(searchCastStr == memberDefs.end())
 	{
-		BuiltInStatement::built_in lambda = [memberDefs, intrinsicEnv](Environment* _env, Position _execPos)
+		auto func_body = [memberDefs, intrinsicEnv](Environment* _env, Position _execPos)
 		{
 			std::string str = "{ ";
 
@@ -156,7 +156,6 @@ IValue* MemberedValue::Create(Environment* _creationEnv, AssignmentMap& _memAssi
 
 			return new StringValue(str, _execPos);
 		};
-		IStatement* func_body = new BuiltInStatement(lambda);
 		DefinitionList func_argDefs;
 		FuncValue* func = new FuncValue(intrinsicEnv, func_body, func_argDefs, "string", _pos);
 
@@ -173,8 +172,7 @@ IValue* MemberedValue::Create(Environment* _creationEnv, AssignmentMap& _memAssi
 	auto searchCastBool = memberDefs.find("__bool__");
 	if(searchCastBool == memberDefs.end())
 	{
-		BuiltInStatement::built_in lambda = [](Environment* _env, Position _execPos) { return (IValue*)new BoolValue(true, _execPos); };
-		IStatement* func_body = new BuiltInStatement(lambda);
+		auto func_body = [](Environment* _env, Position _execPos) { return (IValue*)new BoolValue(true, _execPos); };
 		DefinitionList func_argDefs;
 		FuncValue* func = new FuncValue(intrinsicEnv, func_body, func_argDefs, "bool", _pos);
 
@@ -262,9 +260,24 @@ FuncValue::FuncValue(Environment* _defEnv, IStatement* _statement, DefinitionLis
 	body = _statement;
 	argDefs = _argDefs;
 	returnTypename = _retTypeName;
+	bodyType = DECLARED;
 }
 
-FuncValue::~FuncValue() { delete body; }
+FuncValue::FuncValue(Environment* _defEnv, built_in _ptr, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos)
+	: IValue(VFUNC, _pos, GetFuncTypeSig(_argDefs, _retTypeName), 0)
+{
+	defEnvironment = _defEnv;
+	pointer = _ptr;
+	argDefs = _argDefs;
+	returnTypename = _retTypeName;
+	bodyType = BUILT_IN;
+}
+
+FuncValue::~FuncValue()
+{
+	if(body)
+		delete body;
+}
 
 IValue * FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos)
 {
@@ -290,10 +303,16 @@ IValue * FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Positio
 #endif
 	}
 
-	return body->Execute(&env);
-	}
+	if(bodyType == DECLARED) { return body->Execute(&env); }
+	else { return pointer(&env, _execPos); }
+}
 
-IValue* FuncValue::GetCopy() { return new FuncValue(defEnvironment, body->GetCopy(), argDefs, returnTypename, _position); }
+IValue* FuncValue::GetCopy()
+{
+	if(bodyType == DECLARED) { return new FuncValue(defEnvironment, body->GetCopy(), argDefs, returnTypename, _position); }
+	else { return new FuncValue(defEnvironment, pointer, argDefs, returnTypename, _position); }
+}
+
 TypeSig FuncValue::GetTypeSig() { return GetFuncTypeSig(argDefs, returnTypename); }
 std::string FuncValue::ToString(Environment* _execEnv) { return typeName; }
 bool FuncValue::ToBool(Environment* _execEnv) { return true; }

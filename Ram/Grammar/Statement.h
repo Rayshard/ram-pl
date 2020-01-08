@@ -2,12 +2,11 @@
 
 #include <iostream>
 #include <array>
-#include <functional>
 #include "Value.h"
 #include "..\Environment.h"
 #include "Expression.h"
 
-enum StatementType { SBASE, SSIMPLE, SCODE_BLOCK, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL, SBUILT_IN };
+enum StatementType { SBASE, SSIMPLE, SCODE_BLOCK, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
 
 class IStatement
 {
@@ -33,26 +32,6 @@ public:
 
 	IValue* Execute(Environment* _env);
 	IStatement* GetCopy();
-};
-
-class BuiltInStatement : public IStatement
-{
-public:
-	enum Type { BIS_INCLUDE, BIS_OTHER };
-	typedef std::function<IValue*(Environment*, Position)> built_in;
-	
-	Type type;
-	built_in funcPtr;
-	std::vector<IValue*> args;
-
-	BuiltInStatement(Type _type, std::vector<IValue*>& _args, Position _pos);
-	BuiltInStatement(built_in _funPtr);
-	~BuiltInStatement();
-
-	IValue* Execute(Environment* _env);
-	IStatement* GetCopy();
-
-	IValue* _Include_(Environment* _env, Position _execPos);
 };
 
 class CodeBlock : public IStatement
@@ -142,12 +121,12 @@ class FuncDeclaration : public IStatement
 {
 private:
 	std::string identifier;
-	std::vector<Definition> argDefs;
+	DefinitionList argDefs;
 	std::string retTypeName;
 	IStatement* body;
 
 public:
-	FuncDeclaration(std::string _identifier, std::vector<Definition>& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos);
+	FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos);
 	~FuncDeclaration();
 
 	IValue* Execute(Environment* _env);

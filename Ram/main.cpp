@@ -5,7 +5,7 @@ int main()
 {
 	Environment::GLOBAL = Environment::CreateGlobal("");
 
-	const char* mainFilePath = "C:\\Users\\raysh\\Google Drive\\Visual Studio Projects\\RayGoProgrammingLanguage\\RayGo\\Test.ram";
+	const char* mainFilePath = "C:\\Users\\raysh\\OneDrive\\Desktop\\Ram\\Ram\\Test.ram";
 	IValue* endVal = RunFile(mainFilePath, Environment::GLOBAL, false);
 	
 	if(endVal->_type != VEXCEPTION) { std::cout << "Program has exited with code (0)." << std::endl; }

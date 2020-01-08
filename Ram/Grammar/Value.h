@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <functional>
 #include "..\Lexer.h"
 
 class IStatement;
@@ -135,12 +136,18 @@ public:
 class FuncValue : public IValue
 {
 public:
+	enum BodyType { BUILT_IN, DECLARED };
+	typedef std::function<IValue*(Environment*, Position)> built_in;
+
 	IStatement* body;
+	built_in pointer;
+	BodyType bodyType;
 	DefinitionList argDefs;
 	TypeName returnTypename;
 	Environment* defEnvironment;
 
-	FuncValue(Environment* _defEnv, IStatement* _statement, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos);
+	FuncValue(Environment* _defEnv, IStatement* _body, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos);
+	FuncValue(Environment* _defEnv, built_in _ptr, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos);
 	~FuncValue();
 
 	IValue* Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);

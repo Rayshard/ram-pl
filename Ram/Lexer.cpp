@@ -2,7 +2,7 @@
 #include <sstream>
 #include <fstream>
 #include "Grammar\Grammar.h"
-#include "
+#include "Interpreter.h"
 
 Position::Position()
 {
@@ -258,7 +258,6 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		else if(word == "then") { type = TT_THEN; }
 		else if(word == "finally") { type = TT_FINALLY; }
 		else if(word == "while") { type = TT_WHILE; }
-		else if(word == "include") { type = TT_INCLUDE; }
 		else if(word == "def") { type = TT_DEF; }
 		else if(word == "func") { type = TT_FUNC; }
 

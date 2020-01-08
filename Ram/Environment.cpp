@@ -1,5 +1,6 @@
 #include "Environment.h"
 #include "Grammar\Statement.h"
+#include "Parser.h"
 
 Environment* Environment::GLOBAL = 0;
 
@@ -165,7 +166,7 @@ Environment* Environment::GetCopy()
 
 	for(auto it : namedspaces)
 		copyNamedspaces.insert_or_assign(it.first, it.second->GetCopy());
-	
+
 	return new Environment(parent, name, copyVars, typeDefs, copyFuncDecls, copyNamedspaces);
 }
 
@@ -248,30 +249,54 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 	delete env->AddTypeDefinition("bool", "bool", "<BOOL>", Position());
 
 	//Functions (delete throws away the returned VoidValue)
-	BuiltInStatement::built_in lambda;
-
-	lambda = [](Environment* _env, Position _execPos) 
+	FuncValue::built_in func_print_body = [](Environment* _env, Position _execPos)
 	{
 		std::cout << _env->GetValue("arg", _execPos, false, false)->ToString(_env);
 		return new VoidValue(_execPos);
 	};
-	IStatement* func_print_body = new BuiltInStatement(lambda);
 	std::vector<Definition> func_print_argDefs({ Definition("arg", "string") });
-	FuncValue* func_print = new FuncValue(env, func_print_body, func_print_argDefs, "void", func_print_body->_position);
+	FuncValue* func_print = new FuncValue(env, func_print_body, func_print_argDefs, "void", Position(1, 1));
 
-	delete env->AddFuncDeclaration("print", func_print, func_print_body->_position);
+	delete env->AddFuncDeclaration("print", func_print, Position(1, 1));
 
-	lambda = [](Environment* _env, Position _execPos)
+	FuncValue::built_in func_getInput_body = [](Environment* _env, Position _execPos)
 	{
 		std::string input;
 		std::getline(std::cin, input);
 		return new StringValue(input, _execPos);
 	};
-	IStatement* func_getInput_body = new BuiltInStatement(lambda);
-	std::vector<Definition> func_getInput_argDefs({});
-	FuncValue* func_getInput = new FuncValue(env, func_getInput_body, func_getInput_argDefs, "string", func_getInput_body->_position);
+	std::vector<Definition> func_getInput_argDefs;
+	FuncValue* func_getInput = new FuncValue(env, func_getInput_body, func_getInput_argDefs, "string", Position(1, 1));
 
-	delete env->AddFuncDeclaration("getInput", func_getInput, func_print_body->_position);
+	delete env->AddFuncDeclaration("getInput", func_getInput, Position(1, 1));
+
+	FuncValue::built_in func_include_body = [](Environment* _env, Position _execPos)
+	{
+		const char* fileName = _env->GetValue("fileName", _execPos, false, false)->ToString(_env).c_str();
+		std::string nameSpaceName = _env->GetValue("name", _execPos, false, false)->ToString(_env).c_str();
+
+		Environment* prevGlobal = Environment::GLOBAL;
+		Environment* namedspace = Environment::CreateGlobal(nameSpaceName);
+		Environment::GLOBAL = namedspace;
+
+		IValue* retVal = RunFile(fileName, namedspace, false);
+		IValue* nsAddResult = prevGlobal->AddNamedspace(namedspace, _execPos);
+
+		if(nsAddResult->_type == VEXCEPTION)
+		{
+			delete retVal;
+			delete namedspace;
+
+			retVal = nsAddResult;
+		}
+
+		Environment::GLOBAL = prevGlobal;
+		return retVal;
+	};
+	std::vector<Definition> func_include_argDefs({ Definition("fileName", "string"), Definition("name", "string") });
+	FuncValue* func_include = new FuncValue(env, func_include_body, func_include_argDefs, "void", Position(1, 1));
+
+	delete env->AddFuncDeclaration("include", func_include, Position(1, 1));
 
 	return env;
 }

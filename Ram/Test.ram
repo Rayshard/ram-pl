@@ -10,7 +10,6 @@ def Student = {
 	age : int;
 	school : string;
 	pet : Animal;
-	parent : Student;
 };
 
 func PrintNum(num:int) : string =

@@ -8,6 +8,7 @@
 #include <algorithm> 
 #include <cctype>
 #include <locale>
+#include "Interpreter.h"
 
 ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
 {
@@ -700,23 +701,6 @@ StatementResult GetStatement(TokenReader _reader)
 {
 	Token token = _reader.current;
 
-	if(_reader.GetCurType() == TT_INCLUDE)
-	{
-		Position pos = _reader.GetCurPosition();
-
-		_reader.Advance();
-		if(_reader.GetCurType() == TT_STRING_LIT)
-		{
-			StringValue* pathVal = new StringValue(_reader.current.value, _reader.GetCurPosition());
-			StringValue* identifier = new StringValue("Something", _reader.GetCurPosition());
-
-			std::vector<IValue*> args = { pathVal, identifier };
-			BuiltInStatement* includeStmnt = new BuiltInStatement(BuiltInStatement::BIS_INCLUDE, args, pos);
-			return StatementResult::GenSuccess(includeStmnt, _reader.Advance());
-		}
-		else { return StatementResult::GenFailure("Expected file path after include.", _reader); }
-	}
-
 	if(_reader.GetCurType() == TT_LBRACKET)
 		return GetCodeBlock(_reader);
 
@@ -799,7 +783,7 @@ IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 
 			if(statements.size() > 0)
 			{
-				SRC_LINES = fileLines.data(); //One needs to be made per file
+				Interpreter::SRC_LINES = fileLines; //One needs to be made per file
 				CodeBlock program = CodeBlock(statements, statements[0]->_position, _runInSubEnv);
 				endVal = program.Execute(_env);
 			}

@@ -20,67 +20,6 @@ IValue* SimpleStatement::Execute(Environment* _env)
 
 IStatement* SimpleStatement::GetCopy() { return new SimpleStatement(expr->GetCopy()); }
 
-BuiltInStatement::BuiltInStatement(Type _type, std::vector<IValue*>& _args, Position _pos)
-	: IStatement(_pos, SBUILT_IN)
-{
-	type = _type;
-	args = _args;
-}
-
-BuiltInStatement::BuiltInStatement(built_in _funcPtr)
-	: IStatement(Position(1, 1), SBUILT_IN)
-{
-	type = BIS_OTHER;
-	funcPtr = _funcPtr;
-}
-
-BuiltInStatement::~BuiltInStatement()
-{
-	for(auto it : args)
-		delete it;
-}
-
-IValue* BuiltInStatement::Execute(Environment* _env)
-{
-	if(type == BIS_INCLUDE) { return _Include_(_env, _position); }
-	else { return funcPtr(_env, _position); }
-}
-
-IStatement* BuiltInStatement::GetCopy()
-{
-	if(type == BIS_OTHER) { return new BuiltInStatement(funcPtr); }
-	else
-	{
-		std::vector<IValue*> copyArgs;
-
-		for(auto it : args)
-			copyArgs.push_back(it->GetCopy());
-
-		return new BuiltInStatement(type, copyArgs, _position);
-	}
-}
-
-IValue * BuiltInStatement::_Include_(Environment* _env, Position _execPos)
-{
-	Environment* prevGlobal = Environment::GLOBAL;
-	Environment* namedspace = Environment::CreateGlobal(((StringValue*)args[1])->value);
-	Environment::GLOBAL = namedspace;
-
-	IValue* retVal = RunFile(((StringValue*)args[0])->value.c_str(), namedspace, false);
-	IValue* nsAddResult = prevGlobal->AddNamedspace(namedspace, _execPos);
-	
-	if(nsAddResult->_type == VEXCEPTION)
-	{
-		delete retVal;
-		delete namedspace;
-		
-		retVal = nsAddResult;
-	}
-
-	Environment::GLOBAL = prevGlobal;
-	return retVal;
-}
-
 CodeBlock::CodeBlock(std::vector<IStatement*>& _statements, Position _pos, bool _useSubEnv)
 	: IStatement(_pos, SCODE_BLOCK)
 {
@@ -277,7 +216,7 @@ IValue* TypeDefinition::Execute(Environment* _env)
 
 IStatement* TypeDefinition::GetCopy() { return new TypeDefinition(identifier, memDefs, _position); }
 
-FuncDeclaration::FuncDeclaration(std::string _identifier, std::vector<Definition>& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos)
+FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos)
 	: IStatement(_pos, SFUNC_DECL)
 {
 	identifier = _identifier;
