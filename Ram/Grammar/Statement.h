@@ -98,7 +98,7 @@ class MemberDefinition : public IStatement
 public:
 	Definition definition;
 
-	MemberDefinition(std::string _identifier, std::string _typename, Position _pos);
+	MemberDefinition(std::string _identifier, std::string _typeDef, Position _pos);
 
 	IValue* Execute(Environment* _env);
 	IStatement* GetCopy();

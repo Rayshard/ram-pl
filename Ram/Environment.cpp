@@ -74,12 +74,42 @@ IValue* Environment::AddVariable(std::string _identifier, IValue* _val, Position
 	}
 }
 
-IValue* Environment::AddTypeDefinition(TypeName _typeName, TypeDef _typeDef, TypeSig _typeSig, Position _execPos)
+IValue* Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _memDefs, Position _execPos)
 {
 	if(SymbolExists(_typeName, true, true, true, true, true)) { return Exception_SymbolInUse(_typeName, _execPos); }
 	else
 	{
-		typeDefs.insert_or_assign(_typeName, DefSigPair(_typeDef, _typeSig));
+		typeDefs.insert_or_assign(_typeName, "<" + _typeName + ">");
+
+#pragma region Construct Type Sig
+		TypeSig typeSig = "<MEMBERED>{";
+
+		for(auto it : _memDefs)
+		{
+			IValue* retVal = GetTypeSig(it.second, _execPos);
+
+			if(retVal->_type == VEXCEPTION)
+			{
+				typeDefs.erase(_typeName);
+				return retVal;
+			}
+			else
+			{
+				typeSig += it.first + ":" + ((StringValue*)retVal)->value + "; ";
+				delete retVal;
+			}
+		}
+
+		if(_memDefs.size() != 0)
+		{
+			typeSig.pop_back();
+			typeSig.pop_back();
+		}
+
+		typeSig += "}";
+#pragma endregion
+
+		typeDefs.insert_or_assign(_typeName, typeSig);
 		return new VoidValue(_execPos);
 	}
 }
@@ -105,7 +135,7 @@ IValue* Environment::AddNamedspace(Environment* _ns, Position _execPos)
 		namedspaces.insert_or_assign(identifier, new NamedspaceValue(_ns, _execPos));
 
 		for(auto it : _ns->typeDefs)
-			AddTypeDefinition(identifier + "." + it.first, it.second.first, it.second.second, _execPos);
+			typeDefs.insert_or_assign(identifier + "." + it.first, it.second);
 
 		return new VoidValue(_execPos);
 	}
@@ -116,16 +146,16 @@ IValue* Environment::SetValue(std::string _identifier, IValue* _val, Position _e
 	auto search = variables.find(name + "." + _identifier);
 	if(search != variables.end())
 	{
-		std::string orgTypeName = _val->typeName;
-		std::string valTypeName = search->second->typeName;
+		std::string orgTypeSig = _val->GetTypeSig();
+		std::string valTypeSig = search->second->GetTypeSig();
 
-		if(orgTypeName == valTypeName || valTypeName == "void")
+		if(orgTypeSig == valTypeSig || valTypeSig == "void")
 		{
 			delete search->second;
 			variables.insert_or_assign(name + "." + _identifier, _val);
 			return new VoidValue(_execPos);
 		}
-		else { return Exception_MismatchType(orgTypeName, valTypeName, _execPos); }
+		else { return Exception_MismatchType(orgTypeSig, valTypeSig, _execPos); }
 	}
 	else if(parent) { return parent->SetValue(_identifier, _val, _execPos); }
 	else { return Exception_SymbolNotFound(_identifier, _execPos); }
@@ -143,12 +173,12 @@ IValue* Environment::GetValue(std::string _identifier, Position _execPos, bool _
 	else { return Exception_SymbolNotFound(_identifier, _execPos); }
 }
 
-IValue* Environment::GetTypeSigFromTypeName(TypeName _typeName, Position _execPos)
+IValue* Environment::GetTypeSig(TypeName _typeName, Position _execPos)
 {
 	auto search = typeDefs.find(_typeName);
 
-	if(search != typeDefs.end()) { return new StringValue(search->second.second, _execPos); }
-	else if(parent) { return parent->GetTypeSigFromTypeName(_typeName, _execPos); }
+	if(search != typeDefs.end()) { return new StringValue(search->second, _execPos); }
+	else if(parent) { return parent->GetTypeSig(_typeName, _execPos); }
 	else { return Exception_SymbolNotFound(_typeName, _execPos); }
 }
 
@@ -182,7 +212,7 @@ std::string Environment::ToString()
 	while(parentEnv)
 	{
 		for(auto it = parentEnv->variables.begin(); it != parentEnv->variables.end(); it++)
-			os << prefix << it->first << ":" << it->second->GetTypeSig() << " = " << it->second->ToString(this) << std::endl << std::endl;
+			os << prefix << it->first << ":" << it->second->GetTypeSig() << " = " << it->second->ToString() << std::endl << std::endl;
 
 		parentEnv = parentEnv->parent;
 		prefix = "(GLOBAL) ";
@@ -197,7 +227,7 @@ std::string Environment::ToString()
 	while(parentEnv)
 	{
 		for(auto it = parentEnv->typeDefs.begin(); it != parentEnv->typeDefs.end(); it++)
-			os << prefix << it->first << ":" << it->second.first << std::endl << std::endl;
+			os << prefix << it->first << ":" << it->second << std::endl << std::endl;
 
 		parentEnv = parentEnv->parent;
 		prefix = "(GLOBAL) ";
@@ -243,37 +273,38 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 	Environment* env = new Environment(0, _namedspaceName);
 
 	//Type Defs (delete throws away the returned VoidValue)
-	delete env->AddTypeDefinition("int", "int", "<INT>", Position());
-	delete env->AddTypeDefinition("float", "float", "<FLOAT>", Position());
-	delete env->AddTypeDefinition("string", "string", "<STRING>", Position());
-	delete env->AddTypeDefinition("bool", "bool", "<BOOL>", Position());
+	env->typeDefs.insert_or_assign("int", "<INT>");
+	env->typeDefs.insert_or_assign("float", "<FLOAT>");
+	env->typeDefs.insert_or_assign("string", "<STRING>");
+	env->typeDefs.insert_or_assign("bool", "<BOOL>");
+	env->typeDefs.insert_or_assign("void", "<VOID>");
 
 	//Functions (delete throws away the returned VoidValue)
-	FuncValue::built_in func_print_body = [](Environment* _env, Position _execPos)
+	FuncValue::built_in print_body = [](Environment* _env, Position _execPos)
 	{
-		std::cout << _env->GetValue("arg", _execPos, false, false)->ToString(_env);
+		std::cout << _env->GetValue("arg", _execPos, false, false)->ToString();
 		return new VoidValue(_execPos);
 	};
-	std::vector<Definition> func_print_argDefs({ Definition("arg", "string") });
-	FuncValue* func_print = new FuncValue(env, func_print_body, func_print_argDefs, "void", Position(1, 1));
+	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ "<STRING>" });
+	FuncValue* func_print = new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position(1, 1));
 
 	delete env->AddFuncDeclaration("print", func_print, Position(1, 1));
 
-	FuncValue::built_in func_getInput_body = [](Environment* _env, Position _execPos)
+	FuncValue::built_in getInput_body = [](Environment* _env, Position _execPos)
 	{
 		std::string input;
 		std::getline(std::cin, input);
 		return new StringValue(input, _execPos);
 	};
-	std::vector<Definition> func_getInput_argDefs;
-	FuncValue* func_getInput = new FuncValue(env, func_getInput_body, func_getInput_argDefs, "string", Position(1, 1));
+	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ "<STRING>" });
+	FuncValue* func_getInput = new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position(1, 1));
 
 	delete env->AddFuncDeclaration("getInput", func_getInput, Position(1, 1));
 
-	FuncValue::built_in func_include_body = [](Environment* _env, Position _execPos)
+	FuncValue::built_in include_body = [](Environment* _env, Position _execPos)
 	{
-		const char* fileName = _env->GetValue("fileName", _execPos, false, false)->ToString(_env).c_str();
-		std::string nameSpaceName = _env->GetValue("name", _execPos, false, false)->ToString(_env).c_str();
+		const char* fileName = _env->GetValue("fileName", _execPos, false, false)->ToString().c_str();
+		std::string nameSpaceName = _env->GetValue("name", _execPos, false, false)->ToString().c_str();
 
 		Environment* prevGlobal = Environment::GLOBAL;
 		Environment* namedspace = Environment::CreateGlobal(nameSpaceName);
@@ -293,8 +324,8 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 		Environment::GLOBAL = prevGlobal;
 		return retVal;
 	};
-	std::vector<Definition> func_include_argDefs({ Definition("fileName", "string"), Definition("name", "string") });
-	FuncValue* func_include = new FuncValue(env, func_include_body, func_include_argDefs, "void", Position(1, 1));
+	std::vector<std::string> include_argNames({ "fileName", "name" }), include_argSigs({ "<STRING>", "<STRING>" });
+	FuncValue* func_include = new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position(1, 1));
 
 	delete env->AddFuncDeclaration("include", func_include, Position(1, 1));
 

@@ -10,25 +10,11 @@ class IExpression;
 
 enum ValueType : char { VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION, VVOID, VMEMBERED, VFUNC, VNAMEDSPACE };
 
-typedef std::string TypeName;
-typedef std::string TypeSig;
-typedef std::string TypeDef;
-typedef std::pair<TypeDef, TypeSig> DefSigPair;
-typedef std::map<TypeName, DefSigPair> TypeSigMap;
+typedef std::string TypeName, TypeSig;
+typedef std::map<TypeName, TypeSig> TypeSigMap;
 typedef std::vector<IExpression*> ArgumentList;
 typedef std::map<std::string, IExpression*> AssignmentMap;
-
-struct Definition
-{
-	std::string identifier;
-	TypeName typeName;
-
-	Definition(std::string _identifier, TypeName _typename);
-	Definition();
-
-	bool operator==(const Definition& _other);
-};
-
+typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->TypeSig
 typedef std::vector<Definition> DefinitionList;
 typedef std::map<std::string, TypeName> DefinitionMap;
 
@@ -39,15 +25,13 @@ protected:
 public:
 	ValueType _type;
 	Position _position;
-	TypeName typeName;
 
-	IValue(ValueType _type, Position _pos, TypeName _typeName, Environment* _intrEnv);
+	IValue(ValueType _type, Position _pos, Environment* _intrEnv);
 	virtual ~IValue();
 
 	virtual IValue* GetCopy() = 0;
 	virtual TypeSig GetTypeSig() = 0;
-	virtual bool ToBool(Environment* _execEnv) = 0;
-	virtual std::string ToString(Environment* _execEnv) = 0;
+	virtual std::string ToString() = 0;
 
 	Environment* GetIntrinsicEnv();
 };
@@ -65,8 +49,7 @@ public:
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
-	std::string ToString(Environment* _execEnv);
-	bool ToBool(Environment* _execEnv);
+	std::string ToString();
 };
 
 inline IValue* Exception_CompilationError(std::string _msg) { return new ExceptionValue("Compilation Error", _msg, Position(-1, -1)); }
@@ -79,19 +62,12 @@ inline IValue* Exception_WrongNumArgs(int _org, int _passed, Position _pos) { re
 
 class VoidValue : public IValue
 {
-private:
-	TypeSig typeSig;
-
-	VoidValue(TypeName _typeName, TypeSig _typeSig, Position _pos);
 public:
 	VoidValue(Position _pos);
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
-	bool ToBool(Environment* _execEnv);
-	std::string ToString(Environment* _execEnv);
-	
-	static IValue* FromTypeName(TypeName _typeName, Environment* _execEnv, Position _pos);
+	std::string ToString();
 };
 
 class MemberedValue : public IValue
@@ -101,23 +77,18 @@ public:
 	static std::string TYPESIG_CAST_STRING;
 
 	DefinitionMap memDefinitions;
-
+	TypeSig typeSig;
 private:
-	MemberedValue(TypeName _typeName, DefinitionMap& _memDefs, Environment* _intrEnv, Position _pos);
+	MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos);
 public:
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
+	std::string ToString();
 	IValue* GetMemberValue(std::string _memId, Position _execPos, bool _retCopy);
-	std::string ToString(Environment* _execEnv);
-	bool ToBool(Environment* _execEnv);
 	bool HasMember(std::string _name, TypeName _typeName);
 
 	static IValue* Create(Environment* _creationEnv, AssignmentMap& _memAssigns, Position _pos);
 };
-
-DefinitionList GetMemberDefs(ValueMap _mems);
-TypeSig GetMemberedTypeDef(DefinitionMap& _memDefs);
-IValue* GetMemberedTypeSig(Environment* _execEnv, DefinitionMap& _memDefs, Position _execPos);
 
 class NamedspaceValue : public IValue
 {
@@ -129,32 +100,37 @@ public:
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
-	std::string ToString(Environment* _execEnv);
-	bool ToBool(Environment* _execEnv);
+	std::string ToString();
 };
 
 class FuncValue : public IValue
 {
-public:
+private:
 	enum BodyType { BUILT_IN, DECLARED };
+
+	FuncValue(Environment* _defEnv, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
+public:
 	typedef std::function<IValue*(Environment*, Position)> built_in;
 
 	IStatement* body;
 	built_in pointer;
 	BodyType bodyType;
-	DefinitionList argDefs;
-	TypeName returnTypename;
+
+	std::vector<std::string> argNames;
+	std::vector<TypeSig> argSigs;
+	TypeSig returnTypeSig;
+	TypeSig typeSig;
+
 	Environment* defEnvironment;
 
-	FuncValue(Environment* _defEnv, IStatement* _body, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos);
-	FuncValue(Environment* _defEnv, built_in _ptr, DefinitionList& _argDefs, TypeName _retTypeName, Position _pos);
+	FuncValue(Environment* _defEnv, IStatement* _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
+	FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
 	~FuncValue();
 
 	IValue* Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
-	std::string ToString(Environment* _execEnv);
-	bool ToBool(Environment* _execEnv);
+	std::string ToString();
 };
 
 TypeSig GetFuncTypeSig(DefinitionList& _argDefs, TypeName _retTypeName);
@@ -169,8 +145,7 @@ public:
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
-	bool ToBool(Environment* _execEnv);
-	std::string ToString(Environment* _execEnv);
+	std::string ToString();
 };
 
 typedef PrimitiveValue<int> IntValue;
@@ -180,14 +155,14 @@ typedef PrimitiveValue<bool> BoolValue;
 
 template<typename T>
 inline PrimitiveValue<T>::PrimitiveValue(T _value, Position _pos)
-	: IValue(VUNKNOWN, _pos, "", 0)
+	: IValue(VUNKNOWN, _pos, 0)
 {
 	value = _value;
 
-	if(std::is_same<T, int>()) { _type = VINT; typeName = "int"; }
-	else if(std::is_same<T, float>()) { _type = VFLOAT; typeName = "float"; }
-	else if(std::is_same<T, std::string>()) { _type = VSTRING; typeName = "string"; }
-	else if(std::is_same<T, bool>()) { _type = VBOOL; typeName = "bool"; }
+	if(std::is_same<T, int>()) { _type = VINT; }
+	else if(std::is_same<T, float>()) { _type = VFLOAT; }
+	else if(std::is_same<T, std::string>()) { _type = VSTRING; }
+	else if(std::is_same<T, bool>()) { _type = VBOOL; }
 }
 
 template<typename T>
@@ -207,20 +182,7 @@ inline TypeSig PrimitiveValue<T>::GetTypeSig()
 }
 
 template<typename T>
-inline bool PrimitiveValue<T>::ToBool(Environment* _execEnv)
-{
-	switch(_type)
-	{
-		case VINT: return ((IntValue*)this)->value != 0;
-		case VFLOAT: return ((FloatValue*)this)->value != 0;
-		case VSTRING: return !((StringValue*)this)->value.empty();
-		case VBOOL: return ((BoolValue*)this)->value;
-		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToBool()");
-	}
-}
-
-template<typename T>
-inline std::string PrimitiveValue<T>::ToString(Environment* _execEnv)
+inline std::string PrimitiveValue<T>::ToString()
 {
 	switch(_type)
 	{

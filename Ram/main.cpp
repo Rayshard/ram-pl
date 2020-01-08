@@ -12,7 +12,7 @@ int main()
 	else
 	{
 		std::cout << "Program has exited with code (1)." << std::endl << std::endl;
-		std::cout << endVal->ToString(Environment::GLOBAL) << std::endl;
+		std::cout << endVal->ToString() << std::endl;
 	}
 
 	delete endVal;

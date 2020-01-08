@@ -574,11 +574,11 @@ StatementResult GetFuncDeclaration(TokenReader _reader)
 							reader = result.reader;
 							delete result.value;
 
-							if(std::find(usedArgNames.begin(), usedArgNames.end(), argDef.identifier) != usedArgNames.end())
-								return StatementResult::GenFailure("The argument named '" + argDef.identifier + "' was already used.", reader);
+							if(std::find(usedArgNames.begin(), usedArgNames.end(), argDef.first) != usedArgNames.end())
+								return StatementResult::GenFailure("The argument named '" + argDef.first + "' was already used.", reader);
 
 							argDefs.push_back(argDef);
-							usedArgNames.push_back(argDef.identifier);
+							usedArgNames.push_back(argDef.first);
 
 							if(reader.GetCurType() == TT_COMMA) { reader.Advance(); }
 							else if(reader.GetCurType() == TT_RPAREN)
@@ -659,24 +659,20 @@ StatementResult GetTypeDefinition(TokenReader _reader)
 							reader = result.reader;
 							delete result.value;
 
-							if(memDefs.find(memDef.identifier) != memDefs.end())
-								return StatementResult::GenFailure("The member '" + memDef.identifier + "' was already defined.", reader);
+							if(memDefs.find(memDef.first) != memDefs.end())
+								return StatementResult::GenFailure("The member '" + memDef.first + "' was already defined.", reader);
 
 							TokenType lastTokenType = reader.GetCurType();
 
 							if(lastTokenType == TT_SEMICOLON || lastTokenType == TT_RBRACKET)
 							{
-								memDefs.insert_or_assign(memDef.identifier, memDef.typeName);
+								memDefs.insert_or_assign(memDef.first, memDef.second);
 								reader.Advance();
 
 								if(lastTokenType == TT_RBRACKET || reader.GetCurType() == TT_RBRACKET)
 								{
 									if(reader.GetCurType() == TT_RBRACKET)
 										reader.Advance();
-
-									//Checking that intrinsic members have not been defined
-									if(memDefs.find("__bool__") != memDefs.end()) { return StatementResult::GenFailure(identifier + ".__bool__ cannot be explicitly defined.", reader); }
-									if(memDefs.find("__string__") != memDefs.end()) { return StatementResult::GenFailure(identifier + ".__string__ cannot be explicitly defined.", reader); }
 
 									return StatementResult::GenSuccess(new TypeDefinition(identifier, memDefs, pos), reader.GetCurPtr());
 								}

@@ -142,13 +142,13 @@ IValue* ForLoop::Execute(Environment* _env)
 	{
 		auto evalCondVal = std::unique_ptr<IValue>(conditionExpr->Evaluate(&env));
 
-		if(evalCondVal->_type == VEXCEPTION)
-			return evalCondVal.release();
+		if(evalCondVal->_type == VEXCEPTION) { return evalCondVal.release(); }
+		else if(evalCondVal->_type != VBOOL) { return Exception_MismatchType("bool", evalCondVal->GetTypeSig(), evalCondVal->_position); }
 
 		PRINT_VAL(evalCondVal, &env);
 		PRINT_LINE(conditionExpr->_position.line);
 
-		if(!evalCondVal.get()->ToBool(&env))
+		if(!((BoolValue*)evalCondVal.get())->value)
 			break;
 
 		IValue* statementVal = statement->Execute(&env);
@@ -175,24 +175,24 @@ IValue* ForLoop::Execute(Environment* _env)
 
 IStatement* ForLoop::GetCopy() { return new ForLoop((Assignment*)initAssignment->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), (Assignment*)finallyAssign->GetCopy(), _position); }
 
-MemberDefinition::MemberDefinition(std::string _identifier, std::string _typename, Position _pos)
+MemberDefinition::MemberDefinition(std::string _identifier, std::string _typeDef, Position _pos)
 	: IStatement(_pos, SMEMBER_DEF)
 {
-	definition = Definition(_identifier, _typename);
+	definition = Definition(_identifier, _typeDef);
 }
 
 IValue* MemberDefinition::Execute(Environment* _env)
 {
-	IValue* val = _env->GetValue(definition.identifier, _position, true, false);
+	IValue* val = _env->GetValue(definition.first, _position, true, false);
 
 	if(val->_type == VEXCEPTION)
 		return val;
 
-	bool hasType = val->typeName == definition.typeName;
+	bool hasType = val->GetTypeSig() == definition.second;
 	return new BoolValue(hasType, _position);
 }
 
-IStatement* MemberDefinition::GetCopy() { return new MemberDefinition(definition.identifier, definition.typeName, _position); }
+IStatement* MemberDefinition::GetCopy() { return new MemberDefinition(definition.first, definition.second, _position); }
 
 TypeDefinition::TypeDefinition(std::string _identifier, DefinitionMap& _memDefs, Position _pos)
 	: IStatement(_pos, STYPE_DEF)
@@ -201,22 +201,10 @@ TypeDefinition::TypeDefinition(std::string _identifier, DefinitionMap& _memDefs,
 	memDefs = _memDefs;
 }
 
-IValue* TypeDefinition::Execute(Environment* _env)
-{
-	IValue* typeSigVal = GetMemberedTypeSig(_env, memDefs, _position);
-
-	if(typeSigVal->_type == VEXCEPTION) { return typeSigVal; }
-	else
-	{
-		TypeSig typeSig = ((StringValue*)typeSigVal)->value;
-		delete typeSigVal;
-		return _env->AddTypeDefinition(identifier, GetMemberedTypeDef(memDefs), typeSig, _position);
-	}
-}
-
+IValue* TypeDefinition::Execute(Environment* _env) { return _env->AddTypeDefinition(identifier, memDefs, _position); }
 IStatement* TypeDefinition::GetCopy() { return new TypeDefinition(identifier, memDefs, _position); }
 
-FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos)
+FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, TypeName _retTypeName, IStatement* _body, Position _pos)
 	: IStatement(_pos, SFUNC_DECL)
 {
 	identifier = _identifier;
@@ -229,7 +217,32 @@ FuncDeclaration::~FuncDeclaration() { delete body; }
 
 IValue* FuncDeclaration::Execute(Environment* _env)
 {
-	FuncValue* func = new FuncValue(_env, body->GetCopy(), argDefs, retTypeName, _position);
+	std::vector<std::string> argNames, argSigs;
+	TypeSig retSig;
+
+	for(auto it : argDefs)
+	{
+		IValue* val = _env->GetTypeSig(it.second, _position);
+
+		if(val->_type == VEXCEPTION) { return val; }
+		else 
+		{
+			argNames.push_back(it.first);
+			argSigs.push_back(((StringValue*)val)->value);
+			delete val;
+		}
+	}
+
+	IValue* val = _env->GetTypeSig(retTypeName, _position);
+
+	if(val->_type == VEXCEPTION) { return val; }
+	else
+	{
+		retSig = ((StringValue*)val)->value;
+		delete val;
+	}
+
+	FuncValue* func = new FuncValue(_env, body->GetCopy(), argNames, argSigs, retSig, _position);
 	return _env->AddFuncDeclaration(identifier, func, _position);
 }
 

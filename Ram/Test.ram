@@ -25,11 +25,9 @@ let student = {
 	name = name;
 	age = age;
 	school = school;
-	pet = { name = "Sidney"; alive = true };
-	parent = <Student>void
+	pet = { name = "Sidney"; alive = true }
 };
 
-let isTrue = <bool>student;
 let dog = student.pet;
 
 print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");

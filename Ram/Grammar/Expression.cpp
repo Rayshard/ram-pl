@@ -271,7 +271,6 @@ IValue* CastExpression::Evaluate(Environment* _env)
 	auto val = std::unique_ptr<IValue>(factor->Evaluate(_env));
 
 	if(val->_type == VEXCEPTION) { return val.release(); }
-	else if(val->_type == VVOID) { return VoidValue::FromTypeName(typeName, _env, _position); }
 	else
 	{
 		Environment* castingEnv = val->GetIntrinsicEnv();
