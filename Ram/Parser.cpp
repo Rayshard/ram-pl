@@ -105,8 +105,9 @@ ExpressionResult GetMembered(TokenReader _reader)
 			{
 				if(memAssigns.find(stmnt->identifier) != memAssigns.end())
 				{
+					ExpressionResult exception = ExpressionResult::GenFailure("The member '" + stmnt->identifier + "' was already assigned.", reader);
 					delete result.value;
-					return ExpressionResult::GenFailure("The member '" + stmnt->identifier + "' was already assigned.", reader);
+					return exception;
 				}
 				else { memAssigns.insert_or_assign(stmnt->identifier, stmnt->expr->GetCopy()); }
 			}
@@ -472,6 +473,12 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 		TokenReader reader = TokenReader(_reader.Advance());
 		std::vector<IStatement*> statements;
 
+		if(reader.GetCurType() == TT_RBRACKET)
+		{
+			reader.Advance();
+			return StatementResult::GenSuccess(new CodeBlock(statements, pos, true), reader.GetCurPtr());
+		}
+
 		while(!reader.AtEOF())
 		{
 			StatementResult result = _assignmentsOnly ? GetAssignment(reader, false) : GetStatement(reader);
@@ -511,7 +518,7 @@ StatementResult GetSimpleStatement(TokenReader _reader)
 {
 	ExpressionResult result = GetExpression(_reader);
 
-	if(result.success) { return StatementResult::GenSuccess(new SimpleStatement(result.value), result.reader.GetCurPtr()); }
+	if(result.success) { return StatementResult::GenSuccess(new ExprStatement(result.value), result.reader.GetCurPtr()); }
 	else { return StatementResult::GenFailure(result.message, result.reader); }
 }
 
@@ -782,7 +789,7 @@ FileParseResult Parse(Token* _tokens)
 	return FileParseResult::GenSuccess(statements);
 }
 
-IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
+SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 {
 	std::vector<std::string> fileLines;
 	TokensResult tokenizationResult = TokenizeFile(_path, fileLines);
@@ -802,19 +809,19 @@ IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 			std::cout << "Parsed!" << std::endl << std::endl;
 
 			std::vector<IStatement*> statements = parsingResult.value;
-			IValue* endVal;
+			SharedValue endVal;
 
 			if(statements.size() > 0)
 			{
 				CodeBlock program = CodeBlock(statements, statements[0]->_position, _runInSubEnv);
 				endVal = program.Execute(_env);
 			}
-			else { endVal = new VoidValue(Position()); }
+			else { endVal = std::shared_ptr<IValue>(new VoidValue(Position())); }
 
 			std::cout << "Successfully Ran " + path << std::endl << std::endl;
 			return endVal;
 		}
-		else { return Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, parsingResult.position); }
+		else { return std::shared_ptr<IValue>(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, parsingResult.position)); }
 	}
-	else { return Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, tokenizationResult.position); }
+	else { return std::shared_ptr<IValue>(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, tokenizationResult.position)); }
 }

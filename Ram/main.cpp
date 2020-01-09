@@ -6,7 +6,7 @@ int main()
 	Environment::GLOBAL = Environment::CreateGlobal("");
 
 	const char* mainFilePath = "C:\\Users\\raysh\\OneDrive\\Desktop\\Ram\\Ram\\Test.ram";
-	IValue* endVal = RunFile(mainFilePath, Environment::GLOBAL, false);
+	SharedValue endVal = RunFile(mainFilePath, Environment::GLOBAL, false);
 	
 	if(endVal->_type != VEXCEPTION) { std::cout << "Program has exited with code (0)." << std::endl; }
 	else
@@ -15,7 +15,6 @@ int main()
 		std::cout << endVal->ToString() << std::endl;
 	}
 
-	delete endVal;
 	delete Environment::GLOBAL;
 	return 0;
 }

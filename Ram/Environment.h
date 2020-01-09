@@ -6,15 +6,17 @@
 class IValue;
 struct Position;
 
+typedef std::shared_ptr<IValue> SharedValue;
+
 class Environment
 {
 private:
-	ValueMap variables;
+	std::map<std::string, SharedValue> variables;
 	TypeSigMap typeDefs;
-	ValueMap funcDecls;
-	ValueMap namedspaces;
+	std::map<std::string, SharedValue> funcDecls;
+	std::map<std::string, SharedValue> namedspaces;
 
-	Environment(Environment* _parent, std::string _name, ValueMap _variables, TypeSigMap _typeDefs, ValueMap _funcDecls, ValueMap _namedspaces);
+	Environment(Environment* _parent, std::string _name, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces);
 public:
 	std::string name;
 
@@ -33,14 +35,14 @@ public:
 	bool IsNamedspace(std::string _identifier, bool _checkParent);
 	bool SymbolExists(std::string _symbol, bool _checkVariables, bool _checkTypeNames, bool _checkFuncDecls, bool _checkNamedSpaces, bool _checkParent);
 
-	IValue* AddVariable(std::string _identifier, IValue* _val, Position _execPos, bool _checkParent, bool membered);
-	IValue* AddTypeDefinition(TypeName _typeName, DefinitionMap& _typeDefs, Position _execPos);
-	IValue* AddFuncDeclaration(std::string _identifier, FuncValue* _val, Position _execPos);
-	IValue* AddNamedspace(Environment* _ns, Position _execPos);
+	SharedValue AddVariable(std::string _identifier, SharedValue _val, Position _execPos, bool _checkParent);
+	SharedValue AddTypeDefinition(TypeName _typeName, DefinitionMap& _typeDefs, Position _execPos);
+	SharedValue AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos);
+	SharedValue AddNamedspace(Environment* _ns, Position _execPos);
 
-	IValue* SetValue(std::string _identifier, IValue* _val, Position _execPos);
-	IValue* GetValue(std::string _identifier, Position _execPos, bool _checkParent, bool _retCopy);
-	IValue* GetTypeSig(TypeName _typeName, Position _execPos);
+	SharedValue SetValue(std::string _identifier, SharedValue _val, Position _execPos);
+	SharedValue GetValue(std::string _identifier, Position _execPos, bool _checkParent);
+	SharedValue GetTypeSig(TypeName _typeName, Position _execPos);
 
 	Environment* GetCopy();
 	std::string ToString();

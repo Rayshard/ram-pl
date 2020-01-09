@@ -36,7 +36,7 @@ public:
 	Environment* GetIntrinsicEnv();
 };
 
-typedef std::map<std::string, IValue*> ValueMap;
+typedef std::shared_ptr<IValue> SharedValue;
 
 class ExceptionValue : public IValue
 {
@@ -45,7 +45,6 @@ public:
 	std::string message;
 
 	ExceptionValue(std::string _name, std::string _msg, Position _pos);
-	ExceptionValue(Position _pos);
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
@@ -73,21 +72,16 @@ public:
 class MemberedValue : public IValue
 {
 public:
-	static std::string TYPESIG_CAST_BOOL;
-	static std::string TYPESIG_CAST_STRING;
-
 	DefinitionMap memDefinitions;
 	TypeSig typeSig;
-private:
-	MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos);
+
 public:
+	MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos);
+
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
 	std::string ToString();
-	IValue* GetMemberValue(std::string _memId, Position _execPos, bool _retCopy);
-	bool HasMember(std::string _name, TypeName _typeName);
-
-	static IValue* Create(Environment* _creationEnv, AssignmentMap& _memAssigns, Position _pos);
+	SharedValue GetMemberValue(std::string _memId, Position _execPos);
 };
 
 class NamedspaceValue : public IValue
@@ -110,7 +104,7 @@ private:
 
 	FuncValue(Environment* _defEnv, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
 public:
-	typedef std::function<IValue*(Environment*, Position)> built_in;
+	typedef std::function<SharedValue(Environment*, Position)> built_in;
 
 	IStatement* body;
 	built_in pointer;
@@ -127,13 +121,11 @@ public:
 	FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
 	~FuncValue();
 
-	IValue* Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
+	SharedValue Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
 	std::string ToString();
 };
-
-TypeSig GetFuncTypeSig(DefinitionList& _argDefs, TypeName _retTypeName);
 
 template <typename T>
 class PrimitiveValue : public IValue

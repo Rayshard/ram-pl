@@ -6,7 +6,7 @@
 #include "..\Environment.h"
 #include "Expression.h"
 
-enum StatementType { SBASE, SSIMPLE, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
+enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
 
 class IStatement
 {
@@ -17,20 +17,19 @@ public:
 	IStatement(Position _pos, StatementType _type);
 	virtual ~IStatement();
 
-	virtual IValue* Execute(Environment* _env) = 0;
+	virtual SharedValue Execute(Environment* _env) = 0;
 	virtual IStatement* GetCopy() = 0;
 };
 
-class SimpleStatement : public IStatement
+class ExprStatement : public IStatement
 {
 public:
 	IExpression* expr;
 
-	SimpleStatement(Position _pos);
-	SimpleStatement(IExpression* _expr);
-	~SimpleStatement();
+	ExprStatement(IExpression* _expr);
+	~ExprStatement();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -43,7 +42,7 @@ public:
 	CodeBlock(std::vector<IStatement*>& _statements, Position _pos, bool _useSubEnv);
 	~CodeBlock();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 	template <typename T> std::vector<T*> GetStatements();
 };
@@ -73,7 +72,7 @@ public:
 	LetStatement(std::string _identifier, IExpression* _expr, Position _pos);
 	~LetStatement();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -87,7 +86,7 @@ public:
 	Assignment(std::string _identifier, IExpression* _expr, bool _isLet, Position _pos);
 	~Assignment();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -102,7 +101,7 @@ public:
 	ForLoop(Assignment* _initAssign, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos);
 	~ForLoop();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -113,7 +112,7 @@ public:
 
 	MemberDefinition(std::string _identifier, std::string _typeDef, Position _pos);
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -126,7 +125,7 @@ private:
 public:
 	TypeDefinition(std::string _identifier, DefinitionMap& _memDefs, Position _pos);
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };
 
@@ -142,6 +141,6 @@ public:
 	FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos);
 	~FuncDeclaration();
 
-	IValue* Execute(Environment* _env);
+	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };

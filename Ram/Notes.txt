@@ -1,3 +1,5 @@
+TO CHECK:
+
 TODO:
 	- Acessing expressions
 	- Get Rid of bool _membered in Environment.AddVariable

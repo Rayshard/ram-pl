@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory>
 #include "..\Environment.h"
 #include "Value.h"
 
 std::string TypeDefFromMemDefs(std::map<std::string, std::string> _memDefs);
+
+typedef std::shared_ptr<IValue> SharedValue;
 
 class IExpression
 {
@@ -16,20 +19,19 @@ public:
 	IExpression(Position _pos, ExpressionType _type);
 	virtual ~IExpression();
 
-	virtual IValue* Evaluate(Environment* _env) = 0;
+	virtual SharedValue Evaluate(Environment* _env) = 0;
 	virtual IExpression* GetCopy() = 0;
 };
 
 class ValueExpression : public IExpression
 {
 private:
-	IValue* value;
+	SharedValue value;
 
 public:
 	ValueExpression(IValue* _val);
-	~ValueExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
@@ -47,7 +49,7 @@ public:
 	BinopExpression(IExpression* _left, IExpression* _right, OP _op, Position _pos);
 	~BinopExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 	
 	static OP TokenTypeToOp(TokenType _type);
@@ -64,21 +66,21 @@ public:
 	NegationExpression(IExpression* _factor, Position _pos);
 	~NegationExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
 class CastExpression : public IExpression
 {
 private:
-	std::string typeName;
+	TypeName typeName;
 	IExpression* factor;
 
 public:
-	CastExpression(std::string _typeName, IExpression* _factor, Position _pos);
+	CastExpression(TypeName _typeName, IExpression* _factor, Position _pos);
 	~CastExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
@@ -89,7 +91,7 @@ public:
 
 	SymbolExpression(std::string _symbol, Position _pos);
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
@@ -102,7 +104,7 @@ public:
 	MemberedExpression(std::map<std::string, IExpression*>& _memAssigns, Position _pos);
 	~MemberedExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
@@ -116,7 +118,7 @@ public:
 	AccessExpression(IExpression* _base, std::string _memId, Position _pos);
 	~AccessExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
 
@@ -124,12 +126,12 @@ class FuncCallExpression : public IExpression
 {
 private:
 	IExpression* base;
-	std::vector<IExpression*> argExprs;
+	ArgumentList argExprs;
 
 public:
-	FuncCallExpression(IExpression* _base, std::vector<IExpression*>& _argExprs, Position _pos);
+	FuncCallExpression(IExpression* _base, ArgumentList& _argExprs, Position _pos);
 	~FuncCallExpression();
 
-	IValue* Evaluate(Environment* _env);
+	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };

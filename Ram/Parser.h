@@ -47,4 +47,4 @@ StatementResult GetFuncDeclaration(TokenReader _reader);
 StatementResult GetTypeDefinition(TokenReader _reader);
 StatementResult GetStatement(TokenReader _reader);
 FileParseResult Parse(Token* _tokens);
-IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv);
+SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv);
