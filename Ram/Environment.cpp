@@ -286,9 +286,9 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 		return new VoidValue(_execPos);
 	};
 	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ "<STRING>" });
-	FuncValue* func_print = new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position(1, 1));
+	FuncValue* func_print = new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position());
 
-	delete env->AddFuncDeclaration("print", func_print, Position(1, 1));
+	delete env->AddFuncDeclaration("print", func_print, Position());
 
 	FuncValue::built_in getInput_body = [](Environment* _env, Position _execPos)
 	{
@@ -297,9 +297,9 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 		return new StringValue(input, _execPos);
 	};
 	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ "<STRING>" });
-	FuncValue* func_getInput = new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position(1, 1));
+	FuncValue* func_getInput = new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position());
 
-	delete env->AddFuncDeclaration("getInput", func_getInput, Position(1, 1));
+	delete env->AddFuncDeclaration("getInput", func_getInput, Position());
 
 	FuncValue::built_in include_body = [](Environment* _env, Position _execPos)
 	{
@@ -325,9 +325,9 @@ Environment* Environment::CreateGlobal(std::string _namedspaceName)
 		return retVal;
 	};
 	std::vector<std::string> include_argNames({ "fileName", "name" }), include_argSigs({ "<STRING>", "<STRING>" });
-	FuncValue* func_include = new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position(1, 1));
+	FuncValue* func_include = new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position());
 
-	delete env->AddFuncDeclaration("include", func_include, Position(1, 1));
+	delete env->AddFuncDeclaration("include", func_include, Position());
 
 	return env;
 }

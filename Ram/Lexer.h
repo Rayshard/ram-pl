@@ -5,17 +5,6 @@
 #include <sstream>
 #include "Result.h"
 
-struct Position
-{
-	int line;
-	int column;
-
-	Position();
-	Position(int _line, int _col);
-
-	std::string ToString();
-};
-
 enum TokenType {
 	TT_INTEGER_LIT, TT_FLOAT_LIT, TT_STRING_LIT, TT_IDENTIFIER,
 	TT_TRUE, TT_FALSE, TT_VOID,

@@ -52,7 +52,7 @@ public:
 	std::string ToString();
 };
 
-inline IValue* Exception_CompilationError(std::string _msg) { return new ExceptionValue("Compilation Error", _msg, Position(-1, -1)); }
+inline IValue* Exception_CompilationError(std::string _msg, Position _pos) { return new ExceptionValue("Compilation Error", _msg, _pos); }
 inline IValue* Exception_SymbolNotFound(std::string _symbolName, Position _pos) { return new ExceptionValue("Symbol Not Found", "The symbol \"" + _symbolName + "\" does not exist.", _pos); }
 inline IValue* Exception_SymbolInUse(std::string _symbolName, Position _pos) { return new ExceptionValue("Symbol In Use", "The symbol \"" + _symbolName + "\" is in use.", _pos); }
 inline IValue* Exception_MismatchType(TypeName _org, TypeName _mismatch, Position _pos) { return new ExceptionValue("Mismatch Type", "Cannot assign " + _mismatch + " to variable of type " + _org, _pos); }

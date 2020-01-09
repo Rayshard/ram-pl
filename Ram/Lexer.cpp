@@ -4,24 +4,10 @@
 #include "Grammar\Grammar.h"
 #include "Interpreter.h"
 
-Position::Position()
-{
-	line = 0;
-	column = 0;
-}
-
-Position::Position(int _line, int _col)
-{
-	line = _line;
-	column = _col;
-}
-
-std::string Position::ToString() { return "(Line: " + std::to_string(line) + ", Column: " + std::to_string(column) + ")"; }
-
 Token::Token()
 {
 	type = TT_INVALID;
-	position = Position(-1, -1);
+	position = Position();
 }
 
 Token::Token(TokenType _type, int _line, int _col)
@@ -166,7 +152,7 @@ TokenResult TokenizeStringLiteral(char* _chars, int& _offset, int _line, int _co
 		}
 	}
 
-	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg); }
+	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg, Position(_line, _col)); }
 	else
 	{
 		_offset = offset;
@@ -208,7 +194,7 @@ TokenResult TokenizeNumberLiteral(char* _chars, int& _offset, int _line, int _co
 		else { break; }
 	}
 
-	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg); }
+	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg, Position(_line, _col)); }
 	else
 	{
 		_offset = offset;
@@ -238,7 +224,7 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		else { break; }
 	}
 
-	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg); }
+	if(offset == -1) { return TokenResult::GenFailure("Tokenizing Error: " + errorMsg, Position(_line, _col)); }
 	else
 	{
 		std::string word = stream.str();
@@ -432,7 +418,7 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 
 				if(isdigit(curChar)) { finalResult = TokenizeNumberLiteral(startChar, offset, line, column); }
 				else if(curChar == '_' || isalpha(curChar)) { finalResult = TokenizeWord(startChar, offset, line, column); }
-				else { finalResult = TokenResult::GenFailure("Tokenizing Error: Invalid character encountered"); }
+				else { finalResult = TokenResult::GenFailure("Tokenizing Error: Invalid character encountered", Position(line, column)); }
 
 				if(finalResult.success)
 				{
@@ -452,7 +438,7 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 		tokens.push_back(Token(TT_ENDOFFILE, line, column));
 		return TokensResult::GenSuccess(std::vector<Token>(tokens));
 	}
-	else { return TokensResult::GenFailure(finalResult.message += " " + Position(line, column).ToString()); }
+	else { return TokensResult::GenFailure(finalResult.message, Position(line, column)); }
 }
 
 TokensResult TokenizeFile(const char* _path, std::vector<std::string>& _fileLines)

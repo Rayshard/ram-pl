@@ -408,6 +408,38 @@ StatementResult GetAssignment(TokenReader _reader, bool _isLet)
 	else { return StatementResult::GenFailure("Expected identifier.", _reader); }
 }
 
+StatementResult GetLet(TokenReader _reader)
+{
+	if(_reader.GetCurType() == TT_LET)
+	{
+		Position pos = _reader.GetCurPosition();
+		TokenReader reader = TokenReader(_reader.Advance());
+
+		if(reader.GetCurType() == TT_IDENTIFIER)
+		{
+			std::string identifier = reader.current.value;
+			reader.Advance();
+
+			if(reader.GetCurType() == TT_EQUALS)
+			{
+				reader.Advance();
+
+				ExpressionResult result = GetExpression(reader);
+
+				if(result.success)
+				{
+					LetStatement* letStmnt = new LetStatement(identifier, result.value, pos);
+					return StatementResult::GenSuccess(letStmnt, result.reader.GetCurPtr());
+				}
+				else { return StatementResult::GenFailure(result.message, reader); }
+			}
+			else { return StatementResult::GenFailure("Expected '='.", reader); }
+		}
+		else { return StatementResult::GenFailure("Expected identifier.", _reader); }
+	}
+	else { return StatementResult::GenFailure("Expected keyword 'let'.", _reader); }
+}
+
 StatementResult GetDefinition(TokenReader _reader)
 {
 	if(_reader.GetCurType() == TT_IDENTIFIER)
@@ -701,13 +733,7 @@ StatementResult GetStatement(TokenReader _reader)
 		return GetCodeBlock(_reader);
 
 	if(_reader.GetCurType() == TT_LET)
-	{
-		Position pos = _reader.GetCurPosition();
-
-		_reader.Advance();
-		if(_reader.GetCurType() == TT_IDENTIFIER) { return GetAssignment(_reader, true); }
-		else { return StatementResult::GenFailure("Expected identifier after let.", _reader); }
-	}
+		return GetLet(_reader);
 
 	if(_reader.GetCurType() == TT_FOR)
 		return GetForLoop(_reader);
@@ -748,9 +774,9 @@ FileParseResult Parse(Token* _tokens)
 				statements.push_back(result.value);
 				reader.Advance();
 			}
-			else { return FileParseResult::GenFailure("Expected ';'. " + reader.GetCurPosition().ToString()); }
+			else { return FileParseResult::GenFailure("Expected ';'.", reader.GetCurPosition()); }
 		}
-		else { return FileParseResult::GenFailure(result.message + result.reader.GetCurPosition().ToString()); }
+		else { return FileParseResult::GenFailure(result.message, result.reader.GetCurPosition()); }
 	}
 
 	return FileParseResult::GenSuccess(statements);
@@ -760,6 +786,7 @@ IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 {
 	std::vector<std::string> fileLines;
 	TokensResult tokenizationResult = TokenizeFile(_path, fileLines);
+	Interpreter::SRC_LINES = fileLines; //One needs to be made per file
 	std::string path = _path;
 
 	std::cout << "Running " + path << std::endl;
@@ -779,7 +806,6 @@ IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 
 			if(statements.size() > 0)
 			{
-				Interpreter::SRC_LINES = fileLines; //One needs to be made per file
 				CodeBlock program = CodeBlock(statements, statements[0]->_position, _runInSubEnv);
 				endVal = program.Execute(_env);
 			}
@@ -788,7 +814,7 @@ IValue* RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 			std::cout << "Successfully Ran " + path << std::endl << std::endl;
 			return endVal;
 		}
-		else { return Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message); }
+		else { return Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, parsingResult.position); }
 	}
-	else { return Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message); }
+	else { return Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, tokenizationResult.position); }
 }

@@ -6,7 +6,7 @@
 #include "..\Environment.h"
 #include "Expression.h"
 
-enum StatementType { SBASE, SSIMPLE, SCODE_BLOCK, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
+enum StatementType { SBASE, SSIMPLE, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
 
 class IStatement
 {
@@ -63,6 +63,19 @@ inline std::vector<T*> CodeBlock::GetStatements()
 
 	return result;
 }
+
+class LetStatement : public IStatement
+{
+public:
+	std::string identifier;
+	IExpression* expr;
+
+	LetStatement(std::string _identifier, IExpression* _expr, Position _pos);
+	~LetStatement();
+
+	IValue* Execute(Environment* _env);
+	IStatement* GetCopy();
+};
 
 class Assignment : public IStatement
 {

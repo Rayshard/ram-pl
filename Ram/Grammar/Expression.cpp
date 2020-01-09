@@ -1,6 +1,5 @@
 #include "Expression.h"
 
-IExpression::IExpression(ExpressionType _type) : _position(Position()), _type(_type) {}
 IExpression::IExpression(Position _pos, ExpressionType _type) : _position(_pos), _type(_type) {}
 
 IExpression::~IExpression()

@@ -14,7 +14,7 @@ public:
 
 private:
 	ParseResult(bool _success, T _val, Token* _remainingTokens, std::string _msg)
-		: ResultT<T>(_success, _val, _msg)
+		: ResultT<T>(_success, _val, _msg, _remainingTokens[0].position)
 	{
 		reader = TokenReader(_remainingTokens);
 	}

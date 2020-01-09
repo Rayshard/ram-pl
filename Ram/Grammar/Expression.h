@@ -13,7 +13,6 @@ public:
 	Position _position;
 	ExpressionType _type;
 
-	IExpression(ExpressionType _type);
 	IExpression(Position _pos, ExpressionType _type);
 	virtual ~IExpression();
 

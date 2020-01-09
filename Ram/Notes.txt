@@ -1,6 +1,6 @@
 TODO:
-	- Add tostring func in std
-	-  Get Rid of bool _membered in Environment.AddVariable
+	- Acessing expressions
+	- Get Rid of bool _membered in Environment.AddVariable
 	- Copying Values from env? Necessary? Copy on site
 	- scrlines per file
 	- dll stuff

@@ -29,6 +29,7 @@ let student = {
 };
 
 let dog = student.pet;
+student.pet.name = "";
 
 print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");
 print("My pet's name is " + student.pet.name + "\n");

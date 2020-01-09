@@ -9,6 +9,7 @@ IStatement::~IStatement()
 {
 }
 
+#pragma region SimpleStatement
 SimpleStatement::SimpleStatement(Position _pos) : IStatement(_pos, SSIMPLE) { expr = new ValueExpression(new VoidValue(_pos)); }
 SimpleStatement::SimpleStatement(IExpression* _expr) : IStatement(_expr->_position, SSIMPLE) { expr = _expr; }
 SimpleStatement::~SimpleStatement() { delete expr; }
@@ -19,7 +20,9 @@ IValue* SimpleStatement::Execute(Environment* _env)
 }
 
 IStatement* SimpleStatement::GetCopy() { return new SimpleStatement(expr->GetCopy()); }
+#pragma endregion
 
+#pragma region CodeBlock
 CodeBlock::CodeBlock(std::vector<IStatement*>& _statements, Position _pos, bool _useSubEnv)
 	: IStatement(_pos, SCODE_BLOCK)
 {
@@ -71,7 +74,30 @@ IStatement* CodeBlock::GetCopy()
 
 	return new CodeBlock(copy_Stmnts, _position, useSubEnv);
 }
+#pragma endregion
 
+#pragma region LetStatement
+LetStatement::LetStatement(std::string _identifier, IExpression* _expr, Position _pos)
+	: IStatement(_pos, SLET)
+{
+	identifier = _identifier;
+	expr = _expr;
+}
+
+LetStatement::~LetStatement() { delete expr; }
+
+IValue* LetStatement::Execute(Environment* _env)
+{
+	IValue* val = expr->Evaluate(_env);
+
+	if(val->_type == VEXCEPTION) { return val; }
+	else { return _env->AddVariable(identifier, val, _position, false, false); }
+}
+
+IStatement* LetStatement::GetCopy() { return new LetStatement(identifier, expr->GetCopy(), _position); }
+#pragma endregion
+
+#pragma region Assignment
 Assignment::Assignment(std::string _identifier, IExpression* _expr, bool _isLet, Position _pos)
 	: IStatement(_pos, SASSIGNMENT)
 {
@@ -107,7 +133,9 @@ IValue* Assignment::Execute(Environment* _env)
 }
 
 IStatement* Assignment::GetCopy() { return new Assignment(identifier, expr->GetCopy(), isLetAssignment, _position); }
+#pragma endregion
 
+#pragma region ForLoop
 ForLoop::ForLoop(Assignment* _initAssign, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos)
 	: IStatement(_pos, SFOR_LOOP)
 {
@@ -174,7 +202,9 @@ IValue* ForLoop::Execute(Environment* _env)
 }
 
 IStatement* ForLoop::GetCopy() { return new ForLoop((Assignment*)initAssignment->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), (Assignment*)finallyAssign->GetCopy(), _position); }
+#pragma endregion
 
+#pragma region MemberDefinition
 MemberDefinition::MemberDefinition(std::string _identifier, std::string _typeDef, Position _pos)
 	: IStatement(_pos, SMEMBER_DEF)
 {
@@ -193,7 +223,9 @@ IValue* MemberDefinition::Execute(Environment* _env)
 }
 
 IStatement* MemberDefinition::GetCopy() { return new MemberDefinition(definition.first, definition.second, _position); }
+#pragma endregion
 
+#pragma region TypeDefinition
 TypeDefinition::TypeDefinition(std::string _identifier, DefinitionMap& _memDefs, Position _pos)
 	: IStatement(_pos, STYPE_DEF)
 {
@@ -203,7 +235,9 @@ TypeDefinition::TypeDefinition(std::string _identifier, DefinitionMap& _memDefs,
 
 IValue* TypeDefinition::Execute(Environment* _env) { return _env->AddTypeDefinition(identifier, memDefs, _position); }
 IStatement* TypeDefinition::GetCopy() { return new TypeDefinition(identifier, memDefs, _position); }
+#pragma endregion
 
+#pragma region FuncDeclaration
 FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, TypeName _retTypeName, IStatement* _body, Position _pos)
 	: IStatement(_pos, SFUNC_DECL)
 {
@@ -225,7 +259,7 @@ IValue* FuncDeclaration::Execute(Environment* _env)
 		IValue* val = _env->GetTypeSig(it.second, _position);
 
 		if(val->_type == VEXCEPTION) { return val; }
-		else 
+		else
 		{
 			argNames.push_back(it.first);
 			argSigs.push_back(((StringValue*)val)->value);
@@ -247,3 +281,4 @@ IValue* FuncDeclaration::Execute(Environment* _env)
 }
 
 IStatement* FuncDeclaration::GetCopy() { return new FuncDeclaration(identifier, argDefs, retTypeName, body->GetCopy(), _position); }
+#pragma endregion
