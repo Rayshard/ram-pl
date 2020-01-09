@@ -448,8 +448,15 @@ TokensResult TokenizeFile(const char* _path, std::vector<std::string>& _fileLine
 	stream << srcFile.rdbuf();
 
 	std::string line;
-	while(std::getline(stream, line, '\n')) {
-		_fileLines.push_back(line);
+	while(std::getline(stream, line, '\n'))
+	{
+		size_t first = line.find_first_not_of(' \t');
+		std::string trimmedLine;
+
+		if(first == std::string::npos) { trimmedLine = ""; }
+		else { trimmedLine = line.substr(first, (line.find_last_not_of(' \t') - first + 1)); }
+
+		_fileLines.push_back(trimmedLine);
 	}
 
 	std::string srcText = stream.str();

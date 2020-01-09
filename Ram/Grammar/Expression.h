@@ -6,7 +6,7 @@
 
 std::string TypeDefFromMemDefs(std::map<std::string, std::string> _memDefs);
 
-typedef std::shared_ptr<IValue> SharedValue;
+typedef SharedValue SharedValue;
 
 class IExpression
 {

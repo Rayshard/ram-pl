@@ -2,20 +2,17 @@ TO CHECK:
 
 TODO:
 	- Acessing expressions
-	- Get Rid of bool _membered in Environment.AddVariable
-	- Copying Values from env? Necessary? Copy on site
-	- scrlines per file
-	- dll stuff
-	- create right exceptions
-	- make some variables in the environement unchangable (ie so user cant change)
-	- operators
-	- equals operators
-	- add arrays and lists
 	- membered value member assignment
+	- scrlines per file and filename in stack trace
+	- create right exceptions
+	- operators
+		- all boolean operators
+		- pow operator
+		- has definition operator
 	- while loops
-	- functions definitions
-	- stack trace
-	- has definition operator
+	- if statements
+	- add arrays and lists
+	- dll stuff
 
 Optimizations:
 	- After Parsing is complete, change all binops that have their left and right

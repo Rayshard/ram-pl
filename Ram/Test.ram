@@ -17,19 +17,17 @@ func PrintNum(num:int) : string =
 	print(<string>num);
 };
 
-let name = "Ray";
-let age = 21;
-let school = "Cornell University";
+func GetNum() : int = 1;
 
+let name = "Ray";
+let age = 0;
+let school = "Cornell University";
+let k = GetNum();
 let student = {
 	name = name;
 	age = age;
 	school = school;
 	pet = { name = "Sidney"; alive = true };
-};
-
-{
-
 };
 
 let dog = student.pet;

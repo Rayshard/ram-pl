@@ -135,12 +135,11 @@ private:
 	std::string identifier;
 	DefinitionList argDefs;
 	std::string retTypeName;
-	IStatement* body;
+	std::shared_ptr<IStatement> body;
 
 public:
 	FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos);
-	~FuncDeclaration();
-
+	
 	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };

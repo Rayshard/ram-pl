@@ -6,8 +6,6 @@
 class IValue;
 struct Position;
 
-typedef std::shared_ptr<IValue> SharedValue;
-
 class Environment
 {
 private:
@@ -35,7 +33,7 @@ public:
 	bool IsNamedspace(std::string _identifier, bool _checkParent);
 	bool SymbolExists(std::string _symbol, bool _checkVariables, bool _checkTypeNames, bool _checkFuncDecls, bool _checkNamedSpaces, bool _checkParent);
 
-	SharedValue AddVariable(std::string _identifier, SharedValue _val, Position _execPos, bool _checkParent);
+	SharedValue AddVariable(std::string _identifier, SharedValue _val, Position _execPos);
 	SharedValue AddTypeDefinition(TypeName _typeName, DefinitionMap& _typeDefs, Position _execPos);
 	SharedValue AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos);
 	SharedValue AddNamedspace(Environment* _ns, Position _execPos);

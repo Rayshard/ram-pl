@@ -3,7 +3,7 @@
 
 int main()
 {
-	Environment::GLOBAL = Environment::CreateGlobal("");
+	Environment::GLOBAL = Environment::CreateGlobal("Program");
 
 	const char* mainFilePath = "C:\\Users\\raysh\\OneDrive\\Desktop\\Ram\\Ram\\Test.ram";
 	SharedValue endVal = RunFile(mainFilePath, Environment::GLOBAL, false);

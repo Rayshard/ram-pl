@@ -17,11 +17,11 @@ Environment * IValue::GetIntrinsicEnv()
 {
 	if(!intrinsicEnv)
 	{
-		intrinsicEnv = new Environment(Environment::GLOBAL, "");
+		intrinsicEnv = new Environment(Environment::GLOBAL, "<VALUE>");
 
-		FuncValue::built_in string_cast_body = [this](Environment* _env, Position _execPos) { return std::shared_ptr<IValue>(new StringValue(this->ToString(), _execPos)); };
+		FuncValue::built_in string_cast_body = [this](Environment* _env, Position _execPos) { return SharedValue(new StringValue(this->ToString(), _execPos)); };
 		std::vector<std::string> string_cast_argNames({}), string_cast_argSigs({});
-		SharedValue func_string_cast = std::shared_ptr<IValue>(new FuncValue(intrinsicEnv, string_cast_body, string_cast_argNames, string_cast_argSigs, "<STRING>", _position));
+		SharedValue func_string_cast = SharedValue(new FuncValue(intrinsicEnv, string_cast_body, string_cast_argNames, string_cast_argSigs, "<STRING>", _position));
 
 		intrinsicEnv->AddFuncDeclaration("__string__", func_string_cast, _position);
 	}
@@ -29,17 +29,48 @@ Environment * IValue::GetIntrinsicEnv()
 	return intrinsicEnv;
 }
 
+#pragma region Trace
+Trace::Trace(Position _pos, std::string _scope, std::string _fileName)
+{
+	position = _pos;
+	scope = _scope;
+	fileName = _fileName;
+}
+
+std::string Trace::ToString() { return "at " + position.ToString() + " in " + scope + " in " + fileName; }
+#pragma endregion
+
 #pragma region ExceptionValue
-ExceptionValue::ExceptionValue(std::string _name, std::string _msg, Position _pos)
-	: IValue(VEXCEPTION, _pos, 0)
+ExceptionValue::ExceptionValue(std::string _name, std::string _msg, StackTrace & _stackTrace)
+	: IValue(VEXCEPTION, _stackTrace[0].position, 0)
 {
 	name = _name;
 	message = _msg;
+	stackTrace = _stackTrace;
 }
 
-IValue* ExceptionValue::GetCopy() { return new ExceptionValue(name, message, _position); }
+ExceptionValue::ExceptionValue(std::string _name, std::string _msg, Trace _trace)
+	: IValue(VEXCEPTION, _trace.position, 0)
+{
+	name = _name;
+	message = _msg;
+	stackTrace.push_back(_trace);
+}
+
+IValue* ExceptionValue::GetCopy() { return new ExceptionValue(name, message, stackTrace); }
 TypeSig ExceptionValue::GetTypeSig() { return "<EXCEPTION>"; }
-std::string ExceptionValue::ToString() { return "Exception : " + name + "\n" + _position.ToString() + "\n" + message + "\n>> " + GetSrcLine(_position.line); }
+
+void ExceptionValue::ExtendStackTrace(Trace _trace) { stackTrace.push_back(_trace); }
+
+std::string ExceptionValue::ToString()
+{
+	std::string str = ">> " + GetSrcLine(_position.line) + "\n" + name + " Exception : " + message + "\"\n";
+
+	for(auto it : stackTrace)
+		str += "-> " + it.ToString() + "\n";
+
+	return str;
+}
 #pragma endregion
 
 #pragma region VoidValue
@@ -92,7 +123,7 @@ std::string NamedspaceValue::ToString() { return "namedspace"; }
 
 #pragma region FuncValue
 FuncValue::FuncValue(Environment * _defEnv, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, BodyType _bodyType, Position _pos)
-	: IValue(VFUNC, _pos, 0)
+	: IValue(VFUNC, _pos, new Environment(_defEnv, "Func Name"))
 {
 	defEnvironment = _defEnv;
 	argNames = _argNames;
@@ -119,7 +150,7 @@ FuncValue::FuncValue(Environment * _defEnv, std::vector<std::string>& _argNames,
 #pragma endregion
 }
 
-FuncValue::FuncValue(Environment* _defEnv, IStatement* _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
+FuncValue::FuncValue(Environment* _defEnv, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
 	: FuncValue(_defEnv, _argNames, _argSigs, _retTypeSig, DECLARED, _pos)
 {
 	body = _body;
@@ -131,18 +162,14 @@ FuncValue::FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::strin
 	pointer = _ptr;
 }
 
-FuncValue::~FuncValue()
-{
-	if(body)
-		delete body;
-}
-
 SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos)
 {
-	if(_argExprs.size() != argNames.size())
-		return std::shared_ptr<IValue>(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), _execPos));
+	Trace trace = Trace(_position, intrinsicEnv->name, "Put FileName Here");
 
-	Environment env(defEnvironment, "<FUNC>"); //Doesn't have to be a ptr because it only needs to exist in this function
+	if(_argExprs.size() != argNames.size())
+		return SharedValue(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), trace));
+
+	Environment env(intrinsicEnv, "<FUNC>"); //Doesn't have to be a ptr because it only needs to exist in this function
 
 	for(int i = 0; i < _argExprs.size(); i++)
 	{
@@ -150,24 +177,31 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 		TypeSig argSig = argSigs[i];
 
 		if(argVal->_type == VEXCEPTION) { return argVal; }
-		else if(argVal->GetTypeSig() != argSig) { return std::shared_ptr<IValue>(Exception_MismatchType(argSig, argVal->GetTypeSig(), _execPos)); }
-		else { env.AddVariable(argNames[i], argVal, _execPos, false); }
+		else if(argVal->GetTypeSig() != argSig) { return SharedValue(Exception_MismatchType(argSig, argVal->GetTypeSig(), Trace(_execPos, _execEnv->name, "Put FileName Here"))); }
+		else { env.AddVariable(argNames[i], argVal, _execPos); }
 	}
 
-	if(dynamic_cast<CodeBlock*>(body) == 0) // Check if function has code block body or just a one line body
+	if(dynamic_cast<CodeBlock*>(body.get()) == 0) // Check if function has code block body or just a one line body
 	{
 #if PRINT_LINE
 		PrintSrcLine(body->_position.line);
 #endif
 	}
 
-	if(bodyType == DECLARED) { return body->Execute(&env); }
-	else { return pointer(&env, _execPos); }
+	SharedValue retVal(nullptr);
+
+	if(bodyType == DECLARED) { retVal = body->Execute(&env); }
+	else { retVal = pointer(&env, _execPos); }
+
+	if(retVal->_type == VEXCEPTION)
+		((ExceptionValue*)retVal.get())->ExtendStackTrace(trace);
+
+	return retVal;
 }
 
 IValue* FuncValue::GetCopy()
 {
-	if(bodyType == DECLARED) { return new FuncValue(defEnvironment, body->GetCopy(), argNames, argSigs, returnTypeSig, _position); }
+	if(bodyType == DECLARED) { return new FuncValue(defEnvironment, body, argNames, argSigs, returnTypeSig, _position); }
 	else { return new FuncValue(defEnvironment, pointer, argNames, argSigs, returnTypeSig, _position); }
 }
 

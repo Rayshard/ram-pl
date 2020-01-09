@@ -32,7 +32,6 @@ CodeBlock::~CodeBlock()
 SharedValue CodeBlock::Execute(Environment* _env)
 {
 	Environment* env = useSubEnv ? new Environment(_env, "//") : _env;
-
 	SharedValue returnVal(nullptr);
 
 	for(int i = 0; i < statements.size(); i++)
@@ -82,7 +81,7 @@ SharedValue LetStatement::Execute(Environment* _env)
 	SharedValue val = expr->Evaluate(_env);
 
 	if(val->_type == VEXCEPTION) { return val; }
-	else { return _env->AddVariable(identifier, SharedValue(val->GetCopy()), _position, false); }
+	else { return _env->AddVariable(identifier, SharedValue(val->GetCopy()), _position); }
 }
 
 IStatement* LetStatement::GetCopy() { return new LetStatement(identifier, expr->GetCopy(), _position); }
@@ -108,7 +107,7 @@ SharedValue Assignment::Execute(Environment* _env)
 
 	SharedValue assignResult(nullptr);
 
-	if(isLetAssignment) { assignResult = _env->AddVariable(identifier, SharedValue(val->GetCopy()), _position, false); /* Returns void value if successful */ }
+	if(isLetAssignment) { assignResult = _env->AddVariable(identifier, SharedValue(val->GetCopy()), _position); /* Returns void value if successful */ }
 	else { assignResult = _env->SetValue(identifier, SharedValue(val->GetCopy()), _position); /* Returns void value if successful */ }
 
 	return assignResult;
@@ -152,7 +151,7 @@ SharedValue ForLoop::Execute(Environment* _env)
 		auto evalCondVal = std::shared_ptr<IValue>(conditionExpr->Evaluate(&env));
 
 		if(evalCondVal->_type == VEXCEPTION) { return evalCondVal; }
-		else if(evalCondVal->_type != VBOOL) { return std::shared_ptr<IValue>(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), evalCondVal->_position)); }
+		else if(evalCondVal->_type != VBOOL) { return std::shared_ptr<IValue>(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->_position, _env->name, "Put FileName Here"))); }
 
 		PRINT_VAL(evalCondVal, &env);
 		PRINT_LINE(conditionExpr->_position.line);
@@ -223,10 +222,8 @@ FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDe
 	identifier = _identifier;
 	argDefs = _argDefs;
 	retTypeName = _retTypeName;
-	body = _body;
+	body = std::shared_ptr<IStatement>(_body);
 }
-
-FuncDeclaration::~FuncDeclaration() { delete body; }
 
 SharedValue FuncDeclaration::Execute(Environment* _env)
 {
@@ -250,7 +247,7 @@ SharedValue FuncDeclaration::Execute(Environment* _env)
 	if(val->_type == VEXCEPTION) { return val; }
 	else { retSig = ((StringValue*)val.get())->value; }
 
-	SharedValue func = std::shared_ptr<IValue>(new FuncValue(_env, body->GetCopy(), argNames, argSigs, retSig, _position));
+	SharedValue func = std::shared_ptr<IValue>(new FuncValue(_env, body, argNames, argSigs, retSig, _position));
 	return _env->AddFuncDeclaration(identifier, func, _position);
 }
 

@@ -38,26 +38,43 @@ public:
 
 typedef std::shared_ptr<IValue> SharedValue;
 
-class ExceptionValue : public IValue
+struct Trace
 {
-public:
-	std::string name;
-	std::string message;
+	Position position;
+	std::string scope;
+	std::string fileName;
 
-	ExceptionValue(std::string _name, std::string _msg, Position _pos);
+	Trace(Position _pos, std::string _scope, std::string _fileName);
 
-	IValue* GetCopy();
-	TypeSig GetTypeSig();
 	std::string ToString();
 };
 
-inline IValue* Exception_CompilationError(std::string _msg, Position _pos) { return new ExceptionValue("Compilation Error", _msg, _pos); }
-inline IValue* Exception_SymbolNotFound(std::string _symbolName, Position _pos) { return new ExceptionValue("Symbol Not Found", "The symbol \"" + _symbolName + "\" does not exist.", _pos); }
-inline IValue* Exception_SymbolInUse(std::string _symbolName, Position _pos) { return new ExceptionValue("Symbol In Use", "The symbol \"" + _symbolName + "\" is in use.", _pos); }
-inline IValue* Exception_MismatchType(TypeName _org, TypeName _mismatch, Position _pos) { return new ExceptionValue("Mismatch Type", "Cannot assign " + _mismatch + " to variable of type " + _org, _pos); }
-inline IValue* Exception_InvalidOperation(std::string _msg, Position _pos) { return new ExceptionValue("Invalid Operation", _msg, _pos); }
-inline IValue* Exception_DivisionByZero(Position _pos) { return new ExceptionValue("Division By Zero", "Cannot divide by 0.", _pos); }
-inline IValue* Exception_WrongNumArgs(int _org, int _passed, Position _pos) { return new ExceptionValue("Wrong Number of Arguments", std::to_string(_org) + " arguments(s) were expected but " + std::to_string(_passed) + " were given.", _pos); }
+typedef std::vector<Trace> StackTrace;
+
+class ExceptionValue : public IValue
+{
+private:
+	ExceptionValue(std::string _name, std::string _msg, StackTrace& _stackTrace);
+public:
+	std::string name;
+	std::string message;
+	StackTrace stackTrace;
+
+	ExceptionValue(std::string _name, std::string _msg, Trace _trace);
+
+	IValue* GetCopy();
+	TypeSig GetTypeSig();
+	void ExtendStackTrace(Trace _trace);
+	std::string ToString();
+};
+
+inline IValue* Exception_CompilationError(std::string _msg, Trace _trace) { return new ExceptionValue("Compilation Error", _msg, _trace); }
+inline IValue* Exception_SymbolNotFound(std::string _symbolName, Trace _trace) { return new ExceptionValue("Symbol Not Found", "The symbol \"" + _symbolName + "\" does not exist.", _trace); }
+inline IValue* Exception_SymbolInUse(std::string _symbolName, Trace _trace) { return new ExceptionValue("Symbol In Use", "The symbol \"" + _symbolName + "\" is in use.", _trace); }
+inline IValue* Exception_MismatchType(TypeName _org, TypeName _mismatch, Trace _trace) { return new ExceptionValue("Mismatch Type", "Cannot assign " + _mismatch + " to variable of type " + _org, _trace); }
+inline IValue* Exception_InvalidOperation(std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Operation", _msg, _trace); }
+inline IValue* Exception_DivisionByZero(Trace _trace) { return new ExceptionValue("Division By Zero", "Cannot divide by 0.", _trace); }
+inline IValue* Exception_WrongNumArgs(int _org, int _passed, Trace _trace) { return new ExceptionValue("Wrong Number of Arguments", std::to_string(_org) + " arguments(s) were expected but " + std::to_string(_passed) + " were given.", _trace); }
 
 class VoidValue : public IValue
 {
@@ -106,7 +123,7 @@ private:
 public:
 	typedef std::function<SharedValue(Environment*, Position)> built_in;
 
-	IStatement* body;
+	std::shared_ptr<IStatement> body;
 	built_in pointer;
 	BodyType bodyType;
 
@@ -117,9 +134,8 @@ public:
 
 	Environment* defEnvironment;
 
-	FuncValue(Environment* _defEnv, IStatement* _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
+	FuncValue(Environment* _defEnv, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
 	FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
-	~FuncValue();
 
 	SharedValue Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
 	IValue* GetCopy();

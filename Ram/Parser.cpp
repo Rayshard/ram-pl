@@ -809,19 +809,19 @@ SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 			std::cout << "Parsed!" << std::endl << std::endl;
 
 			std::vector<IStatement*> statements = parsingResult.value;
-			SharedValue endVal;
+			SharedValue endVal(nullptr);
 
 			if(statements.size() > 0)
 			{
 				CodeBlock program = CodeBlock(statements, statements[0]->_position, _runInSubEnv);
 				endVal = program.Execute(_env);
 			}
-			else { endVal = std::shared_ptr<IValue>(new VoidValue(Position())); }
+			else { endVal = SharedValue(new VoidValue(Position())); }
 
 			std::cout << "Successfully Ran " + path << std::endl << std::endl;
 			return endVal;
 		}
-		else { return std::shared_ptr<IValue>(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, parsingResult.position)); }
+		else { return SharedValue(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, Trace(parsingResult.position, _env->name, _path))); }
 	}
-	else { return std::shared_ptr<IValue>(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, tokenizationResult.position)); }
+	else { return SharedValue(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, Trace(tokenizationResult.position, _env->name, _path))); }
 }
