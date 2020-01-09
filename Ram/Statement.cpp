@@ -1,7 +1,16 @@
-#include <iostream>
-#include "..\pch.h"
+#include "pch.h"
 #include "Statement.h"
-#include "..\Parser.h"
+#include "Expression.h"
+#include "Value.h"
+#include "Environment.h"
+
+#define PRINT_ENVS 1
+#define PRINT_VALS 0
+#define PRINT_LINES 0
+
+#define PRINT_VAL(val, execEnv) { if(PRINT_VALS) std::cout << val->ToString() << std::endl; }
+#define PRINT_ENV(env) { if(PRINT_ENVS) std::cout << std::endl << std::endl << env.ToString() << std::endl; }
+#define PRINT_LINE(line) { if(PRINT_LINES) std::cout << GetSrcLine(line) << std::endl; }
 
 IStatement::IStatement(Position _pos, StatementType _type) : _position(_pos), _type(_type) {}
 IStatement::~IStatement() {}
@@ -14,29 +23,21 @@ IStatement* ExprStatement::GetCopy() { return new ExprStatement(expr->GetCopy())
 #pragma endregion
 
 #pragma region CodeBlock
-CodeBlock::CodeBlock(std::vector<IStatement*>& _statements, Position _pos, bool _useSubEnv)
-	: IStatement(_pos, SCODE_BLOCK)
-{
-	statements = _statements;
-	useSubEnv = _useSubEnv;
-
-	if(statements.size() == 0)
-		statements.push_back(new ExprStatement(new ValueExpression(new VoidValue(_pos))));
-}
+CodeBlock::CodeBlock(std::vector<IStatement*>& _statements, Position _pos) : IStatement(_pos, SCODE_BLOCK) { statements = _statements; }
 
 CodeBlock::~CodeBlock()
 {
 	for(auto it : statements)
 		delete it;
 }
+
 SharedValue CodeBlock::Execute(Environment* _env)
 {
-	Environment* env = useSubEnv ? new Environment(_env, "//") : _env;
 	SharedValue returnVal(nullptr);
 
 	for(int i = 0; i < statements.size(); i++)
 	{
-		SharedValue val = statements[i]->Execute(env);
+		SharedValue val = statements[i]->Execute(_env);
 		PRINT_LINE(statements[i]->_position.line);
 
 		if(val->_type == VEXCEPTION)
@@ -47,12 +48,9 @@ SharedValue CodeBlock::Execute(Environment* _env)
 		else { PRINT_VAL(val, env); }
 	}
 
-	PRINT_ENV((*env));
-
-	if(useSubEnv)
-		delete env;
-
-	return returnVal ? returnVal : std::shared_ptr<IValue>(new VoidValue(_position));
+	PRINT_ENV((*_env));
+	
+	return returnVal ? returnVal : SharedValue(new VoidValue(_position));
 }
 
 IStatement* CodeBlock::GetCopy()
@@ -62,7 +60,7 @@ IStatement* CodeBlock::GetCopy()
 	for(auto it : statements)
 		copy_Stmnts.push_back(it->GetCopy());
 
-	return new CodeBlock(copy_Stmnts, _position, useSubEnv);
+	return new CodeBlock(copy_Stmnts, _position);
 }
 #pragma endregion
 

@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Result.h"
 
 Position::Position()
@@ -13,3 +14,12 @@ Position::Position(int _line, int _col)
 }
 
 std::string Position::ToString() { return "(Line: " + std::to_string(line) + ", Column: " + std::to_string(column) + ")"; }
+
+Trace::Trace(Position _pos, std::string _scope, std::string _fileName)
+{
+	position = _pos;
+	scope = _scope;
+	fileName = _fileName;
+}
+
+std::string Trace::ToString() { return "at " + position.ToString() + " in " + scope + " in " + fileName; }

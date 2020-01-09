@@ -1,4 +1,7 @@
+#include "pch.h"
 #include "Expression.h"
+#include "Value.h"
+#include "Environment.h"
 
 IExpression::IExpression(Position _pos, ExpressionType _type) : _position(_pos), _type(_type) {}
 IExpression::~IExpression() {}

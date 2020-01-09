@@ -1,22 +1,11 @@
 #pragma once
 
-#include <map>
-#include <functional>
-#include "..\Lexer.h"
-
-class IStatement;
-class Environment;
 class IExpression;
+class Environment;
+struct Position;
+class IStatement;
 
 enum ValueType : char { VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION, VVOID, VMEMBERED, VFUNC, VNAMEDSPACE };
-
-typedef std::string TypeName, TypeSig;
-typedef std::map<TypeName, TypeSig> TypeSigMap;
-typedef std::vector<IExpression*> ArgumentList;
-typedef std::map<std::string, IExpression*> AssignmentMap;
-typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->TypeSig
-typedef std::vector<Definition> DefinitionList;
-typedef std::map<std::string, TypeName> DefinitionMap;
 
 class IValue
 {
@@ -35,21 +24,6 @@ public:
 
 	Environment* GetIntrinsicEnv();
 };
-
-typedef std::shared_ptr<IValue> SharedValue;
-
-struct Trace
-{
-	Position position;
-	std::string scope;
-	std::string fileName;
-
-	Trace(Position _pos, std::string _scope, std::string _fileName);
-
-	std::string ToString();
-};
-
-typedef std::vector<Trace> StackTrace;
 
 class ExceptionValue : public IValue
 {

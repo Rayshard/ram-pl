@@ -1,5 +1,6 @@
+#include "pch.h"
 #include "Environment.h"
-#include "Grammar\Statement.h"
+#include "Value.h"
 #include "Parser.h"
 
 Environment* Environment::GLOBAL = 0;
@@ -282,7 +283,7 @@ Environment* Environment::CreateGlobal(std::string _name)
 		Environment* namedspace = Environment::CreateGlobal(nameSpaceName);
 		Environment::GLOBAL = namedspace;
 
-		SharedValue retVal = RunFile(fileName, namedspace, false);
+		SharedValue retVal = RunFile(fileName, namedspace);
 		SharedValue nsAddResult = prevGlobal->AddNamedspace(namedspace, _execPos);
 
 		if(nsAddResult->_type == VEXCEPTION)

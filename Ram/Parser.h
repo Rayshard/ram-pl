@@ -1,11 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include "Result.h"
-#include "Lexer.h"
-#include "Grammar\Grammar.h"
-
 template <typename T>
 class ParseResult : public ResultT<T>
 {
@@ -47,4 +41,4 @@ StatementResult GetFuncDeclaration(TokenReader _reader);
 StatementResult GetTypeDefinition(TokenReader _reader);
 StatementResult GetStatement(TokenReader _reader);
 FileParseResult Parse(Token* _tokens);
-SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv);
+SharedValue RunFile(const char* _path, Environment* _env);

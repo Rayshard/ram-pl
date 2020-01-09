@@ -1,10 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <sstream>
-#include "Result.h"
-
 enum TokenType {
 	TT_INTEGER_LIT, TT_FLOAT_LIT, TT_STRING_LIT, TT_IDENTIFIER,
 	TT_TRUE, TT_FALSE, TT_VOID,

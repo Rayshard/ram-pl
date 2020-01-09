@@ -1,5 +1,8 @@
+#include "pch.h"
 #include "Value.h"
+#include "Environment.h"
 #include "Statement.h"
+#include "Expression.h"
 
 IValue::IValue(ValueType _type, Position _pos, Environment* _intrEnv)
 	: _type(_type), _position(_pos), intrinsicEnv(_intrEnv)
@@ -28,17 +31,6 @@ Environment * IValue::GetIntrinsicEnv()
 
 	return intrinsicEnv;
 }
-
-#pragma region Trace
-Trace::Trace(Position _pos, std::string _scope, std::string _fileName)
-{
-	position = _pos;
-	scope = _scope;
-	fileName = _fileName;
-}
-
-std::string Trace::ToString() { return "at " + position.ToString() + " in " + scope + " in " + fileName; }
-#pragma endregion
 
 #pragma region ExceptionValue
 ExceptionValue::ExceptionValue(std::string _name, std::string _msg, StackTrace & _stackTrace)

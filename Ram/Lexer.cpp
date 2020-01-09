@@ -1,7 +1,5 @@
+#include "pch.h"
 #include "Lexer.h"
-#include <sstream>
-#include <fstream>
-#include "Grammar\Grammar.h"
 #include "Interpreter.h"
 
 Token::Token()

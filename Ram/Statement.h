@@ -1,11 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <array>
-#include "Value.h"
-#include "..\Environment.h"
-#include "Expression.h"
-
 enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
 
 class IStatement
@@ -37,9 +31,8 @@ class CodeBlock : public IStatement
 {
 public:
 	std::vector<IStatement*> statements;
-	bool useSubEnv;
 	
-	CodeBlock(std::vector<IStatement*>& _statements, Position _pos, bool _useSubEnv);
+	CodeBlock(std::vector<IStatement*>& _statements, Position _pos);
 	~CodeBlock();
 
 	SharedValue Execute(Environment* _env);

@@ -1,11 +1,36 @@
-#pragma once
+#ifndef PCH_H
+#define PCH_H
 
-#include "Grammar\Statement.h"
+#include <iostream>
+#include <vector>
+#include <map>
+#include <functional>
+#include <memory>
+#include <string>
+#include <array>
+#include <algorithm> 
+#include <fstream>
+#include <sstream>
+#include <cctype>
+#include <locale>
+#include <iterator>
+#include "Result.h"
+#include "Lexer.h"
+#include "Grammar.h"
 
-#define PRINT_ENVS 1
-#define PRINT_VALS 0
-#define PRINT_LINES 0
+class IValue;
+class IStatement;
+class IExpression;
+class Environment;
 
-#define PRINT_VAL(val, execEnv) { if(PRINT_VALS) std::cout << val->ToString() << std::endl; }
-#define PRINT_ENV(env) { if(PRINT_ENVS) std::cout << std::endl << std::endl << env.ToString() << std::endl; }
-#define PRINT_LINE(line) { if(PRINT_LINES) std::cout << GetSrcLine(line) << std::endl; }
+typedef std::string TypeName, TypeSig;
+typedef std::map<TypeName, TypeSig> TypeSigMap;
+typedef std::vector<IExpression*> ArgumentList;
+typedef std::map<std::string, IExpression*> AssignmentMap;
+typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->TypeSig
+typedef std::vector<Definition> DefinitionList;
+typedef std::map<std::string, TypeName> DefinitionMap;
+typedef std::shared_ptr<IValue> SharedValue;
+
+#endif
+

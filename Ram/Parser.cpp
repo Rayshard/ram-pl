@@ -1,13 +1,9 @@
+#include "pch.h"
 #include "Parser.h"
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <iterator>
-#include <vector>
-#include <algorithm> 
-#include <cctype>
-#include <locale>
+#include "Value.h"
+#include "Statement.h"
+#include "Expression.h"
+#include "Environment.h"
 #include "Interpreter.h"
 
 ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
@@ -476,7 +472,7 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 		if(reader.GetCurType() == TT_RBRACKET)
 		{
 			reader.Advance();
-			return StatementResult::GenSuccess(new CodeBlock(statements, pos, true), reader.GetCurPtr());
+			return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
 		}
 
 		while(!reader.AtEOF())
@@ -491,7 +487,7 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 				{
 					statements.push_back(result.value);
 					reader.Advance();
-					return StatementResult::GenSuccess(new CodeBlock(statements, pos, true), reader.GetCurPtr());
+					return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
 				}
 				else if(reader.GetCurType() == TT_SEMICOLON)
 				{
@@ -501,7 +497,7 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 					if(reader.GetCurType() == TT_RBRACKET)
 					{
 						reader.Advance();
-						return StatementResult::GenSuccess(new CodeBlock(statements, pos, true), reader.GetCurPtr());
+						return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
 					}
 				}
 				else { return StatementResult::GenFailure("Expected ';'. ", reader); }
@@ -789,7 +785,7 @@ FileParseResult Parse(Token* _tokens)
 	return FileParseResult::GenSuccess(statements);
 }
 
-SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
+SharedValue RunFile(const char* _path, Environment* _env)
 {
 	std::vector<std::string> fileLines;
 	TokensResult tokenizationResult = TokenizeFile(_path, fileLines);
@@ -813,7 +809,7 @@ SharedValue RunFile(const char* _path, Environment* _env, bool _runInSubEnv)
 
 			if(statements.size() > 0)
 			{
-				CodeBlock program = CodeBlock(statements, statements[0]->_position, _runInSubEnv);
+				CodeBlock program = CodeBlock(statements, statements[0]->_position);
 				endVal = program.Execute(_env);
 			}
 			else { endVal = SharedValue(new VoidValue(Position())); }

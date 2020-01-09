@@ -1,13 +1,5 @@
 #pragma once
 
-#include <memory>
-#include "..\Environment.h"
-#include "Value.h"
-
-std::string TypeDefFromMemDefs(std::map<std::string, std::string> _memDefs);
-
-typedef SharedValue SharedValue;
-
 class IExpression
 {
 public:

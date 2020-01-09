@@ -1,11 +1,5 @@
 #pragma once
 
-#include <map>
-#include "Grammar\Value.h"
-
-class IValue;
-struct Position;
-
 class Environment
 {
 private:

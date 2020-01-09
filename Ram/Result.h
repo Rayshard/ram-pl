@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 struct Position
 {
 	int line;
@@ -40,3 +38,16 @@ inline ResultT<T>::ResultT(bool _success, T _val, std::string _msg, Position _po
 	message = _msg;
 	position = _pos;
 }
+
+struct Trace
+{
+	Position position;
+	std::string scope;
+	std::string fileName;
+
+	Trace(Position _pos, std::string _scope, std::string _fileName);
+
+	std::string ToString();
+};
+
+typedef std::vector<Trace> StackTrace;
