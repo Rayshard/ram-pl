@@ -8,14 +8,16 @@ private:
 	std::map<std::string, SharedValue> funcDecls;
 	std::map<std::string, SharedValue> namedspaces;
 
-	Environment(Environment* _parent, std::string _name, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces);
+	Environment(Environment* _parent, std::string _name, std::string _filePath, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces);
 public:
 	std::string name;
+	std::string filePath;
 
 	static Environment* GLOBAL;
 
 	Environment* parent;
 
+	Environment(Environment* _parent, std::string _name, std::string _filePath);
 	Environment(Environment* _parent, std::string _name);
 	~Environment();
 
@@ -39,6 +41,6 @@ public:
 	Environment* GetCopy();
 	std::string ToString();
 
-	static Environment* CreateGlobal(std::string _name);
+	static Environment* CreateGlobal(std::string _name, std::string _filePath);
 };
 

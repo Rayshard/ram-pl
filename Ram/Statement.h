@@ -30,9 +30,10 @@ public:
 class CodeBlock : public IStatement
 {
 public:
+	std::string name;
 	std::vector<IStatement*> statements;
 	
-	CodeBlock(std::vector<IStatement*>& _statements, Position _pos);
+	CodeBlock(std::vector<IStatement*>& _statements, Position _pos, std::string _name);
 	~CodeBlock();
 
 	SharedValue Execute(Environment* _env);
@@ -72,11 +73,10 @@ public:
 class Assignment : public IStatement
 {
 public:
-	std::string identifier;
-	IExpression* expr;
+	IExpression* base, *valExpr;
 	bool isLetAssignment;
 
-	Assignment(std::string _identifier, IExpression* _expr, bool _isLet, Position _pos);
+	Assignment(IExpression* _base, IExpression* _valExpr, Position _pos);
 	~Assignment();
 
 	SharedValue Execute(Environment* _env);
@@ -86,12 +86,12 @@ public:
 class ForLoop : public IStatement
 {
 public:
-	Assignment* initAssignment;
+	LetStatement* initLet;
 	IExpression* conditionExpr;
 	IStatement* statement;
 	Assignment* finallyAssign;
 
-	ForLoop(Assignment* _initAssign, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos);
+	ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos);
 	~ForLoop();
 
 	SharedValue Execute(Environment* _env);

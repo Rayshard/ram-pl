@@ -3,6 +3,7 @@
 #include "Environment.h"
 #include "Statement.h"
 #include "Expression.h"
+#include "Interpreter.h"
 
 IValue::IValue(ValueType _type, Position _pos, Environment* _intrEnv)
 	: _type(_type), _position(_pos), intrinsicEnv(_intrEnv)
@@ -56,7 +57,7 @@ void ExceptionValue::ExtendStackTrace(Trace _trace) { stackTrace.push_back(_trac
 
 std::string ExceptionValue::ToString()
 {
-	std::string str = ">> " + GetSrcLine(_position.line) + "\n" + name + " Exception : " + message + "\"\n";
+	std::string str = ">> " + Interpreter::GetSrcLine(Environment::GLOBAL->filePath, _position.line) + "\n" + name + " Exception : " + message + "\"\n";
 
 	for(auto it : stackTrace)
 		str += "-> " + it.ToString() + "\n";

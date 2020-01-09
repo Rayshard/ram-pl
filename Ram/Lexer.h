@@ -50,5 +50,3 @@ TokenResult TokenizeNumberLiteral(char* _chars, int& _offset, int _line, int _co
 TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col);
 TokensResult Tokenize(char* _srcChars, int _srcLength);
 TokensResult TokenizeFile(const char* _path, std::vector<std::string>& _fileLines);
-
-std::string GetSrcLine(int _line);

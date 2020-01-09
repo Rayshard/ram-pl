@@ -469,5 +469,3 @@ TokensResult TokenizeFile(const char* _path, std::vector<std::string>& _fileLine
 	free(srcChars);
 	return tokenizeResult;
 }
-
-std::string GetSrcLine(int _line) { return Interpreter::SRC_LINES[_line - 1]; }

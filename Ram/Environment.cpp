@@ -2,11 +2,12 @@
 #include "Environment.h"
 #include "Value.h"
 #include "Parser.h"
+#include "Interpreter.h"
 
 Environment* Environment::GLOBAL = 0;
 
-Environment::Environment(Environment* _parent, std::string _name, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces)
-	: Environment(_parent, _name)
+Environment::Environment(Environment* _parent, std::string _name, std::string _filePath, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces)
+	: Environment(_parent, _name, _filePath)
 {
 	variables = _variables;
 	typeDefs = _typeDefs;
@@ -14,11 +15,14 @@ Environment::Environment(Environment* _parent, std::string _name, std::map<std::
 	namedspaces = _namedspaces;
 }
 
-Environment::Environment(Environment* _parent, std::string _name)
+Environment::Environment(Environment* _parent, std::string _name, std::string _filePath)
 {
 	parent = _parent;
 	name = _name;
+	filePath = _filePath;
 }
+
+Environment::Environment(Environment* _parent, std::string _name) : Environment(_parent, _name, _parent->filePath) { }
 
 Environment::~Environment()
 {
@@ -171,7 +175,7 @@ SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
 	else { return SharedValue(Exception_SymbolNotFound(_typeName, Trace(_execPos, name, "Put FileName Here"))); }
 }
 
-Environment* Environment::GetCopy() { return new Environment(parent, name, variables, typeDefs, funcDecls, namedspaces); }
+Environment* Environment::GetCopy() { return new Environment(parent, name, filePath, variables, typeDefs, funcDecls, namedspaces); }
 
 std::string Environment::ToString()
 {
@@ -241,9 +245,9 @@ std::string Environment::ToString()
 	return os.str();
 }
 
-Environment* Environment::CreateGlobal(std::string _name)
+Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 {
-	Environment* env = new Environment(0, _name);
+	Environment* env = new Environment(0, _name, _filePath);
 
 	//Type Defs (delete throws away the returned VoidValue)
 	env->typeDefs.insert_or_assign(_name + ".int", "<INT>");
@@ -276,28 +280,25 @@ Environment* Environment::CreateGlobal(std::string _name)
 
 	FuncValue::built_in include_body = [](Environment* _env, Position _execPos)
 	{
-		const char* fileName = _env->GetValue("fileName", _execPos, false)->ToString().c_str();
-		std::string nameSpaceName = _env->GetValue("name", _execPos, false)->ToString().c_str();
+		const char* filePath = _env->GetValue("filePath", _execPos, false)->ToString().c_str();
+		std::string namedSpaceName = _env->GetValue("name", _execPos, false)->ToString().c_str();
 
-		Environment* prevGlobal = Environment::GLOBAL;
-		Environment* namedspace = Environment::CreateGlobal(nameSpaceName);
-		Environment::GLOBAL = namedspace;
-
-		SharedValue retVal = RunFile(fileName, namedspace);
-		SharedValue nsAddResult = prevGlobal->AddNamedspace(namedspace, _execPos);
+		Environment* prevGlobal = Environment::GLOBAL; // Keep copy of calling file's environment to return to when finished
+		SharedValue retVal = Interpreter::RunFile(filePath, namedSpaceName); // The sets the global environment to the file begin run
+		SharedValue nsAddResult = prevGlobal->AddNamedspace(Environment::GLOBAL, _execPos); // Adds the run file environment (global environment) to the call file's list of namedspaces
 
 		if(nsAddResult->_type == VEXCEPTION)
 		{
 			retVal.reset();
 			retVal = nsAddResult;
 
-			delete namedspace;
+			delete Environment::GLOBAL;
 		}
 
-		Environment::GLOBAL = prevGlobal;
+		Environment::GLOBAL = prevGlobal; // Reset global environment to calling file
 		return retVal;
 	};
-	std::vector<std::string> include_argNames({ "fileName", "name" }), include_argSigs({ "<STRING>", "<STRING>" });
+	std::vector<std::string> include_argNames({ "filePath", "name" }), include_argSigs({ "<STRING>", "<STRING>" });
 	SharedValue func_include = SharedValue(new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("include", func_include, Position());

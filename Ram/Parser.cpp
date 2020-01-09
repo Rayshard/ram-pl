@@ -4,7 +4,6 @@
 #include "Statement.h"
 #include "Expression.h"
 #include "Environment.h"
-#include "Interpreter.h"
 
 ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
 {
@@ -90,22 +89,26 @@ ExpressionResult GetMembered(TokenReader _reader)
 	if(_reader.GetCurType() == TT_LBRACKET)
 	{
 		TokenReader reader = TokenReader(_reader);
-		StatementResult result = GetCodeBlock(reader, true);
+		auto parser = [](TokenReader _r) { return GetLet(_r, false); }; // Looks only for let statments without the let keyword
+		StatementResult result = GetCodeBlock(reader, "<MEMBERED>", parser);
 
 		if(result.success)
 		{
-			auto assignStmnts = ((CodeBlock*)result.value)->GetStatements<Assignment>();
+			auto assignStmnts = ((CodeBlock*)result.value)->statements;
 			std::map<std::string, IExpression*> memAssigns;
 
 			for(auto stmnt : assignStmnts)
 			{
-				if(memAssigns.find(stmnt->identifier) != memAssigns.end())
+				std::string identifier = ((LetStatement*)stmnt)->identifier;
+				IExpression* expr = ((LetStatement*)stmnt)->expr;
+
+				if(memAssigns.find(identifier) != memAssigns.end())
 				{
-					ExpressionResult exception = ExpressionResult::GenFailure("The member '" + stmnt->identifier + "' was already assigned.", reader);
+					ExpressionResult exception = ExpressionResult::GenFailure("The member '" + identifier + "' was already assigned.", reader);
 					delete result.value;
 					return exception;
 				}
-				else { memAssigns.insert_or_assign(stmnt->identifier, stmnt->expr->GetCopy()); }
+				else { memAssigns.insert_or_assign(identifier, expr->GetCopy()); }
 			}
 
 			MemberedExpression* memExpr = new MemberedExpression(memAssigns, _reader.GetCurPosition());
@@ -379,38 +382,29 @@ ExpressionResult GetExpression(TokenReader _reader)
 	else { return leftResult; }
 }
 
-StatementResult GetAssignment(TokenReader _reader, bool _isLet)
+StatementResult GetAssignment(TokenReader _reader, IExpression* _base)
 {
-	if(_reader.GetCurType() == TT_IDENTIFIER)
+	if(_reader.GetCurType() == TT_EQUALS)
 	{
-		Position pos = _reader.GetCurPosition();
-		std::string identifier = _reader.current.value;
-		TokenReader reader = TokenReader(_reader.Advance());
+		_reader.Advance();
+		ExpressionResult result = GetExpression(_reader);
 
-		if(reader.GetCurType() == TT_EQUALS)
+		if(result.success)
 		{
-			reader.Advance();
-
-			ExpressionResult result = GetExpression(reader);
-
-			if(result.success)
-			{
-				Assignment* assignment = new Assignment(identifier, result.value, _isLet, pos);
-				return StatementResult::GenSuccess(assignment, result.reader.GetCurPtr());
-			}
-			else { return StatementResult::GenFailure(result.message, reader); }
+			Assignment* assignment = new Assignment(_base, result.value, _base->_position);
+			return StatementResult::GenSuccess(assignment, result.reader.GetCurPtr());
 		}
-		else { return StatementResult::GenFailure("Expected = after identifier.", reader); }
+		else { return StatementResult::GenFailure(result.message, _reader); }
 	}
-	else { return StatementResult::GenFailure("Expected identifier.", _reader); }
+	else { return StatementResult::GenFailure("Expected '='.", _reader); }
 }
 
-StatementResult GetLet(TokenReader _reader)
+StatementResult GetLet(TokenReader _reader, bool _reqKeyword = true)
 {
-	if(_reader.GetCurType() == TT_LET)
+	if(_reader.GetCurType() == TT_LET || !_reqKeyword)
 	{
 		Position pos = _reader.GetCurPosition();
-		TokenReader reader = TokenReader(_reader.Advance());
+		TokenReader reader = TokenReader(_reqKeyword ? _reader.Advance() : _reader.GetCurPtr());
 
 		if(reader.GetCurType() == TT_IDENTIFIER)
 		{
@@ -461,7 +455,7 @@ StatementResult GetDefinition(TokenReader _reader)
 	else { return StatementResult::GenFailure("Expected identifier.", _reader); }
 }
 
-StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
+StatementResult GetCodeBlock(TokenReader _reader, std::string _name, std::function<StatementResult(TokenReader)> _parser)
 {
 	if(_reader.GetCurType() == TT_LBRACKET)
 	{
@@ -472,12 +466,12 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 		if(reader.GetCurType() == TT_RBRACKET)
 		{
 			reader.Advance();
-			return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
+			return StatementResult::GenSuccess(new CodeBlock(statements, pos, _name), reader.GetCurPtr());
 		}
 
 		while(!reader.AtEOF())
 		{
-			StatementResult result = _assignmentsOnly ? GetAssignment(reader, false) : GetStatement(reader);
+			StatementResult result = _parser(reader);
 
 			if(result.success)
 			{
@@ -487,7 +481,7 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 				{
 					statements.push_back(result.value);
 					reader.Advance();
-					return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
+					return StatementResult::GenSuccess(new CodeBlock(statements, pos, _name), reader.GetCurPtr());
 				}
 				else if(reader.GetCurType() == TT_SEMICOLON)
 				{
@@ -497,7 +491,7 @@ StatementResult GetCodeBlock(TokenReader _reader, bool _assignmentsOnly = false)
 					if(reader.GetCurType() == TT_RBRACKET)
 					{
 						reader.Advance();
-						return StatementResult::GenSuccess(new CodeBlock(statements, pos), reader.GetCurPtr());
+						return StatementResult::GenSuccess(new CodeBlock(statements, pos, _name), reader.GetCurPtr());
 					}
 				}
 				else { return StatementResult::GenFailure("Expected ';'. ", reader); }
@@ -524,7 +518,7 @@ StatementResult GetForLoop(TokenReader _reader)
 	{
 		Position pos = _reader.GetCurPosition();
 		TokenReader reader = TokenReader(_reader.Advance());
-		StatementResult assignResult = GetAssignment(reader, true);
+		StatementResult assignResult = GetLet(reader, false);
 
 		if(assignResult.success)
 		{
@@ -552,12 +546,15 @@ StatementResult GetForLoop(TokenReader _reader)
 
 								if(finResult.success)
 								{
-									Assignment* initAssign = (Assignment*)assignResult.value;
+									LetStatement* initLet = (LetStatement*)assignResult.value;
 									IExpression* condExpr = condResult.value;
-									IStatement* statement = stmtResult.value;
+									IStatement* body = stmtResult.value;
 									Assignment* finStmt = (Assignment*)finResult.value;
 
-									ForLoop* forLoop = new ForLoop(initAssign, condExpr, statement, finStmt, pos);
+									if(body->_type == SCODE_BLOCK)
+										((CodeBlock*)body)->name = "<FORLOOP>";
+
+									ForLoop* forLoop = new ForLoop(initLet, condExpr, body, finStmt, pos);
 									return StatementResult::GenSuccess(forLoop, finResult.reader.GetCurPtr());
 								}
 								else { return finResult; }
@@ -644,7 +641,12 @@ StatementResult GetFuncDeclaration(TokenReader _reader)
 
 							if(stmtResult.success)
 							{
-								FuncDeclaration* funcDecl = new FuncDeclaration(identifier, argDefs, retTypeName, stmtResult.value, pos);
+								IStatement* body = stmtResult.value;
+
+								if(body->_type == SCODE_BLOCK)
+									((CodeBlock*)body)->name = identifier;
+
+								FuncDeclaration* funcDecl = new FuncDeclaration(identifier, argDefs, retTypeName, body, pos);
 								return StatementResult::GenSuccess(funcDecl, stmtResult.reader.GetCurPtr());
 							}
 							else { return stmtResult; }
@@ -733,7 +735,7 @@ StatementResult GetStatement(TokenReader _reader)
 	Token token = _reader.current;
 
 	if(_reader.GetCurType() == TT_LBRACKET)
-		return GetCodeBlock(_reader);
+		return GetCodeBlock(_reader, "<CODEBLOCK>", GetStatement);
 
 	if(_reader.GetCurType() == TT_LET)
 		return GetLet(_reader);
@@ -747,15 +749,16 @@ StatementResult GetStatement(TokenReader _reader)
 	if(_reader.GetCurType() == TT_FUNC)
 		return GetFuncDeclaration(_reader);
 
-	if(_reader.GetCurType() == TT_IDENTIFIER)
+	StatementResult result = GetSimpleStatement(_reader);
+
+	if(result.success)
 	{
-		StatementResult result = GetAssignment(_reader, false);
+		TokenReader reader = result.reader;
 
-		if(result.success)
-			return result;
+		if(reader.GetCurType() == TT_EQUALS) { return GetAssignment(reader, ((ExprStatement*)result.value)->expr); }
+		else { return result; }
 	}
-
-	return GetSimpleStatement(_reader);
+	else { return result; }
 }
 
 FileParseResult Parse(Token* _tokens)
@@ -783,41 +786,4 @@ FileParseResult Parse(Token* _tokens)
 	}
 
 	return FileParseResult::GenSuccess(statements);
-}
-
-SharedValue RunFile(const char* _path, Environment* _env)
-{
-	std::vector<std::string> fileLines;
-	TokensResult tokenizationResult = TokenizeFile(_path, fileLines);
-	Interpreter::SRC_LINES = fileLines; //One needs to be made per file
-	std::string path = _path;
-
-	std::cout << "Running " + path << std::endl;
-
-	if(tokenizationResult.success)
-	{
-		std::cout << "Tokenized!" << std::endl;
-
-		FileParseResult parsingResult = Parse(tokenizationResult.value.data());
-
-		if(parsingResult.success)
-		{
-			std::cout << "Parsed!" << std::endl << std::endl;
-
-			std::vector<IStatement*> statements = parsingResult.value;
-			SharedValue endVal(nullptr);
-
-			if(statements.size() > 0)
-			{
-				CodeBlock program = CodeBlock(statements, statements[0]->_position);
-				endVal = program.Execute(_env);
-			}
-			else { endVal = SharedValue(new VoidValue(Position())); }
-
-			std::cout << "Successfully Ran " + path << std::endl << std::endl;
-			return endVal;
-		}
-		else { return SharedValue(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, Trace(parsingResult.position, _env->name, _path))); }
-	}
-	else { return SharedValue(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, Trace(tokenizationResult.position, _env->name, _path))); }
 }
