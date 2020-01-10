@@ -1,0 +1,25 @@
+{
+    "name": "ram-lang",
+    "displayName": "Ram Lang",
+    "description": "Syntax Highlighting for Ram Lang",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.41.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "ram",
+            "aliases": ["Ram", "ram"],
+            "extensions": [".ram"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "ram",
+            "scopeName": "source.ram",
+            "path": "./syntaxes/ram.tmLanguage.json"
+        }]
+    }
+}
