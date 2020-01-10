@@ -255,7 +255,7 @@ ExpressionResult GetFactor(TokenReader _reader)
 		if(result.success)
 		{
 			TokenReader reader = result.reader;
-			IExpression* factorExpr = negated ? new NegationExpression(result.value, pos) : result.value;
+			IExpression* factorExpr = negated ? new UnopExpression(result.value, UnopExpression::NEG, pos) : result.value;
 
 			while(true)
 			{

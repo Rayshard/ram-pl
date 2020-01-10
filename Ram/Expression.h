@@ -3,7 +3,7 @@
 class IExpression
 {
 public:
-	enum ExpressionType { EVALUE, EBINOP, ENEGATION, ECAST, ESYMBOL, EMEMBERED, EACCESS, EFUNC_CALL };
+	enum ExpressionType { EVALUE, EBINOP, EUNOP, ECAST, ESYMBOL, EMEMBERED, EACCESS, EFUNC_CALL };
 
 	Position _position;
 	ExpressionType _type;
@@ -49,18 +49,26 @@ public:
 
 inline constexpr int MakeBinop(char _left, char _right, char _op) { return (_left << 16) | (_right << 8) | _op; }
 
-class NegationExpression : public IExpression
+class UnopExpression : public IExpression
 {
+public:
+	enum OP : char { INC, DEC, NEG, NOT };
+
 private:
-	IExpression* factor;
+	IExpression* expr;
+	OP operation;
 
 public:
-	NegationExpression(IExpression* _factor, Position _pos);
-	~NegationExpression();
+	UnopExpression(IExpression* _expr, OP _op, Position _pos);
+	~UnopExpression();
 
 	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
+
+	static OP TokenTypeToOp(TokenType _type);
 };
+
+inline constexpr int MakeUnop(char _factor, char _op) { return (_factor << 8) | _op; }
 
 class CastExpression : public IExpression
 {

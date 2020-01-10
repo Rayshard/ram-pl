@@ -11,10 +11,11 @@ func CallNum(num:int) : int =
 	else {
 		let cnt = 0;
 
-		while true do {
+	while true do
+    {
 			cnt = cnt + 1;
-			if(cnt >= 5) then
-				break;
+			if cnt >= 0.5 then
+			  break;
 		};
 
 		return cnt;

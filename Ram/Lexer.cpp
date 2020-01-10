@@ -288,12 +288,42 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 				column++;
 			} break;
 			case '+': {
-				tokens.push_back(Token(TT_PLUS, line, column));
-				column++;
+				if(lookAheadChar == '+')
+				{
+					tokens.push_back(Token(TT_INC, line, column));
+					i++;
+					column += 2;
+				}
+				else if(lookAheadChar == '=')
+				{
+					tokens.push_back(Token(TT_PLUSEQ, line, column));
+					i++;
+					column += 2;
+				}
+				else
+				{
+					tokens.push_back(Token(TT_PLUS, line, column));
+					column++;
+				}
 			} break;
 			case '-': {
-				tokens.push_back(Token(TT_MINUS, line, column));
-				column++;
+				if(lookAheadChar == '-')
+				{
+					tokens.push_back(Token(TT_DEC, line, column));
+					i++;
+					column += 2;
+				}
+				else if(lookAheadChar == '=')
+				{
+					tokens.push_back(Token(TT_MINUSEQ, line, column));
+					i++;
+					column += 2;
+				}
+				else
+				{
+					tokens.push_back(Token(TT_MINUS, line, column));
+					column++;
+				}
 			} break;
 			case '*': {
 				tokens.push_back(Token(TT_TIMES, line, column));
@@ -392,24 +422,8 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 				}
 			} break;
 			case '.': {
-				if(isdigit(lookAheadChar))
-				{
-					char* startChar = _srcChars + i;
-					int offset = 0;
-
-					finalResult = TokenizeNumberLiteral(startChar, offset, line, column);
-					if(finalResult.success)
-					{
-						tokens.push_back(finalResult.value);
-						i += offset - 1;
-						column += offset;
-					}
-				}
-				else
-				{
-					tokens.push_back(Token(TT_PERIOD, line, column));
-					column++;
-				}
+				tokens.push_back(Token(TT_PERIOD, line, column));
+				column++;
 			} break;
 			case '#': {
 				commentLine = true;

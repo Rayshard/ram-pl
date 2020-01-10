@@ -7,6 +7,9 @@ TODO:
 		- all boolean operators
 		- pow operator
 		- has definition operator
+
+		Unary: ++, --, -, !
+		Binary: =, ==, !=, ^, %, &, |, ||, &&, <<, >>, +=, -=, *=, /=, ^=, %=, &=, |=, .
 	- add arrays and lists
 	- dll stuff
 

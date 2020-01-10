@@ -225,22 +225,54 @@ BinopExpression::OP BinopExpression::TokenTypeToOp(TokenType _type)
 }
 #pragma endregion
 
-#pragma region NegationExpression
-NegationExpression::NegationExpression(IExpression* _factor, Position _pos) : IExpression(_pos, ENEGATION) { factor = _factor; }
-NegationExpression::~NegationExpression() { delete factor; }
-
-SharedValue NegationExpression::Evaluate(Environment* _env)
+#pragma region UnopExpression
+UnopExpression::UnopExpression(IExpression* _expr, OP _op, Position _pos)
+	: IExpression(_pos, EBINOP)
 {
-	SharedValue val = factor->Evaluate(_env);
-	ValueType type = val->GetType();
-
-	if(type == VEXCEPTION) { return val; }
-	else if(type == VINT) { return SHARE(new IntValue(-val->AsInt()->value, _position)); }
-	else if(type == VFLOAT) { return SHARE(new FloatValue(-val->AsFloat()->value, _position)); }
-	else { return SHARE(Exception_InvalidOperation("Cannot perform arithmetic negation on this type.", Trace(_position, _env->name, _env->filePath))); }
+	expr = _expr;
+	operation = _op;
 }
 
-IExpression* NegationExpression::GetCopy() { return new NegationExpression(factor->GetCopy(), _position); }
+UnopExpression::~UnopExpression() { delete expr; }
+
+SharedValue UnopExpression::Evaluate(Environment* _env)
+{
+	SharedValue eExpr = expr->Evaluate(_env);
+
+	if(eExpr->GetType() == VEXCEPTION)
+		return eExpr;
+
+	IValue* result = 0;
+
+	switch(MakeUnop(eExpr->GetType(), operation))
+	{
+		case MakeUnop(VINT, NEG): result = new IntValue(-eExpr->AsInt()->value, _position); break;
+		case MakeUnop(VFLOAT, NEG): result = new FloatValue(-eExpr->AsFloat()->value, _position); break;
+		case MakeUnop(VINT, INC): result = new IntValue(eExpr->AsInt()->value + 1, _position); break;
+		case MakeUnop(VFLOAT, INC): result = new FloatValue(eExpr->AsFloat()->value + 1, _position); break;
+		case MakeUnop(VINT, DEC): result = new IntValue(eExpr->AsInt()->value - 1, _position); break;
+		case MakeUnop(VFLOAT, DEC): result = new IntValue(eExpr->AsFloat()->value - 1, _position); break;
+		case MakeUnop(VBOOL, NOT): result = new BoolValue(!eExpr->AsBool(), _position); break;
+		default: return SHARE(Exception_InvalidOperation("Cannot perform operation on this type.", Trace(_position, _env->name, _env->filePath)));
+	}
+
+	if(operation == NEG || operation == NOT) { return SHARE(result); }
+	else { return eExpr->Set(_env, result, _position); }
+}
+
+IExpression* UnopExpression::GetCopy() { return new UnopExpression(expr->GetCopy(), operation, _position); }
+
+UnopExpression::OP UnopExpression::TokenTypeToOp(TokenType _type)
+{
+	switch(_type)
+	{
+		case TT_INC: return UnopExpression::INC;
+		case TT_DEC: return UnopExpression::DEC;
+		case TT_MINUS: return UnopExpression::NEG;
+		case TT_NOT: return UnopExpression::NOT;
+		default: throw std::invalid_argument("Incorrect Token Type");
+	}
+}
 #pragma endregion
 
 #pragma region CastExpression
@@ -389,9 +421,9 @@ SharedValue FuncCallExpression::Evaluate(Environment* _env)
 	Trace trace = Trace(_position, _env->name, _env->filePath);
 
 	if(baseValType == VFUNC)
-	{ 
+	{
 		SharedValue retVal = baseVal->AsFunc()->Call(_env, argExprs, base->_position);
-	
+
 		if(retVal->GetType() == VEXCEPTION)
 			retVal->AsException()->ExtendStackTrace(trace);
 

@@ -271,6 +271,15 @@ Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 
 	env->AddFuncDeclaration("getInput", func_getInput, Position());
 
+	FuncValue::built_in time_body = [](Environment* _env, Position _execPos)
+	{
+		return SHARE(new IntValue(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()), _execPos));
+	};
+	std::vector<std::string> time_argNames({}), time_argSigs({});
+	SharedValue func_time = SHARE(new FuncValue(env, time_body, time_argNames, time_argSigs, "<INT>", Position()));
+
+	env->AddFuncDeclaration("time", func_time, Position());
+
 	FuncValue::built_in include_body = [](Environment* _env, Position _execPos)
 	{
 		const char* filePath = _env->GetValue("filePath", _execPos, false)->ToString().c_str();

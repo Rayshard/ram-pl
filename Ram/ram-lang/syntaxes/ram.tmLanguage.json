@@ -7,6 +7,12 @@
     },
     {
       "include": "#strings"
+    },
+    {
+      "include": "#numerics"
+    },
+    {
+      "include": "identifiers"
     }
   ],
   "repository": {
@@ -14,7 +20,31 @@
       "patterns": [
         {
           "name": "keyword.control.ram",
-          "match": "\\b(if|while|for|return)\\b"
+          "match": "\\b(if|while|for|then|break|continue|return|else|def|func|let|do|include)\\b"
+        },
+        {
+          "name": "keyword.ram",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "storage.type.ram",
+          "match": "\\b(int|float|bool|string|def|func)\\b",
+        }
+      ]
+    },
+    "numerics": {
+      "patterns": [
+        {
+          "name": "constant.numeric.ram",
+          "match": "-?(0|[1-9]\\d*)(\\.\\d+)?"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "entity.tag.ram",
+          "match": "\\b[A-Za-z_][A-Za-z_0-9]*\\b"
         }
       ]
     },
@@ -26,6 +56,24 @@
         {
           "name": "constant.character.escape.ram",
           "match": "\\\\."
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.ram",
+          "begin": "#\\*",
+          "captures": {
+            "0": {
+              "name": "comment.block.ram"
+            }
+          },
+          "end": "\\*#"
+        },
+        {
+          "name": "comment.line.ram",
+          "match": "#.*"
         }
       ]
     }
