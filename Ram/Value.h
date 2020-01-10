@@ -49,6 +49,7 @@ inline IValue* Exception_MismatchType(TypeName _org, TypeName _mismatch, Trace _
 inline IValue* Exception_InvalidOperation(std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Operation", _msg, _trace); }
 inline IValue* Exception_DivisionByZero(Trace _trace) { return new ExceptionValue("Division By Zero", "Cannot divide by 0.", _trace); }
 inline IValue* Exception_WrongNumArgs(int _org, int _passed, Trace _trace) { return new ExceptionValue("Wrong Number of Arguments", std::to_string(_org) + " arguments(s) were expected but " + std::to_string(_passed) + " were given.", _trace); }
+inline IValue* Exception_MissingReturn(Trace _trace) { return new ExceptionValue("Missing Return", "A return statement is needed.", _trace); }
 
 class VoidValue : public IValue
 {
@@ -100,6 +101,7 @@ public:
 	std::shared_ptr<IStatement> body;
 	built_in pointer;
 	BodyType bodyType;
+	bool needsReturn;
 
 	std::vector<std::string> argNames;
 	std::vector<TypeSig> argSigs;

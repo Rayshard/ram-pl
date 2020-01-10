@@ -6,6 +6,16 @@
 
 Environment* Environment::GLOBAL = 0;
 
+Environment::Environment(Environment* _parent, std::string _name, std::string _filePath)
+{
+	parent = _parent;
+	name = _name;
+	filePath = _filePath;
+	propReturn = true;
+	propBreak = true;
+	propContinue = true;
+}
+
 Environment::Environment(Environment* _parent, std::string _name, std::string _filePath, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces)
 	: Environment(_parent, _name, _filePath)
 {
@@ -13,13 +23,6 @@ Environment::Environment(Environment* _parent, std::string _name, std::string _f
 	typeDefs = _typeDefs;
 	funcDecls = _funcDecls;
 	namedspaces = _namedspaces;
-}
-
-Environment::Environment(Environment* _parent, std::string _name, std::string _filePath)
-{
-	parent = _parent;
-	name = _name;
-	filePath = _filePath;
 }
 
 Environment::Environment(Environment* _parent, std::string _name) : Environment(_parent, _name, _parent->filePath) { }
@@ -39,9 +42,9 @@ void Environment::Clear(Environment* _newParent)
 	namedspaces.clear();
 }
 
-bool Environment::IsVariable(std::string _identifier, bool _checkParent) { return variables.find(_identifier) != variables.end() || (_checkParent && parent && parent->IsVariable(_identifier, true)); }
-bool Environment::IsTypeName(std::string _identifier, bool _checkParent) { return typeDefs.find(_identifier) != typeDefs.end() || (_checkParent && parent && parent->IsTypeName(_identifier, true)); }
-bool Environment::IsFuncDecl(std::string _identifier, bool _checkParent) { return funcDecls.find(_identifier) != funcDecls.end() || (_checkParent && parent && parent->IsFuncDecl(_identifier, true)); }
+bool Environment::IsVariable(std::string _identifier, bool _checkParent) { return variables.find(name + "." + _identifier) != variables.end() || (_checkParent && parent && parent->IsVariable(_identifier, true)); }
+bool Environment::IsTypeName(std::string _identifier, bool _checkParent) { return typeDefs.find(name + "." + _identifier) != typeDefs.end() || (_checkParent && parent && parent->IsTypeName(_identifier, true)); }
+bool Environment::IsFuncDecl(std::string _identifier, bool _checkParent) { return funcDecls.find(name + "." + _identifier) != funcDecls.end() || (_checkParent && parent && parent->IsFuncDecl(_identifier, true)); }
 bool Environment::IsNamedspace(std::string _identifier, bool _checkParent) { return namedspaces.find(_identifier) != namedspaces.end() || (_checkParent && parent && parent->IsNamedspace(_identifier, true)); }
 
 bool Environment::SymbolExists(std::string _symbol, bool _checkVariables, bool _checkTypeNames, bool _checkFuncDecls, bool _checkNamedspaces, bool _checkParent)
@@ -53,26 +56,29 @@ bool Environment::SymbolExists(std::string _symbol, bool _checkVariables, bool _
 	else { return false; }
 }
 
-SharedValue Environment::AddVariable(std::string _identifier, SharedValue _val, Position _execPos)
+SharedValue Environment::AddVariable(std::string _id, SharedValue _val, Position _execPos)
 {
-	std::string scopedID = name + "." + _identifier;
-	variables.erase(scopedID);
-
-	if(SymbolExists(scopedID, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_identifier, Trace(_execPos, name, filePath))); }
+	if(SymbolExists(_id, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_id, Trace(_execPos, name, filePath))); }
 	else
 	{
+		std::string scopedID = name + "." + _id;
+
+		variables.erase(scopedID);
 		variables.insert_or_assign(scopedID, _val);
+
+		if(parent && ((propReturn && _id == "return") || (propBreak && _id == "break") || (propContinue && _id == "continue")))
+			parent->AddVariable(_id, _val, _execPos);
+
 		return SHARE(new VoidValue(_execPos));
 	}
 }
 
 SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _memDefs, Position _execPos)
 {
-	std::string scopedTypeName = name + "." + _typeName;
-
-	if(SymbolExists(scopedTypeName, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
+	if(SymbolExists(name, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
 	else
 	{
+		std::string scopedTypeName = name + "." + _typeName;
 		typeDefs.insert_or_assign(scopedTypeName, "<" + scopedTypeName + ">");
 
 #pragma region Construct Type Sig
@@ -106,11 +112,10 @@ SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _m
 
 SharedValue Environment::AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos)
 {
-	std::string scopedID = name + "." + _identifier;
-	if(SymbolExists(scopedID, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_identifier, Trace(_execPos, name, filePath))); }
+	if(SymbolExists(_identifier, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_identifier, Trace(_execPos, name, filePath))); }
 	else
 	{
-		funcDecls.insert_or_assign(scopedID, _val);
+		funcDecls.insert_or_assign(name + "." + _identifier, _val);
 		return SHARE(new VoidValue(_execPos));
 	}
 }

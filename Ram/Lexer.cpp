@@ -244,6 +244,11 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		else if(word == "while") { type = TT_WHILE; }
 		else if(word == "def") { type = TT_DEF; }
 		else if(word == "func") { type = TT_FUNC; }
+		else if(word == "return") { type = TT_RETURN; }
+		else if(word == "if") { type = TT_IF; }
+		else if(word == "while") { type = TT_WHILE; }
+		else if(word == "break") { type = TT_BREAK; }
+		else if(word == "continue") { type = TT_CONTINUE; }
 
 		_offset = offset;
 		return TokenResult::GenSuccess((type == TT_IDENTIFIER || IsTypeName(type)) ? Token(type, _line, _col, word) : Token(type, _line, _col));
@@ -433,7 +438,9 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 
 	if(finalResult.success)
 	{
-		tokens.push_back(Token(TT_ENDOFFILE, line, column));
+		if(tokens.size() > 0) { tokens.push_back(Token(TT_ENDOFFILE, tokens[tokens.size() - 1].position.line, tokens[tokens.size() - 1].position.column + 1)); }
+		else { tokens.push_back(Token(TT_ENDOFFILE, line, column)); }
+
 		return TokensResult::GenSuccess(std::vector<Token>(tokens));
 	}
 	else { return TokensResult::GenFailure(finalResult.message, Position(line, column)); }
@@ -448,7 +455,7 @@ TokensResult TokenizeFile(const char* _path, std::vector<std::string>& _fileLine
 	std::string line;
 	while(std::getline(stream, line, '\n'))
 	{
-		size_t first = line.find_first_not_of(' \t');
+		int first = line.find_first_not_of(' \t');
 		std::string trimmedLine;
 
 		if(first == std::string::npos) { trimmedLine = ""; }

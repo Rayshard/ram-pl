@@ -21,6 +21,10 @@ CodeBlock::CodeBlock(std::vector<IStatement*>& _statements, Position _pos, std::
 {
 	name = _name;
 	statements = _statements;
+	createSubEnv = true;
+	canReturn = true;
+	canBreak = true;
+	canContinue = true;
 }
 
 CodeBlock::~CodeBlock()
@@ -31,23 +35,33 @@ CodeBlock::~CodeBlock()
 
 SharedValue CodeBlock::Execute(Environment* _env)
 {
-	Environment env(_env, name);
+	Environment* env = createSubEnv ? new Environment(_env, name) : _env;
 	SharedValue returnVal(nullptr);
 
 	for(int i = 0; i < statements.size(); i++)
 	{
-		SharedValue val = statements[i]->Execute(&env);
-		PRINT_LINE((&env)->filePath, statements[i]->_position.line);
+		IStatement* statement = statements[i];
+		SharedValue val = statement->Execute(env);
+		PRINT_LINE(env->filePath, statements[i]->_position.line);
 
 		if(val->GetType() == VEXCEPTION)
 		{
 			returnVal = val;
 			break;
 		}
-		else { PRINT_VAL(val, env); }
+		
+		PRINT_VAL(val);
+
+		if(canReturn && env->IsVariable("return", false)) { break; }
+		else if(canBreak && env->IsVariable("break", false)) { break; }
+		else if(canContinue && env->IsVariable("continue", false)) { break; }
 	}
 
-	PRINT_ENV(env);
+	PRINT_ENV(*env);
+
+	if(createSubEnv)
+		delete env;
+
 	return returnVal ? returnVal : SHARE(new VoidValue(_position));
 }
 
@@ -116,13 +130,20 @@ IStatement* Assignment::GetCopy() { return new Assignment(base->GetCopy(), valEx
 #pragma endregion
 
 #pragma region ForLoop
-ForLoop::ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos)
+ForLoop::ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, IStatement* _finStmnt, Position _pos)
 	: IStatement(_pos, SFOR_LOOP)
 {
 	initLet = _initLet;
 	conditionExpr = _conditionExpr;
 	statement = _statement;
-	finallyAssign = _finAssign;
+	finallyStmnt = _finStmnt;
+
+	if(statement->_type == SCODE_BLOCK)
+	{
+		((CodeBlock*)statement)->canReturn = true;
+		((CodeBlock*)statement)->canBreak = true;
+		((CodeBlock*)statement)->canContinue = true;
+	}
 }
 
 ForLoop::~ForLoop()
@@ -130,19 +151,22 @@ ForLoop::~ForLoop()
 	delete initLet;
 	delete conditionExpr;
 	delete statement;
-	delete finallyAssign;
+	delete finallyStmnt;
 }
 
 SharedValue ForLoop::Execute(Environment* _env)
 {
 	Environment env(_env, "<FORLOOP>");
+	env.propReturn = true;
+	env.propBreak = false;
+	env.propContinue = false;
 
 	SharedValue initAssignVal = initLet->Execute(&env);
 
 	if(initAssignVal->GetType() == VEXCEPTION)
 		return initAssignVal;
 
-	PRINT_VAL(initAssignVal, &env);
+	PRINT_VAL(initAssignVal);
 	PRINT_LINE(env.filePath, initLet->_position.line);
 
 	while(true)
@@ -152,7 +176,7 @@ SharedValue ForLoop::Execute(Environment* _env)
 		if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
 		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
 
-		PRINT_VAL(evalCondVal, &env);
+		PRINT_VAL(evalCondVal);
 		PRINT_LINE(env.filePath, conditionExpr->_position.line);
 
 		if(!evalCondVal->AsBool()->value)
@@ -163,22 +187,25 @@ SharedValue ForLoop::Execute(Environment* _env)
 		if(statementVal->GetType() == VEXCEPTION)
 			return statementVal;
 
-		PRINT_VAL(statementVal, &env);
+		PRINT_VAL(statementVal);
 		PRINT_LINE(env.filePath, statement->_position.line);
 
-		SharedValue finallyAssignVal = finallyAssign->Execute(&env);
+		if(env.IsVariable("break", false) || env.IsVariable("return", false))
+			break;
 
-		if(finallyAssignVal->GetType() == VEXCEPTION)
-			return finallyAssignVal;
+		SharedValue finallyStmntVal = finallyStmnt->Execute(&env);
 
-		PRINT_VAL(finallyAssignVal, &env);
-		PRINT_LINE(env.filePath, finallyAssign->_position.line);
+		if(finallyStmntVal->GetType() == VEXCEPTION)
+			return finallyStmntVal;
+
+		PRINT_VAL(finallyStmntVal);
+		PRINT_LINE(env.filePath, finallyStmnt->_position.line);
 	}
 
 	return SHARE(new VoidValue(_position));
 }
 
-IStatement* ForLoop::GetCopy() { return new ForLoop((LetStatement*)initLet->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), (Assignment*)finallyAssign->GetCopy(), _position); }
+IStatement* ForLoop::GetCopy() { return new ForLoop((LetStatement*)initLet->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), finallyStmnt->GetCopy(), _position); }
 #pragma endregion
 
 #pragma region MemberDefinition

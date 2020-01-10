@@ -147,6 +147,7 @@ FuncValue::FuncValue(Environment* _defEnv, std::shared_ptr<IStatement> _body, st
 	: FuncValue(_defEnv, _argNames, _argSigs, _retTypeSig, DECLARED, _pos)
 {
 	body = _body;
+	needsReturn = body->_type != SEXPR;
 }
 
 FuncValue::FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
@@ -163,6 +164,9 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 		return SHARE(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), trace));
 
 	Environment env(intrinsicEnv, "<FUNC>"); //Doesn't have to be a ptr because it only needs to exist in this function
+	env.propReturn = false;
+	env.propBreak = false;
+	env.propContinue = false;
 
 	for(int i = 0; i < _argExprs.size(); i++)
 	{
@@ -174,20 +178,34 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 		else { env.AddVariable(argNames[i], argVal, _execPos); }
 	}
 
-	if(dynamic_cast<CodeBlock*>(body.get()) == 0) // Check if function has code block body or just a one line body
-	{
-#if PRINT_LINE
-		PrintSrcLine(body->_position.line);
-#endif
-	}
-
 	SharedValue retVal(nullptr);
 
-	if(bodyType == DECLARED) { retVal = body->Execute(&env); }
+	if(bodyType == DECLARED)
+	{
+		if(body->_type != SCODE_BLOCK)
+			PRINT_LINE(env.filePath, body->_position.line);
+
+		env.propReturn = false;
+		retVal = body->Execute(&env);
+	}
 	else { retVal = pointer(&env, _execPos); }
 
-	if(retVal->GetType() == VEXCEPTION)
-		retVal->AsException()->ExtendStackTrace(trace);
+	if(retVal->GetType() == VEXCEPTION) { retVal->AsException()->ExtendStackTrace(trace); }
+	else
+	{
+		if(needsReturn)
+		{
+			SharedValue varRetVal = env.GetValue("return", _execPos, false);
+
+			if(varRetVal->GetType() == VEXCEPTION) { return SHARE(Exception_MissingReturn(trace)); }
+			else { retVal = varRetVal; }
+		}
+
+		TypeSig retValTypeSig = retVal->GetTypeSig();
+
+		if(retValTypeSig != returnTypeSig)
+			return SHARE(Exception_MismatchType(returnTypeSig, retValTypeSig, trace));
+	}
 
 	return retVal;
 }

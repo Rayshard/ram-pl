@@ -1,39 +1,27 @@
 #include "Includes.ram";
 
-def Animal = {
-	name : string;
-	alive : bool
-};
+def Animal = { name : string; alive : bool };
+def Student = {	name : string; age : int; school : string; pet : Animal };
 
-def Student = {
-	name : string;
-	age : int;
-	school : string;
-	pet : Animal;
-};
-
-func PrintNum(num:int) : string =
+func CallNum() : int =
 {
-	print(<string>num);
+	let cnt = 0;
+	continue;
+	for i = 0 if i < 10 then
+	{
+		cnt = cnt + 2;
+	} finally i=i+1;
+
+	return cnt;
 };
 
-func GetNum() : int = 1;
-
-let name = "Ray";
-let age = 0;
-let school = "Cornell University";
-let k = GetNum();
-let student = {
-	name = name;
-	age = age;
-	school = school;
-	pet = { name = "Sidney"; alive = true };
-};
-
+let name = "Ray"; let age = 21; let school = "Cornell University";
+let student = {	name = name; age = age;	school = school; pet = { name = "Sidney"; alive = true } };
 let dog = student.pet;
-student.pet.name = "";
-student.pet.name = 5;
+
 print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");
 print("My pet's name is " + student.pet.name + "\n");
 
-PrintNum(1579);
+print(<string>CallNum());
+
+print("\n\n");

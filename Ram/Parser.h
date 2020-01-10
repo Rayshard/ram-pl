@@ -32,6 +32,8 @@ ExpressionResult GetFactor(TokenReader _reader);
 ExpressionResult GetTerm(TokenReader _reader);
 ExpressionResult GetBinopExpr(TokenReader _reader);
 ExpressionResult GetExpression(TokenReader _reader);
+
+StatementResult GetControlFlow(TokenReader _reader);
 StatementResult GetAssignment(TokenReader _reader, IExpression* _base);
 StatementResult GetLet(TokenReader _reader, bool _reqKeyword);
 StatementResult GetDefinition(TokenReader _reader);

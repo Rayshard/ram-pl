@@ -12,6 +12,7 @@ private:
 public:
 	std::string name;
 	std::string filePath;
+	bool propReturn, propBreak, propContinue;
 
 	static Environment* GLOBAL;
 

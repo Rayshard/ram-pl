@@ -1,6 +1,8 @@
 TO CHECK:
 	- Check all binops are right
 TODO:
+	- implement return, break, continue
+	- only have return, break and continue in appropriate places
 	- create right exceptions
 	- operators
 		- all boolean operators

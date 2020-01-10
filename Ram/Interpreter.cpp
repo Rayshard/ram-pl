@@ -41,7 +41,7 @@ SharedValue Interpreter::RunFile(const char* _path, std::string _name)
 			}
 			else { endVal = SHARE(new VoidValue(Position())); }
 
-			std::cout << "Successfully Ran " + path << std::endl << std::endl;
+			std::cout << "Exited Running " + path << std::endl << std::endl;
 			return endVal;
 		}
 		else { return SHARE(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, Trace(parsingResult.position, _name, _path))); }

@@ -382,6 +382,44 @@ ExpressionResult GetExpression(TokenReader _reader)
 	else { return leftResult; }
 }
 
+StatementResult GetControlFlow(TokenReader _reader)
+{
+	Position pos = _reader.GetCurPosition();
+
+	if(_reader.GetCurType() == TT_RETURN)
+	{
+		IExpression* expr = nullptr;
+		Token* remainingTokens = _reader.Advance();
+		ExpressionResult result = GetExpression(remainingTokens);
+
+		if(result.success)
+		{
+			expr = result.value;
+			remainingTokens = result.reader.GetCurPtr();
+		}
+		else { expr = new ValueExpression(new VoidValue(pos)); }
+
+		LetStatement* statement = new LetStatement("return", expr, pos);
+		statement->_type = SRETURN;
+		return StatementResult::GenSuccess(statement, remainingTokens);
+	}
+	else if(_reader.GetCurType() == TT_BREAK) 
+	{
+		LetStatement* statement = new LetStatement("break", new ValueExpression(new BoolValue(true, pos)), pos);
+		statement->_type = SBREAK;
+
+		return StatementResult::GenSuccess(statement, _reader.Advance());
+	}
+	else if(_reader.GetCurType() == TT_CONTINUE)
+	{
+		LetStatement* statement = new LetStatement("continue", new ValueExpression(new BoolValue(true, pos)), pos);
+		statement->_type = SCONTINUE;
+
+		return StatementResult::GenSuccess(statement, _reader.Advance());
+	}
+	else { return StatementResult::GenFailure("Expected a 'return', 'break', or 'continue'.", _reader); }
+}
+
 StatementResult GetAssignment(TokenReader _reader, IExpression* _base)
 {
 	if(_reader.GetCurType() == TT_EQUALS)
@@ -542,14 +580,14 @@ StatementResult GetForLoop(TokenReader _reader)
 							if(reader.GetCurType() == TT_FINALLY)
 							{
 								reader.Advance();
-								StatementResult finResult = GetAssignment(reader, false);
+								StatementResult finResult = GetStatement(reader);
 
 								if(finResult.success)
 								{
 									LetStatement* initLet = (LetStatement*)assignResult.value;
 									IExpression* condExpr = condResult.value;
 									IStatement* body = stmtResult.value;
-									Assignment* finStmt = (Assignment*)finResult.value;
+									IStatement* finStmt = (IStatement*)finResult.value;
 
 									if(body->_type == SCODE_BLOCK)
 										((CodeBlock*)body)->name = "<FORLOOP>";
@@ -644,7 +682,13 @@ StatementResult GetFuncDeclaration(TokenReader _reader)
 								IStatement* body = stmtResult.value;
 
 								if(body->_type == SCODE_BLOCK)
+								{
 									((CodeBlock*)body)->name = identifier;
+									((CodeBlock*)body)->createSubEnv = false;
+									((CodeBlock*)body)->canReturn = true;
+									((CodeBlock*)body)->canBreak = false;
+									((CodeBlock*)body)->canContinue = false;
+								}
 
 								FuncDeclaration* funcDecl = new FuncDeclaration(identifier, argDefs, retTypeName, body, pos);
 								return StatementResult::GenSuccess(funcDecl, stmtResult.reader.GetCurPtr());
@@ -748,6 +792,9 @@ StatementResult GetStatement(TokenReader _reader)
 
 	if(_reader.GetCurType() == TT_FUNC)
 		return GetFuncDeclaration(_reader);
+
+	if(IsControlFLow(_reader.GetCurType()))
+		return GetControlFlow(_reader);
 
 	ExpressionResult result = GetExpression(_reader);
 

@@ -1,6 +1,7 @@
 #pragma once
 
-enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL };
+enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL,
+					 SRETURN, SBREAK, SCONTINUE };
 
 class IStatement
 {
@@ -32,6 +33,7 @@ class CodeBlock : public IStatement
 public:
 	std::string name;
 	std::vector<IStatement*> statements;
+	bool createSubEnv, canReturn, canBreak, canContinue;
 	
 	CodeBlock(std::vector<IStatement*>& _statements, Position _pos, std::string _name);
 	~CodeBlock();
@@ -89,9 +91,9 @@ public:
 	LetStatement* initLet;
 	IExpression* conditionExpr;
 	IStatement* statement;
-	Assignment* finallyAssign;
+	IStatement* finallyStmnt;
 
-	ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, Assignment* _finAssign, Position _pos);
+	ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, IStatement* _finStmnt, Position _pos);
 	~ForLoop();
 
 	SharedValue Execute(Environment* _env);
