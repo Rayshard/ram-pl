@@ -19,6 +19,7 @@
 #include "Grammar.h"
 
 class IValue;
+class Value;
 class IStatement;
 class IExpression;
 class Environment;
@@ -30,7 +31,8 @@ typedef std::map<std::string, IExpression*> AssignmentMap;
 typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->TypeSig
 typedef std::vector<Definition> DefinitionList;
 typedef std::map<std::string, TypeName> DefinitionMap;
-typedef std::shared_ptr<IValue> SharedValue;
+typedef std::shared_ptr<Value> SharedValue;
 
+#define SHARE(v) SharedValue(new Value(v))
 #endif
 

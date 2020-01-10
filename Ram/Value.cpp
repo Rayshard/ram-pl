@@ -23,9 +23,9 @@ Environment * IValue::GetIntrinsicEnv()
 	{
 		intrinsicEnv = new Environment(Environment::GLOBAL, "<VALUE>");
 
-		FuncValue::built_in string_cast_body = [this](Environment* _env, Position _execPos) { return SharedValue(new StringValue(this->ToString(), _execPos)); };
+		FuncValue::built_in string_cast_body = [this](Environment* _env, Position _execPos) { return SHARE(new StringValue(this->ToString(), _execPos)); };
 		std::vector<std::string> string_cast_argNames({}), string_cast_argSigs({});
-		SharedValue func_string_cast = SharedValue(new FuncValue(intrinsicEnv, string_cast_body, string_cast_argNames, string_cast_argSigs, "<STRING>", _position));
+		SharedValue func_string_cast = SHARE(new FuncValue(intrinsicEnv, string_cast_body, string_cast_argNames, string_cast_argSigs, "<STRING>", _position));
 
 		intrinsicEnv->AddFuncDeclaration("__string__", func_string_cast, _position);
 	}
@@ -157,10 +157,10 @@ FuncValue::FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::strin
 
 SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos)
 {
-	Trace trace = Trace(_position, intrinsicEnv->name, "Put FileName Here");
+	Trace trace = Trace(_position, intrinsicEnv->name, intrinsicEnv->filePath);
 
 	if(_argExprs.size() != argNames.size())
-		return SharedValue(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), trace));
+		return SHARE(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), trace));
 
 	Environment env(intrinsicEnv, "<FUNC>"); //Doesn't have to be a ptr because it only needs to exist in this function
 
@@ -169,8 +169,8 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 		SharedValue argVal = _argExprs[i]->Evaluate(_execEnv);
 		TypeSig argSig = argSigs[i];
 
-		if(argVal->_type == VEXCEPTION) { return argVal; }
-		else if(argVal->GetTypeSig() != argSig) { return SharedValue(Exception_MismatchType(argSig, argVal->GetTypeSig(), Trace(_execPos, _execEnv->name, "Put FileName Here"))); }
+		if(argVal->GetType() == VEXCEPTION) { return argVal; }
+		else if(argVal->GetTypeSig() != argSig) { return SHARE(Exception_MismatchType(argSig, argVal->GetTypeSig(), Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
 		else { env.AddVariable(argNames[i], argVal, _execPos); }
 	}
 
@@ -186,8 +186,8 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 	if(bodyType == DECLARED) { retVal = body->Execute(&env); }
 	else { retVal = pointer(&env, _execPos); }
 
-	if(retVal->_type == VEXCEPTION)
-		((ExceptionValue*)retVal.get())->ExtendStackTrace(trace);
+	if(retVal->GetType() == VEXCEPTION)
+		retVal->AsException()->ExtendStackTrace(trace);
 
 	return retVal;
 }
@@ -201,3 +201,17 @@ IValue* FuncValue::GetCopy()
 TypeSig FuncValue::GetTypeSig() { return typeSig; }
 std::string FuncValue::ToString() { return GetTypeSig(); }
 #pragma endregion
+
+SharedValue Value::Set(Environment* _execEnv, IValue * _val, Position _execPos)
+{
+	TypeSig orgTypeSig = value->GetTypeSig();
+	TypeSig valTypeSig = _val->GetTypeSig();
+
+	if(orgTypeSig == valTypeSig)
+	{
+		delete value;
+		value = _val;
+		return SHARE(new VoidValue(_execPos));
+	}
+	else { return SHARE(Exception_MismatchType(orgTypeSig, valTypeSig, Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
+}

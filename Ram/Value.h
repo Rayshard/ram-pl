@@ -175,3 +175,31 @@ inline std::string PrimitiveValue<T>::ToString()
 		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToString()");
 	}
 }
+
+class Value
+{
+public:
+	IValue* value;
+
+	Value(IValue* _val) { value = _val; }
+	~Value() { delete value; }
+
+	SharedValue Set(Environment* _execEnv, IValue * _val, Position _execPos);
+
+	ValueType GetType() { return value->_type; }
+	Position GetPosition() { return value->_position; }
+	IValue* GetCopy() { return value->GetCopy(); }
+	TypeSig GetTypeSig() { return value->GetTypeSig(); }
+	std::string ToString() { return value->ToString(); }
+	Environment* GetIntrinsicEnv() { return value->GetIntrinsicEnv(); }
+
+	ExceptionValue* AsException() { return (ExceptionValue*)value; }
+	VoidValue* AsVoid() { return (VoidValue*)value; }
+	MemberedValue* AsMembered() { return (MemberedValue*)value; }
+	NamedspaceValue* AsNamedspace() { return (NamedspaceValue*)value; }
+	FuncValue* AsFunc() { return (FuncValue*)value; }
+	IntValue* AsInt() { return (IntValue*)value; }
+	FloatValue* AsFloat() { return (FloatValue*)value; }
+	StringValue* AsString() { return (StringValue*)value; }
+	BoolValue* AsBool() { return (BoolValue*)value; }
+};

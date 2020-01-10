@@ -58,11 +58,11 @@ SharedValue Environment::AddVariable(std::string _identifier, SharedValue _val, 
 	std::string scopedID = name + "." + _identifier;
 	variables.erase(scopedID);
 
-	if(SymbolExists(scopedID, true, true, true, true, false)) { return SharedValue(Exception_SymbolInUse(_identifier, Trace(_execPos, name, "Put FileName Here"))); }
+	if(SymbolExists(scopedID, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_identifier, Trace(_execPos, name, filePath))); }
 	else
 	{
 		variables.insert_or_assign(scopedID, _val);
-		return SharedValue(new VoidValue(_execPos));
+		return SHARE(new VoidValue(_execPos));
 	}
 }
 
@@ -70,7 +70,7 @@ SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _m
 {
 	std::string scopedTypeName = name + "." + _typeName;
 
-	if(SymbolExists(scopedTypeName, true, true, true, true, false)) { return SharedValue(Exception_SymbolInUse(_typeName, Trace(_execPos, name, "Put FileName Here"))); }
+	if(SymbolExists(scopedTypeName, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
 	else
 	{
 		typeDefs.insert_or_assign(scopedTypeName, "<" + scopedTypeName + ">");
@@ -82,12 +82,12 @@ SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _m
 		{
 			SharedValue retVal = GetTypeSig(it.second, _execPos);
 
-			if(retVal->_type == VEXCEPTION)
+			if(retVal->GetType() == VEXCEPTION)
 			{
 				typeDefs.erase(scopedTypeName);
 				return retVal;
 			}
-			else { typeSig += it.first + ":" + ((StringValue*)retVal.get())->value + "; "; }
+			else { typeSig += it.first + ":" + retVal->AsString()->value + "; "; }
 		}
 
 		if(_memDefs.size() != 0)
@@ -100,18 +100,18 @@ SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _m
 #pragma endregion
 
 		typeDefs.insert_or_assign(scopedTypeName, typeSig);
-		return SharedValue(new VoidValue(_execPos));
+		return SHARE(new VoidValue(_execPos));
 	}
 }
 
 SharedValue Environment::AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos)
 {
 	std::string scopedID = name + "." + _identifier;
-	if(SymbolExists(scopedID, true, true, true, true, false)) { return SharedValue(Exception_SymbolInUse(_identifier, Trace(_execPos, name, "Put FileName Here"))); }
+	if(SymbolExists(scopedID, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_identifier, Trace(_execPos, name, filePath))); }
 	else
 	{
 		funcDecls.insert_or_assign(scopedID, _val);
-		return SharedValue(new VoidValue(_execPos));
+		return SHARE(new VoidValue(_execPos));
 	}
 }
 
@@ -119,15 +119,15 @@ SharedValue Environment::AddNamedspace(Environment* _ns, Position _execPos)
 {
 	std::string identifier = name.empty() ? _ns->name : (name + "." + _ns->name);
 
-	if(SymbolExists(identifier, true, true, true, true, true)) { return SharedValue(Exception_SymbolInUse(_ns->name, Trace(_execPos, name, "Put FileName Here"))); }
+	if(SymbolExists(identifier, true, true, true, true, true)) { return SHARE(Exception_SymbolInUse(_ns->name, Trace(_execPos, name, filePath))); }
 	else
 	{
-		namedspaces.insert_or_assign(identifier, SharedValue(new NamedspaceValue(_ns, _execPos)));
+		namedspaces.insert_or_assign(identifier, SHARE(new NamedspaceValue(_ns, _execPos)));
 
 		for(auto it : _ns->typeDefs)
 			typeDefs.insert_or_assign(identifier + "." + it.first, it.second);
 
-		return SharedValue(new VoidValue(_execPos));
+		return SHARE(new VoidValue(_execPos));
 	}
 }
 
@@ -136,21 +136,9 @@ SharedValue Environment::SetValue(std::string _identifier, SharedValue _val, Pos
 	std::string scopeID = name + "." + _identifier;
 	auto search = variables.find(scopeID);
 
-	if(search != variables.end())
-	{
-		std::string orgTypeSig = _val->GetTypeSig();
-		std::string valTypeSig = search->second->GetTypeSig();
-
-		if(orgTypeSig == valTypeSig || valTypeSig == "void")
-		{
-			variables.erase(scopeID);
-			variables.insert_or_assign(scopeID, _val);
-			return SharedValue(new VoidValue(_execPos));
-		}
-		else { return SharedValue(Exception_MismatchType(orgTypeSig, valTypeSig, Trace(_execPos, name, "Put FileName Here"))); }
-	}
+	if(search != variables.end()) { return search->second->Set(this, _val->value, _execPos); }
 	else if(parent) { return parent->SetValue(_identifier, _val, _execPos); }
-	else { return SharedValue(Exception_SymbolNotFound(_identifier, Trace(_execPos, name, "Put FileName Here"))); }
+	else { return SHARE(Exception_SymbolNotFound(_identifier, Trace(_execPos, name, filePath))); }
 }
 
 SharedValue Environment::GetValue(std::string _identifier, Position _execPos, bool _checkParent)
@@ -162,7 +150,7 @@ SharedValue Environment::GetValue(std::string _identifier, Position _execPos, bo
 	else if((search = funcDecls.find(scopedID)) != funcDecls.end()) { return search->second; }
 	else if((search = namedspaces.find(_identifier)) != namedspaces.end()) { return search->second; }
 	else if(parent && _checkParent) { return parent->GetValue(_identifier, _execPos, true); }
-	else { return SharedValue(Exception_SymbolNotFound(_identifier, Trace(_execPos, name, "Put FileName Here"))); }
+	else { return SHARE(Exception_SymbolNotFound(_identifier, Trace(_execPos, name, filePath))); }
 }
 
 SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
@@ -170,9 +158,9 @@ SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
 	std::string scopedTypeName = name + "." + _typeName;
 	auto search = typeDefs.find(scopedTypeName);
 
-	if(search != typeDefs.end()) { return SharedValue(new StringValue(search->second, _execPos)); }
+	if(search != typeDefs.end()) { return SHARE(new StringValue(search->second, _execPos)); }
 	else if(parent) { return parent->GetTypeSig(_typeName, _execPos); }
-	else { return SharedValue(Exception_SymbolNotFound(_typeName, Trace(_execPos, name, "Put FileName Here"))); }
+	else { return SHARE(Exception_SymbolNotFound(_typeName, Trace(_execPos, name, filePath))); }
 }
 
 Environment* Environment::GetCopy() { return new Environment(parent, name, filePath, variables, typeDefs, funcDecls, namedspaces); }
@@ -260,10 +248,10 @@ Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 	FuncValue::built_in print_body = [](Environment* _env, Position _execPos)
 	{
 		std::cout << _env->GetValue("arg", _execPos, false)->ToString();
-		return SharedValue(new VoidValue(_execPos));
+		return SHARE(new VoidValue(_execPos));
 	};
 	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ "<STRING>" });
-	SharedValue func_print = SharedValue(new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position()));
+	SharedValue func_print = SHARE(new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("print", func_print, Position());
 
@@ -271,10 +259,10 @@ Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 	{
 		std::string input;
 		std::getline(std::cin, input);
-		return SharedValue(new StringValue(input, _execPos));
+		return SHARE(new StringValue(input, _execPos));
 	};
 	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ "<STRING>" });
-	SharedValue func_getInput = SharedValue(new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position()));
+	SharedValue func_getInput = SHARE(new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position()));
 
 	env->AddFuncDeclaration("getInput", func_getInput, Position());
 
@@ -287,7 +275,7 @@ Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 		SharedValue retVal = Interpreter::RunFile(filePath, namedSpaceName); // The sets the global environment to the file begin run
 		SharedValue nsAddResult = prevGlobal->AddNamedspace(Environment::GLOBAL, _execPos); // Adds the run file environment (global environment) to the call file's list of namedspaces
 
-		if(nsAddResult->_type == VEXCEPTION)
+		if(nsAddResult->GetType() == VEXCEPTION)
 		{
 			retVal.reset();
 			retVal = nsAddResult;
@@ -299,7 +287,7 @@ Environment* Environment::CreateGlobal(std::string _name, std::string _filePath)
 		return retVal;
 	};
 	std::vector<std::string> include_argNames({ "filePath", "name" }), include_argSigs({ "<STRING>", "<STRING>" });
-	SharedValue func_include = SharedValue(new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position()));
+	SharedValue func_include = SHARE(new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("include", func_include, Position());
 

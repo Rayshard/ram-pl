@@ -39,12 +39,12 @@ SharedValue Interpreter::RunFile(const char* _path, std::string _name)
 				CodeBlock program = CodeBlock(statements, statements[0]->_position, _name);
 				endVal = program.Execute(Environment::GLOBAL);
 			}
-			else { endVal = SharedValue(new VoidValue(Position())); }
+			else { endVal = SHARE(new VoidValue(Position())); }
 
 			std::cout << "Successfully Ran " + path << std::endl << std::endl;
 			return endVal;
 		}
-		else { return SharedValue(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, Trace(parsingResult.position, _name, _path))); }
+		else { return SHARE(Exception_CompilationError("There was a parsing error in " + path + "\n\n" + parsingResult.message, Trace(parsingResult.position, _name, _path))); }
 	}
-	else { return SharedValue(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, Trace(tokenizationResult.position, _name, _path))); }
+	else { return SHARE(Exception_CompilationError("There was a tokenizing error in " + path + "\n\n" + tokenizationResult.message, Trace(tokenizationResult.position, _name, _path))); }
 }

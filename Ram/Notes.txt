@@ -1,9 +1,6 @@
 TO CHECK:
-
+	- Check all binops are right
 TODO:
-	- Acessing expressions
-	- membered value member assignment
-	- scrlines per file and filename in stack trace
 	- create right exceptions
 	- operators
 		- all boolean operators

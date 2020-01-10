@@ -749,16 +749,16 @@ StatementResult GetStatement(TokenReader _reader)
 	if(_reader.GetCurType() == TT_FUNC)
 		return GetFuncDeclaration(_reader);
 
-	StatementResult result = GetSimpleStatement(_reader);
+	ExpressionResult result = GetExpression(_reader);
 
 	if(result.success)
 	{
 		TokenReader reader = result.reader;
 
-		if(reader.GetCurType() == TT_EQUALS) { return GetAssignment(reader, ((ExprStatement*)result.value)->expr); }
-		else { return result; }
+		if(reader.GetCurType() == TT_EQUALS) { return GetAssignment(reader, result.value); }
+		else { return StatementResult::GenSuccess(new ExprStatement(result.value), reader.GetCurPtr()); }
 	}
-	else { return result; }
+	else { return StatementResult::GenFailure(result.message, _reader); }
 }
 
 FileParseResult Parse(Token* _tokens)

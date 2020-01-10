@@ -7,7 +7,7 @@ IExpression::IExpression(Position _pos, ExpressionType _type) : _position(_pos),
 IExpression::~IExpression() {}
 
 #pragma region ValueExpression
-ValueExpression::ValueExpression(IValue* _val) : IExpression(_val->_position, EVALUE) { value.reset(_val); }
+ValueExpression::ValueExpression(IValue* _val) : IExpression(_val->_position, EVALUE) { value = SHARE(_val); }
 SharedValue ValueExpression::Evaluate(Environment* _env) { return value; }
 IExpression* ValueExpression::GetCopy() { return new ValueExpression(value->GetCopy()); }
 #pragma endregion
@@ -31,96 +31,96 @@ SharedValue BinopExpression::Evaluate(Environment* _env)
 {
 	SharedValue eLeft = left->Evaluate(_env), eRight = right->Evaluate(_env);
 
-	if(eLeft->_type == VEXCEPTION) { return eLeft; }
-	if(eRight->_type == VEXCEPTION) { return eRight; }
+	if(eLeft->GetType() == VEXCEPTION) { return eLeft; }
+	if(eRight->GetType() == VEXCEPTION) { return eRight; }
 
 	IValue* result = 0;
-	ValueType rightValType = eRight->_type;
+	ValueType rightValType = eRight->GetType();
 
-	switch(MakeBinop(eLeft.get()->_type, eRight.get()->_type, operation))
+	switch(MakeBinop(eLeft->GetType(), eRight->GetType(), operation))
 	{
-		case MakeBinop(VINT, VINT, ADD): result = new IntValue(((IntValue*)eLeft.get())->value + ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VINT, SUBTRACT): result = new IntValue(((IntValue*)eLeft.get())->value - ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VINT, MULTIPY): result = new IntValue(((IntValue*)eLeft.get())->value * ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VINT, VINT, ADD): result = new IntValue(eLeft->AsInt()->value + eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VINT, SUBTRACT): result = new IntValue(eLeft->AsInt()->value - eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VINT, MULTIPY): result = new IntValue(eLeft->AsInt()->value * eRight->AsInt()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VINT, VINT, DIVIDE): {
-			if(((IntValue*)eRight.get())->value != 0) { result = new IntValue(((IntValue*)eLeft.get())->value / ((IntValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsInt()->value != 0) { result = new IntValue(eLeft->AsInt()->value / eRight->AsInt()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VINT, VINT, LT): result = new IntValue(((IntValue*)eLeft.get())->value < ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VINT, LTEQ): result = new IntValue(((IntValue*)eLeft.get())->value <= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VINT, GT): result = new IntValue(((IntValue*)eLeft.get())->value > ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VINT, GTEQ): result = new IntValue(((IntValue*)eLeft.get())->value >= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, ADD): result = new IntValue(((IntValue*)eLeft.get())->value + ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, SUBTRACT): result = new IntValue(((IntValue*)eLeft.get())->value - ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, MULTIPY): result = new IntValue(((IntValue*)eLeft.get())->value * ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VINT, VINT, LT): result = new IntValue(eLeft->AsInt()->value < eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VINT, LTEQ): result = new IntValue(eLeft->AsInt()->value <= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VINT, GT): result = new IntValue(eLeft->AsInt()->value > eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VINT, GTEQ): result = new IntValue(eLeft->AsInt()->value >= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, ADD): result = new IntValue(eLeft->AsInt()->value + eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, SUBTRACT): result = new IntValue(eLeft->AsInt()->value - eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, MULTIPY): result = new IntValue(eLeft->AsInt()->value * eRight->AsFloat()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VINT, VFLOAT, DIVIDE): {
-			if(((FloatValue*)eRight.get())->value != 0) { result = new IntValue(((IntValue*)eLeft.get())->value / ((FloatValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsFloat()->value != 0) { result = new IntValue(eLeft->AsInt()->value / eRight->AsFloat()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VINT, VFLOAT, LT): result = new IntValue(((IntValue*)eLeft.get())->value < ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, LTEQ): result = new IntValue(((IntValue*)eLeft.get())->value <= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, GT): result = new IntValue(((IntValue*)eLeft.get())->value > ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VFLOAT, GTEQ): result = new IntValue(((IntValue*)eLeft.get())->value >= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, ADD): result = new IntValue(((IntValue*)eLeft.get())->value + ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, SUBTRACT): result = new IntValue(((IntValue*)eLeft.get())->value - ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, MULTIPY): result = new IntValue(((IntValue*)eLeft.get())->value * ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VINT, VFLOAT, LT): result = new IntValue(eLeft->AsInt()->value < eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, LTEQ): result = new IntValue(eLeft->AsInt()->value <= eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, GT): result = new IntValue(eLeft->AsInt()->value > eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VFLOAT, GTEQ): result = new IntValue(eLeft->AsInt()->value >= eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, ADD): result = new IntValue(eLeft->AsInt()->value + (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, SUBTRACT): result = new IntValue(eLeft->AsInt()->value - (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, MULTIPY): result = new IntValue(eLeft->AsInt()->value * (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VINT, VBOOL, DIVIDE): {
-			if(((BoolValue*)eRight.get())->value != 0) { result = new IntValue(((IntValue*)eLeft.get())->value / ((BoolValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsBool()->value) { result = new IntValue(eLeft->AsInt()->value / (int)eRight->AsBool()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VINT, VBOOL, LT): result = new IntValue(((IntValue*)eLeft.get())->value < ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, LTEQ): result = new IntValue(((IntValue*)eLeft.get())->value <= ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, GT): result = new IntValue(((IntValue*)eLeft.get())->value > ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VBOOL, GTEQ): result = new IntValue(((IntValue*)eLeft.get())->value >= ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VINT, VSTRING, ADD): result = new StringValue(std::to_string(((IntValue*)eLeft.get())->value) + ((StringValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VINT, VBOOL, LT): result = new IntValue(eLeft->AsInt()->value < (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, LTEQ): result = new IntValue(eLeft->AsInt()->value <= (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, GT): result = new IntValue(eLeft->AsInt()->value > (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VBOOL, GTEQ): result = new IntValue(eLeft->AsInt()->value >= (int)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VINT, VSTRING, ADD): result = new StringValue(std::to_string(eLeft->AsInt()->value) + eRight->AsString()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VINT, VSTRING, MULTIPY): {
-			int count = ((IntValue*)eLeft.get())->value;
-			std::string repeat = ((StringValue*)eRight.get())->value;
+			int count = eLeft->AsInt()->value;
+			std::string repeat = eRight->AsString()->value;
 			std::string str;
 
 			for(int i = 0; i < count; i++)
 				str += repeat;
 
-			result = new StringValue(str, eLeft.get()->_position);
+			result = new StringValue(str, eLeft->GetPosition());
 		}break;
 
-		case MakeBinop(VFLOAT, VINT, ADD): result = new FloatValue(((FloatValue*)eLeft.get())->value + ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VINT, SUBTRACT): result = new FloatValue(((FloatValue*)eLeft.get())->value - ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VINT, MULTIPY): result = new FloatValue(((FloatValue*)eLeft.get())->value * ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VFLOAT, VINT, ADD): result = new FloatValue(eLeft->AsFloat()->value + eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VINT, SUBTRACT): result = new FloatValue(eLeft->AsFloat()->value - eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VINT, MULTIPY): result = new FloatValue(eLeft->AsFloat()->value * eRight->AsInt()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VFLOAT, VINT, DIVIDE): {
-			if(((IntValue*)eRight.get())->value != 0) { result = new FloatValue(((FloatValue*)eLeft.get())->value / ((FloatValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsInt()->value != 0) { result = new FloatValue(eLeft->AsFloat()->value / eRight->AsFloat()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VFLOAT, VINT, LT): result = new FloatValue(((FloatValue*)eLeft.get())->value < ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VINT, LTEQ): result = new IntValue(((FloatValue*)eLeft.get())->value <= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VINT, GT): result = new FloatValue(((FloatValue*)eLeft.get())->value > ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VINT, GTEQ): result = new FloatValue(((FloatValue*)eLeft.get())->value >= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, ADD): result = new FloatValue(((FloatValue*)eLeft.get())->value + ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, SUBTRACT): result = new FloatValue(((FloatValue*)eLeft.get())->value - ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, MULTIPY): result = new FloatValue(((FloatValue*)eLeft.get())->value * ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VFLOAT, VINT, LT): result = new FloatValue(eLeft->AsFloat()->value < eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VINT, LTEQ): result = new IntValue(eLeft->AsFloat()->value <= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VINT, GT): result = new FloatValue(eLeft->AsFloat()->value > eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VINT, GTEQ): result = new FloatValue(eLeft->AsFloat()->value >= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, ADD): result = new FloatValue(eLeft->AsFloat()->value + eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, SUBTRACT): result = new FloatValue(eLeft->AsFloat()->value - eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, MULTIPY): result = new FloatValue(eLeft->AsFloat()->value * eRight->AsFloat()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VFLOAT, VFLOAT, DIVIDE): {
-			if(((FloatValue*)eRight.get())->value != 0) { result = new FloatValue(((FloatValue*)eLeft.get())->value / ((FloatValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsFloat()->value != 0) { result = new FloatValue(eLeft->AsFloat()->value / eRight->AsFloat()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VFLOAT, VFLOAT, LT): result = new FloatValue(((FloatValue*)eLeft.get())->value < ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, LTEQ): result = new FloatValue(((FloatValue*)eLeft.get())->value <= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, GT): result = new FloatValue(((FloatValue*)eLeft.get())->value > ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VFLOAT, GTEQ): result = new FloatValue(((FloatValue*)eLeft.get())->value >= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, ADD): result = new FloatValue(((FloatValue*)eLeft.get())->value + ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, SUBTRACT): result = new FloatValue(((FloatValue*)eLeft.get())->value - ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, MULTIPY): result = new FloatValue(((FloatValue*)eLeft.get())->value * ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VFLOAT, VFLOAT, LT): result = new FloatValue(eLeft->AsFloat()->value < eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, LTEQ): result = new FloatValue(eLeft->AsFloat()->value <= eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, GT): result = new FloatValue(eLeft->AsFloat()->value > eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VFLOAT, GTEQ): result = new FloatValue(eLeft->AsFloat()->value >= eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, ADD): result = new FloatValue(eLeft->AsFloat()->value + eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, SUBTRACT): result = new FloatValue(eLeft->AsFloat()->value - eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, MULTIPY): result = new FloatValue(eLeft->AsFloat()->value * eRight->AsBool()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VFLOAT, VBOOL, DIVIDE): {
-			if(((BoolValue*)eRight.get())->value != 0) { result = new FloatValue(((FloatValue*)eLeft.get())->value / ((BoolValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsBool()->value) { result = new FloatValue(eLeft->AsFloat()->value / (float)eRight->AsBool()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VFLOAT, VBOOL, LT): result = new FloatValue(((FloatValue*)eLeft.get())->value < ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, LTEQ): result = new FloatValue(((FloatValue*)eLeft.get())->value <= ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, GT): result = new FloatValue(((FloatValue*)eLeft.get())->value > ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VBOOL, GTEQ): result = new FloatValue(((FloatValue*)eLeft.get())->value >= ((BoolValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VFLOAT, VSTRING, ADD): result = new StringValue(std::to_string(((FloatValue*)eLeft.get())->value) + ((StringValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VFLOAT, VBOOL, LT): result = new FloatValue(eLeft->AsFloat()->value < (float)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, LTEQ): result = new FloatValue(eLeft->AsFloat()->value <= (float)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, GT): result = new FloatValue(eLeft->AsFloat()->value > (float)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VBOOL, GTEQ): result = new FloatValue(eLeft->AsFloat()->value >= (float)eRight->AsBool()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VFLOAT, VSTRING, ADD): result = new StringValue(std::to_string(eLeft->AsFloat()->value) + eRight->AsString()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VFLOAT, VSTRING, MULTIPY): {
-			float count = ((FloatValue*)eLeft.get())->value;
-			std::string repeat = ((StringValue*)eRight.get())->value;
+			float count = eLeft->AsFloat()->value;
+			std::string repeat = eRight->AsString()->value;
 			std::string str;
 
 			for(int i = 0; i < count; i++)
@@ -129,24 +129,24 @@ SharedValue BinopExpression::Evaluate(Environment* _env)
 			if(count - (int)count != 0)
 				str += str.substr(0, repeat.size() * (count - (int)count));
 
-			result = new StringValue(str, eLeft.get()->_position);
+			result = new StringValue(str, eLeft->GetPosition());
 		}break;
 
-		case MakeBinop(VSTRING, VINT, ADD): result = new StringValue(((StringValue*)eLeft.get())->value + std::to_string(((IntValue*)eRight.get())->value), eLeft.get()->_position); break;
+		case MakeBinop(VSTRING, VINT, ADD): result = new StringValue(eLeft->AsString()->value + std::to_string(eRight->AsInt()->value), eLeft->GetPosition()); break;
 		case MakeBinop(VSTRING, VINT, MULTIPY): {
-			int count = ((IntValue*)eRight.get())->value;
-			std::string repeat = ((StringValue*)eLeft.get())->value;
+			int count = eRight->AsInt()->value;
+			std::string repeat = eLeft->AsString()->value;
 			std::string str;
 
 			for(int i = 0; i < count; i++)
 				str += repeat;
 
-			result = new StringValue(str, eLeft.get()->_position);
+			result = new StringValue(str, eLeft->GetPosition());
 		}break;
-		case MakeBinop(VSTRING, VFLOAT, ADD): result = new StringValue(((StringValue*)eLeft.get())->value + std::to_string(((FloatValue*)eRight.get())->value), eLeft.get()->_position); break;
+		case MakeBinop(VSTRING, VFLOAT, ADD): result = new StringValue(eLeft->AsString()->value + std::to_string(eRight->AsFloat()->value), eLeft->GetPosition()); break;
 		case MakeBinop(VSTRING, VFLOAT, MULTIPY): {
-			float count = ((FloatValue*)eRight.get())->value;
-			std::string repeat = ((StringValue*)eLeft.get())->value;
+			float count = eRight->AsFloat()->value;
+			std::string repeat = eLeft->AsString()->value;
 			std::string str;
 
 			for(int i = 0; i < count; i++)
@@ -155,37 +155,37 @@ SharedValue BinopExpression::Evaluate(Environment* _env)
 			if(count - (int)count != 0)
 				str += str.substr(0, repeat.size() * (count - (int)count));
 
-			result = new StringValue(str, eLeft.get()->_position);
+			result = new StringValue(str, eLeft->GetPosition());
 		}break;
-		case MakeBinop(VSTRING, VSTRING, ADD): result = new StringValue(((StringValue*)eLeft.get())->value + ((StringValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VSTRING, VSTRING, ADD): result = new StringValue(eLeft->AsString()->value + eRight->AsString()->value, eLeft->GetPosition()); break;
 
-		case MakeBinop(VBOOL, VINT, ADD): result = new IntValue(((BoolValue*)eLeft.get())->value + ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VINT, SUBTRACT): result = new IntValue(((BoolValue*)eLeft.get())->value - ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VINT, MULTIPY): result = new IntValue(((BoolValue*)eLeft.get())->value * ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VBOOL, VINT, ADD): result = new IntValue((int)eLeft->AsBool()->value + eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VINT, SUBTRACT): result = new IntValue((int)eLeft->AsBool()->value - eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VINT, MULTIPY): result = new IntValue((int)eLeft->AsBool()->value * eRight->AsInt()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VBOOL, VINT, DIVIDE): {
-			if(((IntValue*)eRight.get())->value != 0) { result = new IntValue(((BoolValue*)eLeft.get())->value / ((BoolValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsInt()->value != 0) { result = new IntValue((int)eLeft->AsBool()->value / eRight->AsInt()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VBOOL, VINT, LT): result = new BoolValue(((BoolValue*)eLeft.get())->value < ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VINT, LTEQ): result = new BoolValue(((BoolValue*)eLeft.get())->value <= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VINT, GT): result = new BoolValue(((BoolValue*)eLeft.get())->value > ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VINT, GTEQ): result = new BoolValue(((BoolValue*)eLeft.get())->value >= ((IntValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, ADD): result = new FloatValue(((BoolValue*)eLeft.get())->value + ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, SUBTRACT): result = new FloatValue(((BoolValue*)eLeft.get())->value - ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, MULTIPY): result = new FloatValue(((BoolValue*)eLeft.get())->value * ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VBOOL, VINT, LT): result = new BoolValue((int)eLeft->AsBool()->value < eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VINT, LTEQ): result = new BoolValue((int)eLeft->AsBool()->value <= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VINT, GT): result = new BoolValue((int)eLeft->AsBool()->value > eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VINT, GTEQ): result = new BoolValue((int)eLeft->AsBool()->value >= eRight->AsInt()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, ADD): result = new FloatValue((float)eLeft->AsBool()->value + eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, SUBTRACT): result = new FloatValue((float)eLeft->AsBool()->value - eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, MULTIPY): result = new FloatValue((float)eLeft->AsBool()->value * eRight->AsFloat()->value, eLeft->GetPosition()); break;
 		case MakeBinop(VBOOL, VFLOAT, DIVIDE): {
-			if(((FloatValue*)eRight.get())->value != 0) { result = new FloatValue(((BoolValue*)eLeft.get())->value / ((FloatValue*)eRight.get())->value, eLeft.get()->_position); }
-			else { result = Exception_DivisionByZero(Trace(eRight.get()->_position, _env->name, "Put FileName Here")); }
+			if(eRight->AsFloat()->value != 0) { result = new FloatValue((float)eLeft->AsBool()->value / eRight->AsFloat()->value, eLeft->GetPosition()); }
+			else { result = Exception_DivisionByZero(Trace(eRight->GetPosition(), _env->name, _env->filePath)); }
 		}break;
-		case MakeBinop(VBOOL, VFLOAT, LT): result = new BoolValue(((BoolValue*)eLeft.get())->value < ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, LTEQ): result = new BoolValue(((BoolValue*)eLeft.get())->value <= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, GT): result = new BoolValue(((BoolValue*)eLeft.get())->value > ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
-		case MakeBinop(VBOOL, VFLOAT, GTEQ): result = new BoolValue(((BoolValue*)eLeft.get())->value >= ((FloatValue*)eRight.get())->value, eLeft.get()->_position); break;
+		case MakeBinop(VBOOL, VFLOAT, LT): result = new BoolValue((float)eLeft->AsBool()->value < eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, LTEQ): result = new BoolValue((float)eLeft->AsBool()->value <= eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, GT): result = new BoolValue((float)eLeft->AsBool()->value > eRight->AsFloat()->value, eLeft->GetPosition()); break;
+		case MakeBinop(VBOOL, VFLOAT, GTEQ): result = new BoolValue((float)eLeft->AsBool()->value >= eRight->AsFloat()->value, eLeft->GetPosition()); break;
 
-		default: result = Exception_InvalidOperation("Cannot perform operation on these types.", Trace(_position, _env->name, "Put FileName Here"));
+		default: result = Exception_InvalidOperation("Cannot perform operation on these types.", Trace(_position, _env->name, _env->filePath));
 	}
 
-	return SharedValue(result);
+	return SHARE(result);
 }
 
 IExpression* BinopExpression::GetCopy() { return new BinopExpression(left->GetCopy(), right->GetCopy(), operation, _position); }
@@ -232,12 +232,12 @@ NegationExpression::~NegationExpression() { delete factor; }
 SharedValue NegationExpression::Evaluate(Environment* _env)
 {
 	SharedValue val = factor->Evaluate(_env);
-	ValueType type = val->_type;
+	ValueType type = val->GetType();
 
 	if(type == VEXCEPTION) { return val; }
-	else if(type == VINT) { return SharedValue(new IntValue(-((IntValue*)val.get())->value, _position)); }
-	else if(type == VFLOAT) { return SharedValue(new FloatValue(-((FloatValue*)val.get())->value, _position)); }
-	else { return SharedValue(Exception_InvalidOperation("Cannot perform arithmetic negation on this type.", Trace(_position, _env->name, "Put FileName Here"))); }
+	else if(type == VINT) { return SHARE(new IntValue(-val->AsInt()->value, _position)); }
+	else if(type == VFLOAT) { return SHARE(new FloatValue(-val->AsFloat()->value, _position)); }
+	else { return SHARE(Exception_InvalidOperation("Cannot perform arithmetic negation on this type.", Trace(_position, _env->name, _env->filePath))); }
 }
 
 IExpression* NegationExpression::GetCopy() { return new NegationExpression(factor->GetCopy(), _position); }
@@ -257,7 +257,7 @@ SharedValue CastExpression::Evaluate(Environment* _env)
 {
 	SharedValue val = factor->Evaluate(_env);
 
-	if(val->_type == VEXCEPTION) { return val; }
+	if(val->GetType() == VEXCEPTION) { return val; }
 	else
 	{
 		Environment* castingEnv = val->GetIntrinsicEnv();
@@ -266,16 +266,16 @@ SharedValue CastExpression::Evaluate(Environment* _env)
 
 		std::vector<IExpression*> argExprs({});
 		SharedValue func = castingEnv->GetValue(castFuncName, _position, false);
-		Trace trace = Trace(_position, _env->name, "Put FileName Here");
+		Trace trace = Trace(_position, _env->name, _env->filePath);
 
-		if(func->_type == VEXCEPTION) { return func; }
-		else if(func->_type != VFUNC) { return SharedValue(Exception_MismatchType(castFuncSig, func->GetTypeSig(), trace)); }
+		if(func->GetType() == VEXCEPTION) { return func; }
+		else if(func->GetType() != VFUNC) { return SHARE(Exception_MismatchType(castFuncSig, func->GetTypeSig(), trace)); }
 		else
 		{
-			SharedValue retVal = ((FuncValue*)func.get())->Call(_env, argExprs, _position);
+			SharedValue retVal = func->AsFunc()->Call(_env, argExprs, _position);
 
-			if(retVal->_type == VEXCEPTION)
-				((ExceptionValue*)retVal.get())->ExtendStackTrace(trace);
+			if(retVal->GetType() == VEXCEPTION)
+				retVal->AsException()->ExtendStackTrace(trace);
 
 			return retVal;
 		}
@@ -313,7 +313,7 @@ SharedValue MemberedExpression::Evaluate(Environment* _env)
 		// _creationEnv instead of membersEnv;
 		SharedValue val = it.second->Evaluate(_env);
 
-		if(val->_type == VEXCEPTION)
+		if(val->GetType() == VEXCEPTION)
 		{
 			delete intrinsicEnv;
 			return val;
@@ -331,7 +331,7 @@ SharedValue MemberedExpression::Evaluate(Environment* _env)
 	typeSig.pop_back();
 	typeSig += "}";
 
-	return SharedValue(new MemberedValue(memberDefs, typeSig, intrinsicEnv, _position));
+	return SHARE(new MemberedValue(memberDefs, typeSig, intrinsicEnv, _position));
 }
 
 IExpression* MemberedExpression::GetCopy()
@@ -359,8 +359,8 @@ SharedValue AccessExpression::Evaluate(Environment* _env)
 {
 	SharedValue baseVal = base->Evaluate(_env);
 
-	if(baseVal->_type == VEXCEPTION) { return baseVal; }
-	else { return ((MemberedValue*)baseVal.get())->GetIntrinsicEnv()->GetValue(memberIdentifer, _position, false); }
+	if(baseVal->GetType() == VEXCEPTION) { return baseVal; }
+	else { return baseVal->AsMembered()->GetIntrinsicEnv()->GetValue(memberIdentifer, _position, false); }
 }
 
 IExpression* AccessExpression::GetCopy() { return new AccessExpression(base->GetCopy(), memberIdentifer, _position); }
@@ -385,20 +385,20 @@ FuncCallExpression::~FuncCallExpression()
 SharedValue FuncCallExpression::Evaluate(Environment* _env)
 {
 	SharedValue baseVal = base->Evaluate(_env);
-	ValueType baseValType = baseVal->_type;
-	Trace trace = Trace(_position, _env->name, "Put FileName Here");
+	ValueType baseValType = baseVal->GetType();
+	Trace trace = Trace(_position, _env->name, _env->filePath);
 
 	if(baseValType == VFUNC)
 	{ 
-		SharedValue retVal = ((FuncValue*)baseVal.get())->Call(_env, argExprs, base->_position);
+		SharedValue retVal = baseVal->AsFunc()->Call(_env, argExprs, base->_position);
 	
-		if(retVal->_type == VEXCEPTION)
-			((ExceptionValue*)retVal.get())->ExtendStackTrace(trace);
+		if(retVal->GetType() == VEXCEPTION)
+			retVal->AsException()->ExtendStackTrace(trace);
 
 		return retVal;
 	}
 	else if(baseValType == VEXCEPTION) { return baseVal; }
-	else { return SharedValue(Exception_InvalidOperation("Value not callable!", trace)); }
+	else { return SHARE(Exception_InvalidOperation("Value not callable!", trace)); }
 }
 
 IExpression* FuncCallExpression::GetCopy()

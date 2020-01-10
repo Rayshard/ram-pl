@@ -10,7 +10,7 @@ int main()
 
 	SharedValue endVal = Interpreter::RunFile(mainFilePath, "Test");
 
-	if(endVal->_type != VEXCEPTION) { std::cout << "Program has exited with code (0)." << std::endl; }
+	if(endVal->GetType() != VEXCEPTION) { std::cout << "Program has exited with code (0)." << std::endl; }
 	else
 	{
 		std::cout << "Program has exited with code (1)." << std::endl << std::endl;
@@ -18,5 +18,6 @@ int main()
 	}
 
 	delete Environment::GLOBAL;
+	Interpreter::SRC_LINES.clear();
 	return 0;
 }
