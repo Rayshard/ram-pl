@@ -49,7 +49,7 @@ SharedValue CodeBlock::Execute(Environment* _env)
 			returnVal = val;
 			break;
 		}
-		
+
 		PRINT_VAL(val);
 
 		if(canReturn && env->IsVariable("return", false)) { break; }
@@ -206,6 +206,120 @@ SharedValue ForLoop::Execute(Environment* _env)
 }
 
 IStatement* ForLoop::GetCopy() { return new ForLoop((LetStatement*)initLet->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), finallyStmnt->GetCopy(), _position); }
+#pragma endregion
+
+#pragma region If
+IfStatement::IfStatement(IExpression* _conditionExpr, IStatement* _thenBranch, IStatement* _elseBranch, Position _pos)
+	: IStatement(_pos, SIF)
+{
+	conditionExpr = _conditionExpr;
+	thenBranch = _thenBranch;
+	elseBranch = _elseBranch;
+
+	if(thenBranch->_type == SCODE_BLOCK)
+	{
+		((CodeBlock*)thenBranch)->canReturn = true;
+		((CodeBlock*)thenBranch)->canBreak = false;
+		((CodeBlock*)thenBranch)->canContinue = false;
+	}
+
+	if(elseBranch && (elseBranch->_type == SCODE_BLOCK))
+	{
+		((CodeBlock*)elseBranch)->canReturn = true;
+		((CodeBlock*)elseBranch)->canBreak = false;
+		((CodeBlock*)elseBranch)->canContinue = false;
+	}
+}
+
+IfStatement::~IfStatement()
+{
+	delete conditionExpr;
+	delete thenBranch;
+
+	if(elseBranch)
+		delete elseBranch;
+}
+
+SharedValue IfStatement::Execute(Environment* _env)
+{
+	Environment env(_env, "<IF>");
+	env.propReturn = true;
+	env.propBreak = true;
+	env.propContinue = true;
+
+	auto evalCondVal = conditionExpr->Evaluate(&env);
+
+	if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
+	else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
+
+	PRINT_VAL(evalCondVal);
+	PRINT_LINE(env.filePath, conditionExpr->_position.line);
+
+	if(evalCondVal->AsBool()->value) { return thenBranch->Execute(&env); }
+	else if(elseBranch) { return elseBranch->Execute(&env); }
+	else { return SHARE(new VoidValue(_position)); }
+}
+
+IStatement* IfStatement::GetCopy() { return new IfStatement(conditionExpr->GetCopy(), thenBranch->GetCopy(), elseBranch->GetCopy(), _position); }
+#pragma endregion
+
+#pragma region While
+WhileStatement::WhileStatement(IExpression* _conditionExpr, IStatement* _statement, Position _pos)
+	: IStatement(_pos, SWHILE)
+{
+	conditionExpr = _conditionExpr;
+	statement = _statement;
+
+	if(statement->_type == SCODE_BLOCK)
+	{
+		((CodeBlock*)statement)->canReturn = true;
+		((CodeBlock*)statement)->canBreak = true;
+		((CodeBlock*)statement)->canContinue = true;
+	}
+}
+
+WhileStatement::~WhileStatement()
+{
+	delete conditionExpr;
+	delete statement;
+}
+
+SharedValue WhileStatement::Execute(Environment* _env)
+{
+	Environment env(_env, "<WHILE>");
+	env.propReturn = true;
+	env.propBreak = false;
+	env.propContinue = false;
+
+	while(true)
+	{
+		auto evalCondVal = conditionExpr->Evaluate(&env);
+
+		if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
+		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
+
+		PRINT_VAL(evalCondVal);
+		PRINT_LINE(env.filePath, conditionExpr->_position.line);
+
+		if(!evalCondVal->AsBool()->value)
+			break;
+
+		SharedValue statementVal = statement->Execute(&env);
+
+		if(statementVal->GetType() == VEXCEPTION)
+			return statementVal;
+
+		PRINT_VAL(statementVal);
+		PRINT_LINE(env.filePath, statement->_position.line);
+
+		if(env.IsVariable("break", false) || env.IsVariable("return", false))
+			break;
+	}
+
+	return SHARE(new VoidValue(_position));
+}
+
+IStatement* WhileStatement::GetCopy() { return new WhileStatement(conditionExpr->GetCopy(), statement->GetCopy(), _position); }
 #pragma endregion
 
 #pragma region MemberDefinition

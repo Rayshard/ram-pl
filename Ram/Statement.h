@@ -1,7 +1,7 @@
 #pragma once
 
 enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL,
-					 SRETURN, SBREAK, SCONTINUE };
+					 SRETURN, SBREAK, SCONTINUE, SWHILE, SIF };
 
 class IStatement
 {
@@ -95,6 +95,33 @@ public:
 
 	ForLoop(LetStatement* _initLet, IExpression* _conditionExpr, IStatement* _statement, IStatement* _finStmnt, Position _pos);
 	~ForLoop();
+
+	SharedValue Execute(Environment* _env);
+	IStatement* GetCopy();
+};
+
+class IfStatement : public IStatement
+{
+public:
+	IExpression* conditionExpr;
+	IStatement* thenBranch;
+	IStatement* elseBranch;
+
+	IfStatement(IExpression* _conditionExpr, IStatement* _thenBranch, IStatement* _elseStmnt, Position _pos);
+	~IfStatement();
+
+	SharedValue Execute(Environment* _env);
+	IStatement* GetCopy();
+};
+
+class WhileStatement : public IStatement
+{
+public:
+	IExpression* conditionExpr;
+	IStatement* statement;
+
+	WhileStatement(IExpression* _conditionExpr, IStatement* _stmnt, Position _pos);
+	~WhileStatement();
 
 	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();

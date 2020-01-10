@@ -245,10 +245,9 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		else if(word == "def") { type = TT_DEF; }
 		else if(word == "func") { type = TT_FUNC; }
 		else if(word == "return") { type = TT_RETURN; }
-		else if(word == "if") { type = TT_IF; }
-		else if(word == "while") { type = TT_WHILE; }
 		else if(word == "break") { type = TT_BREAK; }
 		else if(word == "continue") { type = TT_CONTINUE; }
+		else if(word == "do") { type = TT_DO; }
 
 		_offset = offset;
 		return TokenResult::GenSuccess((type == TT_IDENTIFIER || IsTypeName(type)) ? Token(type, _line, _col, word) : Token(type, _line, _col));

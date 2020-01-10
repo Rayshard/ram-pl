@@ -147,7 +147,7 @@ FuncValue::FuncValue(Environment* _defEnv, std::shared_ptr<IStatement> _body, st
 	: FuncValue(_defEnv, _argNames, _argSigs, _retTypeSig, DECLARED, _pos)
 {
 	body = _body;
-	needsReturn = body->_type != SEXPR;
+	needsReturn = body->_type == SCODE_BLOCK;
 }
 
 FuncValue::FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
@@ -185,7 +185,6 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 		if(body->_type != SCODE_BLOCK)
 			PRINT_LINE(env.filePath, body->_position.line);
 
-		env.propReturn = false;
 		retVal = body->Execute(&env);
 	}
 	else { retVal = pointer(&env, _execPos); }

@@ -403,7 +403,7 @@ StatementResult GetControlFlow(TokenReader _reader)
 		statement->_type = SRETURN;
 		return StatementResult::GenSuccess(statement, remainingTokens);
 	}
-	else if(_reader.GetCurType() == TT_BREAK) 
+	else if(_reader.GetCurType() == TT_BREAK)
 	{
 		LetStatement* statement = new LetStatement("break", new ValueExpression(new BoolValue(true, pos)), pos);
 		statement->_type = SBREAK;
@@ -550,6 +550,58 @@ StatementResult GetSimpleStatement(TokenReader _reader)
 	else { return StatementResult::GenFailure(result.message, result.reader); }
 }
 
+StatementResult GetIfStatement(TokenReader _reader)
+{
+	if(_reader.GetCurType() == TT_IF)
+	{
+		Position pos = _reader.GetCurPosition();
+		ExpressionResult condResult = GetExpression(_reader.Advance());
+
+		if(condResult.success)
+		{
+			TokenReader reader = condResult.reader;
+			if(reader.GetCurType() == TT_THEN)
+			{
+				reader.Advance();
+				StatementResult thenResult = GetStatement(reader);
+
+				if(thenResult.success)
+				{
+					reader = thenResult.reader;
+					IStatement* elseBranch = nullptr;
+
+					if(reader.GetCurType() == TT_ELSE)
+					{
+						reader.Advance();
+
+						StatementResult elseResult = GetStatement(reader);
+
+						if(elseResult.success)
+						{
+							elseBranch = elseResult.value;
+							reader = elseResult.reader;
+						}
+						else { return elseResult; }
+					}
+
+					IExpression* condExpr = condResult.value;
+					IStatement* thenBranch = thenResult.value;
+
+					if(thenBranch->_type == SCODE_BLOCK) { ((CodeBlock*)thenBranch)->name = "<IF>"; }
+					if(elseBranch && (elseBranch->_type == SCODE_BLOCK)) { ((CodeBlock*)elseBranch)->name = "<ELSE>"; }
+
+					IfStatement* ifStatement = new IfStatement(condExpr, thenBranch, elseBranch, pos);
+					return StatementResult::GenSuccess(ifStatement, reader.GetCurPtr());
+				}
+				else { return thenResult; }
+			}
+			else { return StatementResult::GenFailure("Expected keyword 'then'.", reader); }
+		}
+		else { return StatementResult::GenFailure(condResult.message, _reader); }
+	}
+	else { return StatementResult::GenFailure("Expected keyword 'if'.", _reader); }
+}
+
 StatementResult GetForLoop(TokenReader _reader)
 {
 	if(_reader.GetCurType() == TT_FOR)
@@ -587,7 +639,7 @@ StatementResult GetForLoop(TokenReader _reader)
 									LetStatement* initLet = (LetStatement*)assignResult.value;
 									IExpression* condExpr = condResult.value;
 									IStatement* body = stmtResult.value;
-									IStatement* finStmt = (IStatement*)finResult.value;
+									IStatement* finStmt = finResult.value;
 
 									if(body->_type == SCODE_BLOCK)
 										((CodeBlock*)body)->name = "<FORLOOP>";
@@ -610,6 +662,44 @@ StatementResult GetForLoop(TokenReader _reader)
 		else { return assignResult; }
 	}
 	else { return StatementResult::GenFailure("Expected keyword 'for'.", _reader); }
+}
+
+StatementResult GetWhile(TokenReader _reader)
+{
+	if(_reader.GetCurType() == TT_WHILE)
+	{
+		Position pos = _reader.GetCurPosition();
+		ExpressionResult condResult = GetExpression(_reader.Advance());
+
+		if(condResult.success)
+		{
+			TokenReader reader = condResult.reader;
+
+			if(reader.GetCurType() == TT_DO)
+			{
+				reader.Advance();
+				StatementResult stmtResult = GetStatement(reader);
+
+				if(stmtResult.success)
+				{
+					reader = stmtResult.reader;
+
+					IExpression* condExpr = condResult.value;
+					IStatement* body = stmtResult.value;
+
+					if(body->_type == SCODE_BLOCK)
+						((CodeBlock*)body)->name = "<WHILE>";
+
+					WhileStatement* whileStmnt = new WhileStatement(condExpr, body, pos);
+					return StatementResult::GenSuccess(whileStmnt, stmtResult.reader.GetCurPtr());
+				}
+				else { return stmtResult; }
+			}
+			else { return StatementResult::GenFailure("Expected keyword 'do'.", reader); }
+		}
+		else { return StatementResult::GenFailure(condResult.message, _reader); }
+	}
+	else { return StatementResult::GenFailure("Expected keyword 'while'.", _reader); }
 }
 
 StatementResult GetFuncDeclaration(TokenReader _reader)
@@ -786,6 +876,12 @@ StatementResult GetStatement(TokenReader _reader)
 
 	if(_reader.GetCurType() == TT_FOR)
 		return GetForLoop(_reader);
+
+	if(_reader.GetCurType() == TT_WHILE)
+		return GetWhile(_reader);
+
+	if(_reader.GetCurType() == TT_IF)
+		return GetIfStatement(_reader);
 
 	if(_reader.GetCurType() == TT_DEF)
 		return GetTypeDefinition(_reader);

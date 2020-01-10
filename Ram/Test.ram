@@ -3,16 +3,29 @@
 def Animal = { name : string; alive : bool };
 def Student = {	name : string; age : int; school : string; pet : Animal };
 
-func CallNum() : int =
+func CallNum(num:int) : int =
 {
-	let cnt = 0;
-	continue;
-	for i = 0 if i < 10 then
-	{
-		cnt = cnt + 2;
-	} finally i=i+1;
+	if num > 5 then {
+		return num;
+	}
+	else {
+		let cnt = 0;
 
-	return cnt;
+		while true do {
+			cnt = cnt + 1;
+			if(cnt >= 5) then
+				break;
+		};
+
+		return cnt;
+	};
+};
+
+func Factorial(num:int) : int =
+{
+	func helper(num:int, acc:int) : int = if(num <= 0) then acc	else helper(num - 1, acc * num);
+
+	return helper(num, 1);
 };
 
 let name = "Ray"; let age = 21; let school = "Cornell University";
@@ -22,6 +35,5 @@ let dog = student.pet;
 print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");
 print("My pet's name is " + student.pet.name + "\n");
 
-print(<string>CallNum());
-
+print(<string>Factorial(10));
 print("\n\n");
