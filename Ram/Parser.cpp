@@ -183,24 +183,79 @@ ExpressionResult GetTypeName(TokenReader _reader)
 ExpressionResult GetSingular(TokenReader _reader)
 {
 	Token token = _reader.current;
+	ExpressionResult result = ExpressionResult::GenFailure("", _reader);
 
-	if(token.type == TT_LPAREN) { return GetSubExpression(_reader); }
-	else if(token.type == TT_IDENTIFIER) { return GetIdentifier(_reader); }
-	else if(token.type == TT_LBRACKET) { return GetMembered(_reader); }
+	if(token.type == TT_LPAREN) { result = GetSubExpression(_reader); }
+	else if(token.type == TT_IDENTIFIER) { result = GetIdentifier(_reader); }
+	else if(token.type == TT_LBRACKET) { result = GetMembered(_reader); }
 	else
 	{
-		IExpression* expr;
+		IExpression* expr = nullptr;
 
 		if(token.type == TT_INTEGER_LIT) { expr = new ValueExpression(new IntValue(std::stoi(token.value), token.position)); }
 		else if(token.type == TT_FLOAT_LIT) { expr = new ValueExpression(new FloatValue(std::stof(token.value), token.position)); }
 		else if(token.type == TT_STRING_LIT) { expr = new ValueExpression(new StringValue(token.value, token.position)); }
 		else if(token.type == TT_TRUE) { expr = new ValueExpression(new BoolValue(true, token.position)); }
 		else if(token.type == TT_FALSE) { expr = new ValueExpression(new BoolValue(false, token.position)); }
-		else if(token.type == TT_VOID) { expr = new ValueExpression(new VoidValue(token.position)); }
 		else { return ExpressionResult::GenFailure("Value could not be parsed.", _reader); }
 
 		return ExpressionResult::GenSuccess(expr, _reader.Advance());
 	}
+
+	if(!result.success)
+		return result;
+
+	TokenReader reader = result.reader;
+	IExpression* singular = result.value;
+
+	// Get As an Access Expression if there are accessed members that follow 
+	while(true)
+	{
+		if(reader.GetCurType() == TT_PERIOD)
+		{
+			ExpressionResult accessResult = GetAccess(singular, reader);
+
+			if(accessResult.success)
+			{
+				reader = accessResult.reader;
+				singular = accessResult.value;
+			}
+			else
+			{
+				delete singular;
+				return accessResult;
+			}
+		}
+		else if(reader.GetCurType() == TT_LPAREN)
+		{
+			ExpressionResult funcCallResult = GetFuncCall(singular, reader);
+
+			if(funcCallResult.success)
+			{
+				reader = funcCallResult.reader;
+				singular = funcCallResult.value;
+			}
+			else
+			{
+				delete singular;
+				return funcCallResult;
+			}
+		}
+		else { break; }
+	}
+
+	if(reader.GetCurType() == TT_INC)
+	{
+		singular = new UnopExpression(singular, UnopExpression::INC, singular->_position);
+		reader.Advance();
+	}
+	else if(reader.GetCurType() == TT_DEC)
+	{
+		singular = new UnopExpression(singular, UnopExpression::DEC, singular->_position);
+		reader.Advance();
+	}
+
+	return ExpressionResult::GenSuccess(singular, reader.GetCurPtr());
 }
 
 ExpressionResult GetCast(TokenReader _reader)
@@ -245,52 +300,24 @@ ExpressionResult GetFactor(TokenReader _reader)
 	else
 	{
 		Position pos = _reader.GetCurPosition();
-		bool negated = false;
+		TokenType prefix = _reader.GetCurType();
+		bool prefixed = false;
 
-		if(_reader.GetCurType() == TT_MINUS)
-			negated = true;
+		if(IsUnop(prefix))
+		{
+			prefixed = true;
+			_reader.Advance();
+		}
 
-		ExpressionResult result = GetSingular(negated ? _reader.Advance() : _reader.GetCurPtr());
+		ExpressionResult result = GetSingular(_reader);
 
 		if(result.success)
 		{
 			TokenReader reader = result.reader;
-			IExpression* factorExpr = negated ? new UnopExpression(result.value, UnopExpression::NEG, pos) : result.value;
+			IExpression* factorExpr = nullptr;
 
-			while(true)
-			{
-				if(reader.GetCurType() == TT_PERIOD)
-				{
-					ExpressionResult accessResult = GetAccess(factorExpr, reader);
-
-					if(accessResult.success)
-					{
-						reader = accessResult.reader;
-						factorExpr = accessResult.value;
-					}
-					else
-					{
-						delete factorExpr;
-						return accessResult;
-					}
-				}
-				else if(reader.GetCurType() == TT_LPAREN)
-				{
-					ExpressionResult funcCallResult = GetFuncCall(factorExpr, reader);
-
-					if(funcCallResult.success)
-					{
-						reader = funcCallResult.reader;
-						factorExpr = funcCallResult.value;
-					}
-					else
-					{
-						delete factorExpr;
-						return funcCallResult;
-					}
-				}
-				else { break; }
-			}
+			if(prefixed) { factorExpr = new UnopExpression(result.value, UnopExpression::TokenTypeToOp(prefix), pos); }
+			else { factorExpr = result.value; }
 
 			return ExpressionResult::GenSuccess(factorExpr, reader.GetCurPtr());
 		}
@@ -363,7 +390,7 @@ ExpressionResult GetExpression(TokenReader _reader)
 		TokenReader reader = leftResult.reader;
 		TokenType tokenType = reader.GetCurType();
 
-		if(tokenType == TT_LT || tokenType == TT_GT || tokenType == TT_LTEQ || tokenType == TT_GTEQ)
+		if(tokenType == TT_LT || tokenType == TT_GT || tokenType == TT_LT_EQ || tokenType == TT_GT_EQ)
 		{
 			reader.Advance();
 			ExpressionResult rightResult = GetBinopExpr(reader);
@@ -422,7 +449,7 @@ StatementResult GetControlFlow(TokenReader _reader)
 
 StatementResult GetAssignment(TokenReader _reader, IExpression* _base)
 {
-	if(_reader.GetCurType() == TT_EQUALS)
+	if(_reader.GetCurType() == TT_EQ)
 	{
 		_reader.Advance();
 		ExpressionResult result = GetExpression(_reader);
@@ -449,7 +476,7 @@ StatementResult GetLet(TokenReader _reader, bool _reqKeyword = true)
 			std::string identifier = reader.current.value;
 			reader.Advance();
 
-			if(reader.GetCurType() == TT_EQUALS)
+			if(reader.GetCurType() == TT_EQ)
 			{
 				reader.Advance();
 
@@ -481,12 +508,18 @@ StatementResult GetDefinition(TokenReader _reader)
 		{
 			reader.Advance();
 
-			if(IsTypeName(reader.GetCurType()))
+			ExpressionResult typeNameResult = GetTypeName(reader);
+
+			if(typeNameResult.success)
 			{
-				MemberDefinition* memDef = new MemberDefinition(identifier, reader.current.value, pos);
-				return StatementResult::GenSuccess(memDef, reader.Advance());
+				reader = typeNameResult.reader;
+				std::string typeName = ((SymbolExpression*)typeNameResult.value)->symbol;
+				delete typeNameResult.value;
+
+				MemberDefinition* memDef = new MemberDefinition(identifier, typeName, pos);
+				return StatementResult::GenSuccess(memDef, reader.GetCurPtr());
 			}
-			else { return StatementResult::GenFailure("Expected typename after :.", reader); }
+			else { return StatementResult::GenFailure(typeNameResult.message, reader); }
 		}
 		else { return StatementResult::GenFailure("Expected : after identifier.", reader); }
 	}
@@ -761,7 +794,7 @@ StatementResult GetFuncDeclaration(TokenReader _reader)
 						std::string retTypeName = reader.current.value;
 						reader.Advance();
 
-						if(reader.GetCurType() == TT_EQUALS)
+						if(reader.GetCurType() == TT_EQ)
 						{
 							reader.Advance();
 
@@ -810,7 +843,7 @@ StatementResult GetTypeDefinition(TokenReader _reader)
 			std::string identifier = reader.current.value;
 			reader.Advance();
 
-			if(reader.GetCurType() == TT_EQUALS)
+			if(reader.GetCurType() == TT_EQ)
 			{
 				reader.Advance();
 
@@ -898,7 +931,7 @@ StatementResult GetStatement(TokenReader _reader)
 	{
 		TokenReader reader = result.reader;
 
-		if(reader.GetCurType() == TT_EQUALS) { return GetAssignment(reader, result.value); }
+		if(reader.GetCurType() == TT_EQ) { return GetAssignment(reader, result.value); }
 		else { return StatementResult::GenSuccess(new ExprStatement(result.value), reader.GetCurPtr()); }
 	}
 	else { return StatementResult::GenFailure(result.message, _reader); }

@@ -1,10 +1,14 @@
 #pragma once
 
-class Interpreter
+struct Interpreter
 {
-public:
 	static std::map<std::string, std::vector<std::string>> SRC_LINES;
+	static std::chrono::time_point<std::chrono::steady_clock> INIT_TIME;
+	static std::string MainFilePath;
+	static Environment* ENV_STD;
 
+	static void Init(const char* _mainFilePath);
+	static void SetStandardEnvironment();
 	static std::string GetSrcLine(std::string _filePath, int _line);
 	static SharedValue RunFile(const char* _path, std::string _name);
 };

@@ -4,11 +4,18 @@
 #include "Parser.h"
 #include "Interpreter.h"
 
-int main()
+int main(int argc, char *argv[])
 {
-	const char* mainFilePath = "C:\\Users\\raysh\\OneDrive\\Desktop\\Ram\\Ram\\Test.ram";
+	if(argc != 2)
+	{
+		std::cout << "Expected one argument to the path of the Ram source file." << std::endl;
+		return 1;
+	}
 
-	SharedValue endVal = Interpreter::RunFile(mainFilePath, "Test");
+	const char* mainFilePath = argv[1];
+
+	Interpreter::Init(mainFilePath);
+	SharedValue endVal = Interpreter::RunFile(mainFilePath, GetFileName(mainFilePath, false));
 
 	if(endVal->GetType() != VEXCEPTION) { std::cout << "Program has exited with code (0)." << std::endl; }
 	else

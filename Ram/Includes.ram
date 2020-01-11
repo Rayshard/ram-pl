@@ -8,10 +8,25 @@ def Student = {
 	age : int;
 	school : string;
 	pet : Animal;
-	parent : Student;
 };
 
-func PrintNum(num:int) : string =
-{
-	print(<string>num);
+func PrintAnimal(animal:Includes.Animal) : void = {
+  let living = "dead";
+
+  if animal.alive then
+    living = "alive";
+
+  print("My name is " + animal.name + " and I am " + living + ".\n");
+  return;
+};
+
+func PrintStudent(student:Includes.Student) : void = {
+  let name = student.name;
+  let age = student.age;
+  let school = student.school;
+
+  print("My name is " + name + " and I am a " + age + " year old student at " + school + ".\n");
+  print("My pet's name is " + student.pet.name + "\n");
+  student.name = "go";
+  return;
 };

@@ -47,12 +47,12 @@ public:
 	static OP TokenTypeToOp(TokenType _type);
 };
 
-inline constexpr int MakeBinop(char _left, char _right, char _op) { return (_left << 16) | (_right << 8) | _op; }
+inline constexpr int MakeBinop(char _left, char _right, char _op) { return (((int)_left) << 16) | (((int)_right) << 8) | _op; }
 
 class UnopExpression : public IExpression
 {
 public:
-	enum OP : char { INC, DEC, NEG, NOT };
+	enum OP : char { INC, DEC, NEG, NOT, BIN_NOT };
 
 private:
 	IExpression* expr;
@@ -68,7 +68,8 @@ public:
 	static OP TokenTypeToOp(TokenType _type);
 };
 
-inline constexpr int MakeUnop(char _factor, char _op) { return (_factor << 8) | _op; }
+inline constexpr short int MakeUnop(char _factor, char _op) { return (((short int)_factor) << 8) | _op; }
+inline constexpr bool IsUnop(TokenType _type) { return _type == TT_NOT || _type == TT_MINUS || _type == TT_BIN_NOT; }
 
 class CastExpression : public IExpression
 {

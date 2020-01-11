@@ -108,9 +108,8 @@ NamedspaceValue::NamedspaceValue(Environment* _env, Position _pos)
 	environment = intrinsicEnv;
 }
 
-NamedspaceValue::~NamedspaceValue() { delete environment; }
 IValue* NamedspaceValue::GetCopy() { return new NamedspaceValue(environment->GetCopy(), _position); }
-TypeSig NamedspaceValue::GetTypeSig() { return "<NAMEDSPACE>" + environment->name; }
+TypeSig NamedspaceValue::GetTypeSig() { return "<NAMEDSPACE>"; }
 std::string NamedspaceValue::ToString() { return "namedspace"; }
 #pragma endregion
 
@@ -163,7 +162,7 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 	if(_argExprs.size() != argNames.size())
 		return SHARE(Exception_WrongNumArgs(argNames.size(), _argExprs.size(), trace));
 
-	Environment env(intrinsicEnv, "<FUNC>"); //Doesn't have to be a ptr because it only needs to exist in this function
+	Environment env(_execEnv, intrinsicEnv->name); //Doesn't have to be a ptr because it only needs to exist in this function
 	env.propReturn = false;
 	env.propBreak = false;
 	env.propContinue = false;
@@ -175,7 +174,7 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 
 		if(argVal->GetType() == VEXCEPTION) { return argVal; }
 		else if(argVal->GetTypeSig() != argSig) { return SHARE(Exception_MismatchType(argSig, argVal->GetTypeSig(), Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
-		else { env.AddVariable(argNames[i], argVal, _execPos); }
+		else { env.AddVariable(argNames[i], SHARE(argVal->GetCopy()), _execPos); }
 	}
 
 	SharedValue retVal(nullptr);

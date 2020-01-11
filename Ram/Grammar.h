@@ -2,8 +2,7 @@
 
 inline bool IsTypeName(TokenType _type)
 {
-	return _type == TT_IDENTIFIER || _type == TT_TYPE_INT || _type == TT_TYPE_FLOAT || 
-		   _type == TT_TYPE_BOOL || _type == TT_TYPE_STRING || _type == TT_VOID;
+	return _type == TT_IDENTIFIER || _type == TT_VOID;
 }
 
 inline bool IsControlFLow(TokenType _type)

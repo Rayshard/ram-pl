@@ -2,6 +2,7 @@
 #include "Lexer.h"
 #include "Interpreter.h"
 
+#pragma region Token
 Token::Token()
 {
 	type = TT_INVALID;
@@ -51,7 +52,7 @@ std::string Token::ToString()
 		case TT_DIVIDE:
 			return "DIVIDE";
 			break;
-		case TT_EQUALS:
+		case TT_EQ:
 			return "EQUALS";
 			break;
 		case TT_IF:
@@ -83,7 +84,9 @@ std::string Token::ToString()
 			break;
 	}
 }
+#pragma endregion
 
+#pragma region TokenReader
 TokenReader::TokenReader()
 {
 	tokens = 0;
@@ -110,6 +113,7 @@ Token* TokenReader::GetCurPtr() { return tokens + index; }
 TokenType TokenReader::GetCurType() { return current.type; }
 Position TokenReader::GetCurPosition() { return current.position; }
 bool TokenReader::AtEOF() { return current.type == TT_ENDOFFILE; }
+#pragma endregion
 
 TokenResult TokenizeStringLiteral(char* _chars, int& _offset, int _line, int _col)
 {
@@ -233,11 +237,6 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		else if(word == "let") { type = TT_LET; }
 		else if(word == "true") { type = TT_TRUE; }
 		else if(word == "false") { type = TT_FALSE; }
-		else if(word == "void") { type = TT_VOID; }
-		else if(word == "int") { type = TT_TYPE_INT; }
-		else if(word == "float") { type = TT_TYPE_FLOAT; }
-		else if(word == "string") { type = TT_TYPE_STRING; }
-		else if(word == "bool") { type = TT_TYPE_BOOL; }
 		else if(word == "for") { type = TT_FOR; }
 		else if(word == "then") { type = TT_THEN; }
 		else if(word == "finally") { type = TT_FINALLY; }
@@ -252,6 +251,77 @@ TokenResult TokenizeWord(char* _chars, int& _offset, int _line, int _col)
 		_offset = offset;
 		return TokenResult::GenSuccess((type == TT_IDENTIFIER || IsTypeName(type)) ? Token(type, _line, _col, word) : Token(type, _line, _col));
 	}
+}
+
+std::pair<TokenType, int> MatchChars(char* _chars)
+{
+	char c1 = _chars[0];
+	char c2 = c1 == 0 ? 0 : _chars[1];
+	char c3 = c2 == 0 ? 0 : _chars[2];
+
+	TokenType charType = TT_INVALID;
+	int len = 1;
+
+	switch(c1)
+	{
+		case ';': charType = TT_SEMICOLON; break;
+		case '.': charType = TT_PERIOD; break;
+		case ':': charType = TT_COLON; break;
+		case ',': charType = TT_COMMA; break;
+		case '(': charType = TT_LPAREN; break;
+		case ')': charType = TT_RPAREN; break;
+		case '{': charType = TT_LBRACKET; break;
+		case '}': charType = TT_RBRACKET; break;
+		case '~': charType = TT_BIN_NOT; break;
+
+		case '+': if(c2 == '=') { len++; charType = TT_PLUS_EQ; }
+				  else if(c2 == '+') { len++; charType = TT_INC; }
+				  else charType = TT_PLUS; break;
+		case '-': if(c2 == '=') { len++; charType = TT_MINUS_EQ; }
+				  else if(c2 == '-') { len++; charType = TT_DEC; }
+				  else charType = TT_MINUS; break;
+		case '&': if(c2 == '=') { len++; charType = TT_BIN_AND_EQ; }
+				  else if(c2 == '&') { len++; charType = TT_BOOL_AND; }
+				  else charType = TT_BIN_AND; break;
+		case '|': if(c2 == '=') { len++; charType = TT_BIN_OR_EQ; }
+				  else if(c2 == '|') { len++; charType = TT_BOOL_OR; }
+				  else charType = TT_BIN_OR; break;
+
+		case '=': if(c2 == '=') { len++; charType = TT_EQ_EQ; }
+				  else { charType = TT_EQ; } break;
+		case '!': if(c2 == '=') { len++; charType = TT_NEQ; }
+				  else { charType = TT_NOT; } break;
+		case '*': if(c2 == '=') { len++; charType = TT_TIMES_EQ; }
+				  else { charType = TT_TIMES; } break;
+		case '/': if(c2 == '=') { len++; charType = TT_DIVIDE_EQ; }
+				  else { charType = TT_DIVIDE; } break;
+		case '^': if(c2 == '=') { len++; charType = TT_BIN_XOR_EQ; }
+				  else if(c2 == '^')
+		{
+			if(c3 == '=') { len += 2; charType = TT_POW_EQ; }
+			else { len++; charType = TT_POW; }
+		}
+				  else { charType = TT_BIN_XOR; } break;
+		case '%': if(c2 == '=') { len++;  charType = TT_MOD_EQ; }
+				  else { charType = TT_MOD; } break;
+		case '<': if(c2 == '=') { len++; charType = TT_LT_EQ; }
+				  else if(c2 == '<')
+		{
+			if(c3 == '=') { len += 2; charType = TT_SHIFT_LEFT_EQ; }
+			else { len++; charType = TT_SHIFT_LEFT; }
+		}
+				  else { charType = TT_LT; } break;
+		case '>': if(c2 == '=') { len++; charType = TT_GT_EQ; }
+				  else if(c2 == '>')
+		{
+			if(c3 == '=') { len += 2; charType = TT_SHIFT_RIGHT_EQ; }
+			else { len++; charType = TT_SHIFT_RIGHT; }
+		}
+				  else { charType = TT_GT; } break;
+		default: charType = TT_INVALID; break;
+	}
+
+	return std::pair<TokenType, int>(charType, len);
 }
 
 TokensResult Tokenize(char* _srcChars, int _srcLength)
@@ -283,132 +353,6 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 			} break;
 			case ' ': { column++; } break;
 			case '\t': { column += 4; } break;
-			case ';': {
-				tokens.push_back(Token(TT_SEMICOLON, line, column));
-				column++;
-			} break;
-			case '+': {
-				if(lookAheadChar == '+')
-				{
-					tokens.push_back(Token(TT_INC, line, column));
-					i++;
-					column += 2;
-				}
-				else if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_PLUSEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_PLUS, line, column));
-					column++;
-				}
-			} break;
-			case '-': {
-				if(lookAheadChar == '-')
-				{
-					tokens.push_back(Token(TT_DEC, line, column));
-					i++;
-					column += 2;
-				}
-				else if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_MINUSEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_MINUS, line, column));
-					column++;
-				}
-			} break;
-			case '*': {
-				tokens.push_back(Token(TT_TIMES, line, column));
-				column++;
-			} break;
-			case '/': {
-				tokens.push_back(Token(TT_DIVIDE, line, column));
-				column++;
-			} break;
-			case ':': {
-				tokens.push_back(Token(TT_COLON, line, column));
-				column++;
-			} break;
-			case ',': {
-				tokens.push_back(Token(TT_COMMA, line, column));
-				column++;
-			} break;
-			case '=': {
-				if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_EQEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_EQUALS, line, column));
-					column++;
-				}
-			} break;
-			case '(': {
-				tokens.push_back(Token(TT_LPAREN, line, column));
-				column++;
-			} break;
-			case ')': {
-				tokens.push_back(Token(TT_RPAREN, line, column));
-				column++;
-			} break;
-			case '{': {
-				tokens.push_back(Token(TT_LBRACKET, line, column));
-				column++;
-			} break;
-			case '}': {
-				tokens.push_back(Token(TT_RBRACKET, line, column));
-				column++;
-			} break;
-			case '<': {
-				if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_LTEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_LT, line, column));
-					column++;
-				}
-			} break;
-			case '>': {
-				if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_GTEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_GT, line, column));
-					column++;
-				}
-			} break;
-			case '!': {
-				if(lookAheadChar == '=')
-				{
-					tokens.push_back(Token(TT_NEQ, line, column));
-					i++;
-					column += 2;
-				}
-				else
-				{
-					tokens.push_back(Token(TT_NOT, line, column));
-					column++;
-				}
-			} break;
 			case '"': {
 				char* startChar = _srcChars + i + 1;
 				int offset = 0;
@@ -421,26 +365,33 @@ TokensResult Tokenize(char* _srcChars, int _srcLength)
 					column += offset + 2;
 				}
 			} break;
-			case '.': {
-				tokens.push_back(Token(TT_PERIOD, line, column));
-				column++;
-			} break;
 			case '#': {
 				commentLine = true;
 			} break;
 			default: {
 				char* startChar = _srcChars + i;
-				int offset = 0;
+				auto charTokenType = MatchChars(startChar);
 
-				if(isdigit(curChar)) { finalResult = TokenizeNumberLiteral(startChar, offset, line, column); }
-				else if(curChar == '_' || isalpha(curChar)) { finalResult = TokenizeWord(startChar, offset, line, column); }
-				else { finalResult = TokenResult::GenFailure("Tokenizing Error: Invalid character encountered", Position(line, column)); }
-
-				if(finalResult.success)
+				if(charTokenType.first != TT_INVALID)
 				{
-					tokens.push_back(finalResult.value);
-					i += offset - 1;
-					column += offset;
+					tokens.push_back(Token(charTokenType.first, line, column));
+					column += charTokenType.second;
+					i += charTokenType.second - 1;
+				}
+				else
+				{
+					int offset = 0;
+
+					if(isdigit(curChar)) { finalResult = TokenizeNumberLiteral(startChar, offset, line, column); }
+					else if(curChar == '_' || isalpha(curChar)) { finalResult = TokenizeWord(startChar, offset, line, column); }
+					else { finalResult = TokenResult::GenFailure("Tokenizing Error: Invalid character encountered", Position(line, column)); }
+
+					if(finalResult.success)
+					{
+						tokens.push_back(finalResult.value);
+						i += offset - 1;
+						column += offset;
+					}
 				}
 			} break;
 		}

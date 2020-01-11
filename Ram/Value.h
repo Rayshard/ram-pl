@@ -43,6 +43,7 @@ public:
 };
 
 inline IValue* Exception_CompilationError(std::string _msg, Trace _trace) { return new ExceptionValue("Compilation Error", _msg, _trace); }
+inline IValue* Exception_File(std::string _msg, Trace _trace) { return new ExceptionValue("File Error", _msg, _trace); }
 inline IValue* Exception_SymbolNotFound(std::string _symbolName, Trace _trace) { return new ExceptionValue("Symbol Not Found", "The symbol \"" + _symbolName + "\" does not exist.", _trace); }
 inline IValue* Exception_SymbolInUse(std::string _symbolName, Trace _trace) { return new ExceptionValue("Symbol In Use", "The symbol \"" + _symbolName + "\" is in use.", _trace); }
 inline IValue* Exception_MismatchType(TypeName _org, TypeName _mismatch, Trace _trace) { return new ExceptionValue("Mismatch Type", "Cannot assign " + _mismatch + " to variable of type " + _org, _trace); }
@@ -50,6 +51,7 @@ inline IValue* Exception_InvalidOperation(std::string _msg, Trace _trace) { retu
 inline IValue* Exception_DivisionByZero(Trace _trace) { return new ExceptionValue("Division By Zero", "Cannot divide by 0.", _trace); }
 inline IValue* Exception_WrongNumArgs(int _org, int _passed, Trace _trace) { return new ExceptionValue("Wrong Number of Arguments", std::to_string(_org) + " arguments(s) were expected but " + std::to_string(_passed) + " were given.", _trace); }
 inline IValue* Exception_MissingReturn(Trace _trace) { return new ExceptionValue("Missing Return", "A return statement is needed.", _trace); }
+inline IValue* Exception_Format(std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Format", _msg, _trace); }
 
 class VoidValue : public IValue
 {
@@ -82,7 +84,6 @@ public:
 	Environment* environment;
 
 	NamedspaceValue(Environment* _env, Position _pos);
-	~NamedspaceValue();
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();

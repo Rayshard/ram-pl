@@ -1,40 +1,32 @@
-#include "Includes.ram";
+include("Includes.ram", "Includes", false);
 
-def Animal = { name : string; alive : bool };
-def Student = {	name : string; age : int; school : string; pet : Animal };
+let startTime = time();
 
-func CallNum(num:int) : int =
-{
-	if num > 5 then {
-		return num;
-	}
-	else {
-		let cnt = 0;
+func Factorial(num:int) : int = {
+  func helper(num:int, acc:int) : int =
+    if(num <= 0) then acc
+    else helper(num - 1, acc * num);
 
-	while true do
-    {
-			cnt = cnt + 1;
-			if cnt >= 0.5 then
-			  break;
-		};
-
-		return cnt;
-	};
+  return helper(num, 1);
 };
 
-func Factorial(num:int) : int =
-{
-	func helper(num:int, acc:int) : int = if(num <= 0) then acc	else helper(num - 1, acc * num);
-
-	return helper(num, 1);
+let student = {
+  name = "ray";
+  age = 21;
+  school = "Cornell University";
+  pet = { name = "Sidney"; alive = true }
 };
 
-let name = "Ray"; let age = 21; let school = "Cornell University";
-let student = {	name = name; age = age;	school = school; pet = { name = "Sidney"; alive = true } };
 let dog = student.pet;
 
-print("My name is " + student.name + " and I am a " + age + " year old student at " + school + ".\n");
-print("My pet's name is " + student.pet.name + "\n");
+unscope(Includes);
+PrintStudent(student);
+PrintStudent(student);
+PrintAnimal(dog);
 
-print(<string>Factorial(10));
-print("\n\n");
+let facVal = Factorial(5);
+print(<string>(facVal--));
+print("\n");
+
+let endTime = time();
+print("This program ran in " + getElapsedTime(startTime, endTime, "s") + " seconds!\n");

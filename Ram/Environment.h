@@ -1,28 +1,32 @@
 #pragma once
 
+class NamedspaceValue;
+
 class Environment
 {
 private:
-	std::map<std::string, SharedValue> variables;
-	TypeSigMap typeDefs;
-	std::map<std::string, SharedValue> funcDecls;
-	std::map<std::string, SharedValue> namedspaces;
+	enum ValueType { VARIABLE, FUNC_DECL, NAMEDSPACE };
 
-	Environment(Environment* _parent, std::string _name, std::string _filePath, std::map<std::string, SharedValue> _variables, TypeSigMap _typeDefs, std::map<std::string, SharedValue> _funcDecls, std::map<std::string, SharedValue> _namedspaces);
+	std::map<ValueType, std::map<std::string, SharedValue>> values;
+
+	Environment(Environment* _parent, std::string _name, std::string _filePath, TypeSigMap _typeDefs, std::map<ValueType, std::map<std::string, SharedValue>> _values);
+	
+	SharedValue AddValue(ValueType _type, std::string _identifier, SharedValue _val, Position _execPos);
 public:
-	std::string name;
-	std::string filePath;
-	bool propReturn, propBreak, propContinue;
-
 	static Environment* GLOBAL;
 
 	Environment* parent;
+	TypeSigMap typeDefs;
+
+	std::string name;
+	std::string filePath;
+	bool propReturn, propBreak, propContinue;
 
 	Environment(Environment* _parent, std::string _name, std::string _filePath);
 	Environment(Environment* _parent, std::string _name);
 	~Environment();
 
-	void Clear(Environment* _newParent);
+	void Clear();
 
 	bool IsVariable(std::string _identifier, bool _checkParent);
 	bool IsTypeName(std::string _identifier, bool _checkParent);
@@ -30,13 +34,13 @@ public:
 	bool IsNamedspace(std::string _identifier, bool _checkParent);
 	bool SymbolExists(std::string _symbol, bool _checkVariables, bool _checkTypeNames, bool _checkFuncDecls, bool _checkNamedSpaces, bool _checkParent);
 
-	SharedValue AddVariable(std::string _identifier, SharedValue _val, Position _execPos);
 	SharedValue AddTypeDefinition(TypeName _typeName, DefinitionMap& _typeDefs, Position _execPos);
+	SharedValue AddVariable(std::string _id, SharedValue _val, Position _execPos);
 	SharedValue AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos);
-	SharedValue AddNamedspace(Environment* _ns, Position _execPos);
+	SharedValue AddNamedspace(Environment* _ns, Position _execPos, bool _openName);
 
-	SharedValue SetValue(std::string _identifier, SharedValue _val, Position _execPos);
 	SharedValue GetValue(std::string _identifier, Position _execPos, bool _checkParent);
+	SharedValue OpenNamedspace(NamedspaceValue* _nsVal, Position _execPos);
 	SharedValue GetTypeSig(TypeName _typeName, Position _execPos);
 
 	Environment* GetCopy();

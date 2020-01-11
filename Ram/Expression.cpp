@@ -194,33 +194,15 @@ BinopExpression::OP BinopExpression::TokenTypeToOp(TokenType _type)
 {
 	switch(_type)
 	{
-		case TT_PLUS:
-			return BinopExpression::ADD;
-			break;
-		case TT_MINUS:
-			return BinopExpression::SUBTRACT;
-			break;
-		case TT_TIMES:
-			return BinopExpression::MULTIPY;
-			break;
-		case TT_DIVIDE:
-			return BinopExpression::DIVIDE;
-			break;
-		case TT_LT:
-			return BinopExpression::LT;
-			break;
-		case TT_GT:
-			return BinopExpression::GT;
-			break;
-		case TT_LTEQ:
-			return BinopExpression::LTEQ;
-			break;
-		case TT_GTEQ:
-			return BinopExpression::GTEQ;
-			break;
-		default:
-			throw std::invalid_argument("Incorrect Token Type");
-			break;
+		case TT_PLUS: return BinopExpression::ADD;
+		case TT_MINUS: return BinopExpression::SUBTRACT;
+		case TT_TIMES: return BinopExpression::MULTIPY;
+		case TT_DIVIDE: return BinopExpression::DIVIDE;
+		case TT_LT: return BinopExpression::LT;
+		case TT_GT: return BinopExpression::GT;
+		case TT_LT_EQ: return BinopExpression::LTEQ;
+		case TT_GT_EQ: return BinopExpression::GTEQ;
+		default: throw std::invalid_argument("Incorrect Token Type");
 	}
 }
 #pragma endregion
@@ -237,27 +219,34 @@ UnopExpression::~UnopExpression() { delete expr; }
 
 SharedValue UnopExpression::Evaluate(Environment* _env)
 {
-	SharedValue eExpr = expr->Evaluate(_env);
+	SharedValue val = expr->Evaluate(_env);
 
-	if(eExpr->GetType() == VEXCEPTION)
-		return eExpr;
+	if(val->GetType() == VEXCEPTION)
+		return val;
 
 	IValue* result = 0;
 
-	switch(MakeUnop(eExpr->GetType(), operation))
+	switch(MakeUnop(val->GetType(), operation))
 	{
-		case MakeUnop(VINT, NEG): result = new IntValue(-eExpr->AsInt()->value, _position); break;
-		case MakeUnop(VFLOAT, NEG): result = new FloatValue(-eExpr->AsFloat()->value, _position); break;
-		case MakeUnop(VINT, INC): result = new IntValue(eExpr->AsInt()->value + 1, _position); break;
-		case MakeUnop(VFLOAT, INC): result = new FloatValue(eExpr->AsFloat()->value + 1, _position); break;
-		case MakeUnop(VINT, DEC): result = new IntValue(eExpr->AsInt()->value - 1, _position); break;
-		case MakeUnop(VFLOAT, DEC): result = new IntValue(eExpr->AsFloat()->value - 1, _position); break;
-		case MakeUnop(VBOOL, NOT): result = new BoolValue(!eExpr->AsBool(), _position); break;
+		case MakeUnop(VINT, NEG): result = new IntValue(-val->AsInt()->value, _position); break;
+		case MakeUnop(VFLOAT, NEG): result = new FloatValue(-val->AsFloat()->value, _position); break;
+		case MakeUnop(VINT, INC): result = new IntValue(val->AsInt()->value + 1, _position); break;
+		case MakeUnop(VFLOAT, INC): result = new FloatValue(val->AsFloat()->value + 1, _position); break;
+		case MakeUnop(VINT, DEC): result = new IntValue(val->AsInt()->value - 1, _position); break;
+		case MakeUnop(VFLOAT, DEC): result = new IntValue(val->AsFloat()->value - 1, _position); break;
+		case MakeUnop(VBOOL, NOT): result = new BoolValue(!val->AsBool(), _position); break;
+		case MakeUnop(VINT, BIN_NOT): result = new IntValue(-val->AsInt()->value, _position); break;
+		case MakeUnop(VFLOAT, BIN_NOT): result = new FloatValue(-val->AsFloat()->value, _position); break;
+		
 		default: return SHARE(Exception_InvalidOperation("Cannot perform operation on this type.", Trace(_position, _env->name, _env->filePath)));
 	}
 
 	if(operation == NEG || operation == NOT) { return SHARE(result); }
-	else { return eExpr->Set(_env, result, _position); }
+	else
+	{
+		val->Set(_env, result, _position);
+		return SHARE(val->GetCopy());
+	}
 }
 
 IExpression* UnopExpression::GetCopy() { return new UnopExpression(expr->GetCopy(), operation, _position); }
@@ -270,6 +259,7 @@ UnopExpression::OP UnopExpression::TokenTypeToOp(TokenType _type)
 		case TT_DEC: return UnopExpression::DEC;
 		case TT_MINUS: return UnopExpression::NEG;
 		case TT_NOT: return UnopExpression::NOT;
+		case TT_BIN_NOT: return UnopExpression::BIN_NOT;
 		default: throw std::invalid_argument("Incorrect Token Type");
 	}
 }

@@ -32,8 +32,8 @@ BINOP_MULTIPLY = TIMES | DIVIDE
 term = factor (BINOP_MULTIPLY term)
 
 factor =
-	| (MINUS)? singular ((PERIOD IDENTIFIER) | argInlist)*
-	| LT IDENTIFIER GT factor
+	| (MINUS)? singular
+	| LT IDENTIFIER GT factor									// Cast Expression
 
 singular =
 	| LPAREN expr RPAREN
@@ -44,6 +44,7 @@ singular =
 	| STRING_LIT
 	| "true"
 	| "false"
+	| singular PERIOD (IDENTIFIER | argInlist)
 
 membered = <LBRACKET (assigment SEMICOLON)+ RBRACKET>
 
