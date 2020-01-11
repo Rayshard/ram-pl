@@ -97,16 +97,22 @@ void Interpreter::SetStandardEnvironment()
 	//Include
 	FuncValue::built_in include_body = [trace](Environment* _env, Position _execPos)
 	{
-		const char* filePath = _env->GetValue("filePath", _execPos, false)->AsString()->value.c_str();
+		std::string filePath = _env->GetValue("filePath", _execPos, false)->AsString()->value;
 
-		if(!FileExists(filePath) && !FileExists((Interpreter::MainFilePath + SYS_SEP + filePath).c_str()))
-			return SHARE(Exception_File("File at " + std::string(filePath) + " does not exist!", trace));
+		if(!FileExists(filePath.c_str()))
+		{
+			if(FileExists((GetFileDir(Interpreter::MainFilePath) + SYS_SEP + filePath).c_str()))
+			{
+				filePath = (GetFileDir(Interpreter::MainFilePath) + filePath).c_str();
+			}
+			else { return SHARE(Exception_File("File at " + std::string(filePath) + " does not exist!", trace)); }
+		}
 
 		std::string namedSpaceName = _env->GetValue("name", _execPos, false)->ToString();
 
 		Environment* prevGlobal = Environment::GLOBAL; // Keep copy of calling file's environment to return to when finished
-		SharedValue retVal = Interpreter::RunFile(filePath, namedSpaceName); // The sets the global environment to the file begin run
-		
+		SharedValue retVal = Interpreter::RunFile(filePath.c_str(), namedSpaceName); // The sets the global environment to the file begin run
+
 		if(retVal->GetType() != VEXCEPTION)
 		{
 			bool openNamedspace = _env->GetValue("open", _execPos, false)->AsBool()->value;
