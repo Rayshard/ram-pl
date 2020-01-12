@@ -149,3 +149,17 @@ public:
 	SharedValue Evaluate(Environment* _env);
 	IExpression* GetCopy();
 };
+
+class ArrayIndexExpression : public IExpression
+{
+private:
+	IExpression* base;
+	IExpression* indexExpr;
+
+public:
+	ArrayIndexExpression(IExpression* _base, IExpression* _indexExpr, Position _pos);
+	~ArrayIndexExpression();
+
+	SharedValue Evaluate(Environment* _env);
+	IExpression* GetCopy();
+};

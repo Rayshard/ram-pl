@@ -2,7 +2,9 @@ def Something = {
   array : [int]
 };
 
-let myArray = [5];
-myArray.add(7);
+let object = { array = [5, 2] };
+print(<string>object.array[0] + "\n");
+print(<string>object.array[1] + "\n");
+print("Hello"[5] + "\n");
 
 printEnv();

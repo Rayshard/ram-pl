@@ -35,10 +35,10 @@ void Interpreter::SetStandardEnvironment()
 	FuncValue::built_in print_body = [](Environment* _env, Position _execPos)
 	{
 		std::cout << _env->GetValue("arg", _execPos, false)->ToString();
-		return SHARE(new VoidValue(_execPos));
+		return SHARE_VOID(_execPos);
 	};
 	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ "<STRING>" });
-	SharedValue func_print = SHARE(new FuncValue(env, print_body, print_argNames, print_argSigs, "<VOID>", Position()));
+	SharedValue func_print = SHARE(new FuncValue(env, "print", print_body, print_argNames, print_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("print", func_print, Position());
 
@@ -50,7 +50,7 @@ void Interpreter::SetStandardEnvironment()
 		return SHARE(new StringValue(input, _execPos));
 	};
 	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ "<STRING>" });
-	SharedValue func_getInput = SHARE(new FuncValue(env, getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position()));
+	SharedValue func_getInput = SHARE(new FuncValue(env, "getInput", getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position()));
 
 	env->AddFuncDeclaration("getInput", func_getInput, Position());
 
@@ -61,7 +61,7 @@ void Interpreter::SetStandardEnvironment()
 		return SHARE(new StringValue(std::to_string((time - Interpreter::INIT_TIME).count()), _execPos));
 	};
 	std::vector<std::string> time_argNames({}), time_argSigs({});
-	SharedValue func_time = SHARE(new FuncValue(env, time_body, time_argNames, time_argSigs, "<STRING>", Position()));
+	SharedValue func_time = SHARE(new FuncValue(env, "time", time_body, time_argNames, time_argSigs, "<STRING>", Position()));
 
 	env->AddFuncDeclaration("time", func_time, Position());
 
@@ -90,7 +90,7 @@ void Interpreter::SetStandardEnvironment()
 		return SHARE(new StringValue(std::to_string(elapsed), _execPos));
 	};
 	std::vector<std::string> getElapsedTime_argNames({ "start", "end", "precision" }), getElapsedTime_ardSigs({ "<STRING>", "<STRING>", "<STRING>" });
-	SharedValue func_getElapsedTime = SHARE(new FuncValue(env, getElapsedTime_body, getElapsedTime_argNames, getElapsedTime_ardSigs, "<STRING>", Position()));
+	SharedValue func_getElapsedTime = SHARE(new FuncValue(env, "getElapsedTime", getElapsedTime_body, getElapsedTime_argNames, getElapsedTime_ardSigs, "<STRING>", Position()));
 
 	env->AddFuncDeclaration("getElapsedTime", func_getElapsedTime, Position());
 
@@ -130,7 +130,7 @@ void Interpreter::SetStandardEnvironment()
 		return retVal;
 	};
 	std::vector<std::string> include_argNames({ "filePath", "name", "open" }), include_argSigs({ "<STRING>", "<STRING>", "<BOOL>" });
-	SharedValue func_include = SHARE(new FuncValue(env, include_body, include_argNames, include_argSigs, "<VOID>", Position()));
+	SharedValue func_include = SHARE(new FuncValue(env, "include", include_body, include_argNames, include_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("include", func_include, Position());
 
@@ -141,7 +141,7 @@ void Interpreter::SetStandardEnvironment()
 		return _env->parent->OpenNamedspace(ns->AsNamedspace(), _execPos);
 	};
 	std::vector<std::string> unscope_argNames({ "namedspace" }), unscope_argSigs({ "<NAMEDSPACE>" });
-	SharedValue func_unscope = SHARE(new FuncValue(env, unscope_body, unscope_argNames, unscope_argSigs, "<VOID>", Position()));
+	SharedValue func_unscope = SHARE(new FuncValue(env, "unscope", unscope_body, unscope_argNames, unscope_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("unscope", func_unscope, Position());
 
@@ -152,7 +152,7 @@ void Interpreter::SetStandardEnvironment()
 		return SHARE_VOID(_execPos);
 	};
 	std::vector<std::string> printEnv_argNames({}), printEnv_argSigs({});
-	SharedValue func_printEnv = SHARE(new FuncValue(env, printEnv_body, printEnv_argNames, printEnv_argSigs, "<VOID>", Position()));
+	SharedValue func_printEnv = SHARE(new FuncValue(env, "printEnv", printEnv_body, printEnv_argNames, printEnv_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("printEnv", func_printEnv, Position());
 #pragma endregion
@@ -194,7 +194,7 @@ SharedValue Interpreter::RunFile(const char* _path, std::string _name)
 				program.createSubEnv = false;
 				endVal = program.Execute(Environment::GLOBAL);
 			}
-			else { endVal = SHARE(new VoidValue(Position())); }
+			else { endVal = SHARE_VOID(Position()); }
 
 			std::cout << "Exited Running " + path << std::endl << std::endl;
 			return endVal;

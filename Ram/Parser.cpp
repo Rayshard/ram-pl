@@ -75,6 +75,40 @@ ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
 	else { return ExpressionResult::GenFailure("Expected '('.", _reader); }
 }
 
+ExpressionResult GetArrayIndex(IExpression* _base, TokenReader _reader)
+{
+	if(_reader.GetCurType() == TT_LSQRBRACKET)
+	{
+		Position pos = _reader.GetCurPosition();
+		TokenReader reader = TokenReader(_reader.Advance());
+		std::vector<IExpression*> argExprs;
+
+		if(reader.GetCurType() != TT_RSQRBRACKET) // Needs at least on arg
+		{
+			ExpressionResult indexExpr = GetExpression(reader);
+
+			if(indexExpr.success)
+			{
+				reader = indexExpr.reader;
+
+				if(reader.GetCurType() == TT_RSQRBRACKET)
+				{
+					ArrayIndexExpression* arrayIndexExpr = new ArrayIndexExpression(_base, indexExpr.value, pos);
+					return ExpressionResult::GenSuccess(arrayIndexExpr, reader.Advance());
+				}
+				else
+				{
+					delete indexExpr.value;
+					return ExpressionResult::GenFailure("Expected ']'.", reader);
+				}
+			}
+			else { return indexExpr; }
+		}
+		else { return ExpressionResult::GenFailure("Expected index expression.", reader); }
+	}
+	else { return ExpressionResult::GenFailure("Expected '['.", _reader); }
+}
+
 ExpressionResult GetAccess(IExpression* _base, TokenReader _reader)
 {
 	if(_reader.GetCurType() == TT_PERIOD)
@@ -264,9 +298,10 @@ ExpressionResult GetSingular(TokenReader _reader)
 		else if(token.type == TT_STRING_LIT) { expr = new ValueExpression(new StringValue(token.value, token.position)); }
 		else if(token.type == TT_TRUE) { expr = new ValueExpression(new BoolValue(true, token.position)); }
 		else if(token.type == TT_FALSE) { expr = new ValueExpression(new BoolValue(false, token.position)); }
-		else { return ExpressionResult::GenFailure("Value could not be parsed.", _reader); }
+		else { result = ExpressionResult::GenFailure("Value could not be parsed.", _reader); }
 
-		return ExpressionResult::GenSuccess(expr, _reader.Advance());
+		if(expr)
+			result = ExpressionResult::GenSuccess(expr, _reader.Advance());
 	}
 
 	if(!result.success)
@@ -275,40 +310,26 @@ ExpressionResult GetSingular(TokenReader _reader)
 	TokenReader reader = result.reader;
 	IExpression* singular = result.value;
 
-	// Get As an Access Expression if there are accessed members that follow 
+	// Get as an Access Expression if there are accessed members that follow 
 	while(true)
 	{
-		if(reader.GetCurType() == TT_PERIOD)
-		{
-			ExpressionResult accessResult = GetAccess(singular, reader);
+		ExpressionResult result = ExpressionResult::GenFailure("", reader);
 
-			if(accessResult.success)
-			{
-				reader = accessResult.reader;
-				singular = accessResult.value;
-			}
-			else
-			{
-				delete singular;
-				return accessResult;
-			}
-		}
-		else if(reader.GetCurType() == TT_LPAREN)
-		{
-			ExpressionResult funcCallResult = GetFuncCall(singular, reader);
-
-			if(funcCallResult.success)
-			{
-				reader = funcCallResult.reader;
-				singular = funcCallResult.value;
-			}
-			else
-			{
-				delete singular;
-				return funcCallResult;
-			}
-		}
+		if(reader.GetCurType() == TT_PERIOD) { result = GetAccess(singular, reader); }
+		else if(reader.GetCurType() == TT_LPAREN) { result = GetFuncCall(singular, reader); }
+		else if(reader.GetCurType() == TT_LSQRBRACKET) { result = GetArrayIndex(singular, reader); }
 		else { break; }
+
+		if(result.success)
+		{
+			reader = result.reader;
+			singular = result.value;
+		}
+		else
+		{
+			delete singular;
+			return result;
+		}
 	}
 
 	if(reader.GetCurType() == TT_INC)
@@ -574,7 +595,7 @@ StatementResult GetDefinition(TokenReader _reader)
 			if(typeNameResult.success)
 			{
 				reader = typeNameResult.reader;
-				
+
 				MemberDefinition* memDef = new MemberDefinition(identifier, typeName, pos);
 				return StatementResult::GenSuccess(memDef, reader.GetCurPtr());
 			}

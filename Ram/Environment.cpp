@@ -70,7 +70,7 @@ SharedValue Environment::AddValue(ValueType _type, std::string _id, SharedValue 
 		else if(_type == FUNC_DECL) { values[FUNC_DECL].insert_or_assign(scopedID, _val); }
 		else if(_type == NAMEDSPACE) { values[NAMEDSPACE].insert_or_assign(scopedID, _val); }
 
-		return SHARE(new VoidValue(_execPos));
+		return SHARE_VOID(_execPos);
 	}
 }
 
@@ -107,7 +107,7 @@ SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _m
 #pragma endregion
 
 		typeDefs.insert_or_assign(scopedTypeName, typeSig);
-		return SHARE(new VoidValue(_execPos));
+		return SHARE_VOID(_execPos);
 	}
 }
 
@@ -171,7 +171,7 @@ SharedValue Environment::OpenNamedspace(NamedspaceValue* _nsVal, Position _execP
 		}
 	}
 
-	return SHARE(new VoidValue(_execPos));
+	return SHARE_VOID(_execPos);
 }
 
 SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
@@ -202,7 +202,7 @@ Environment* Environment::GetCopy()
 		copyVals[it.first] = std::map<std::string, SharedValue>();
 
 		for(auto it2 : it.second)
-			copyVals[it.first].insert_or_assign(it2.first, SHARE(it2.second->GetCopy()));
+			copyVals[it.first].insert_or_assign(it2.first, SHARE_COPY(it2.second));
 	}
 
 	return new Environment(parent, name, filePath, typeDefs, copyVals);

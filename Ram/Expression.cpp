@@ -7,7 +7,7 @@ IExpression::IExpression(Position _pos, ExpressionType _type) : _position(_pos),
 IExpression::~IExpression() {}
 
 #pragma region ValueExpression
-ValueExpression::ValueExpression(IValue* _val) : IExpression(_val->_position, EVALUE) { value = SHARE(_val); }
+ValueExpression::ValueExpression(IValue* _val) : IExpression(_val->position, EVALUE) { value = SHARE(_val); }
 SharedValue ValueExpression::Evaluate(Environment* _env) { return value; }
 IExpression* ValueExpression::GetCopy() { return new ValueExpression(value->GetCopy()); }
 #pragma endregion
@@ -245,7 +245,7 @@ SharedValue UnopExpression::Evaluate(Environment* _env)
 	else
 	{
 		val->Set(_env, result, _position);
-		return SHARE(val->GetCopy());
+		return SHARE_COPY(val);
 	}
 }
 
@@ -292,15 +292,7 @@ SharedValue CastExpression::Evaluate(Environment* _env)
 
 		if(func->GetType() == VEXCEPTION) { return func; }
 		else if(func->GetType() != VFUNC) { return SHARE(Exception_MismatchType(castFuncSig, func->GetTypeSig(), trace)); }
-		else
-		{
-			SharedValue retVal = func->AsFunc()->Call(_env, argExprs, _position);
-
-			if(retVal->GetType() == VEXCEPTION)
-				retVal->AsException()->ExtendStackTrace(trace);
-
-			return retVal;
-		}
+		else { return func->AsFunc()->Call(_env, argExprs, _position); }
 	}
 }
 
@@ -333,7 +325,7 @@ SharedValue MemberedExpression::Evaluate(Environment* _env)
 		// When the exprs are evaluated, they don't have access to the 
 		// members being created along side them that's why I use
 		// _creationEnv instead of membersEnv;
-		SharedValue val = SHARE(it.second->Evaluate(_env)->GetCopy());
+		SharedValue val = SHARE_COPY(it.second->Evaluate(_env));
 
 		if(val->GetType() == VEXCEPTION)
 		{
@@ -378,7 +370,7 @@ ArrayExpression::~ArrayExpression()
 
 SharedValue ArrayExpression::Evaluate(Environment* _env)
 {
-	SharedValue firstVal = SHARE(elemExprs[0]->Evaluate(_env)->GetCopy());
+	SharedValue firstVal = SHARE_COPY(elemExprs[0]->Evaluate(_env));
 
 	if(firstVal->GetType() == VEXCEPTION)
 		return firstVal;
@@ -386,9 +378,9 @@ SharedValue ArrayExpression::Evaluate(Environment* _env)
 	TypeSig elemTypeSig = firstVal->GetTypeSig();
 	std::vector<SharedValue> elements({ firstVal });
 
-	for(auto i = 1; i < elemExprs.size(); i++)
+	for(auto it : elemExprs)
 	{
-		SharedValue val = elemExprs[i]->Evaluate(_env);
+		SharedValue val = it->Evaluate(_env);
 		TypeSig valTypeSig = val->GetTypeSig();
 
 		if(valTypeSig != elemTypeSig) { return SHARE(Exception_MismatchType(elemTypeSig, valTypeSig, Trace(val->GetPosition(), _env->name, _env->filePath))); }
@@ -450,19 +442,10 @@ SharedValue FuncCallExpression::Evaluate(Environment* _env)
 {
 	SharedValue baseVal = base->Evaluate(_env);
 	ValueType baseValType = baseVal->GetType();
-	Trace trace = Trace(_position, _env->name, _env->filePath);
 
-	if(baseValType == VFUNC)
-	{
-		SharedValue retVal = baseVal->AsFunc()->Call(_env, argExprs, base->_position);
-
-		if(retVal->GetType() == VEXCEPTION)
-			retVal->AsException()->ExtendStackTrace(trace);
-
-		return retVal;
-	}
+	if(baseValType == VFUNC) { return baseVal->AsFunc()->Call(_env, argExprs, base->_position); }
 	else if(baseValType == VEXCEPTION) { return baseVal; }
-	else { return SHARE(Exception_InvalidOperation("Value not callable!", trace)); }
+	else { return SHARE(Exception_InvalidOperation("Value not callable!", Trace(_position, _env->name, _env->filePath))); }
 }
 
 IExpression* FuncCallExpression::GetCopy()
@@ -474,4 +457,35 @@ IExpression* FuncCallExpression::GetCopy()
 
 	return new FuncCallExpression(base->GetCopy(), copy_argExprs, _position);
 }
+#pragma endregion
+
+#pragma region ArrayIndexExpression
+ArrayIndexExpression::ArrayIndexExpression(IExpression* _base, IExpression* _indexExpr, Position _pos)
+	: IExpression(_pos, EFUNC_CALL)
+{
+	base = _base;
+	indexExpr = _indexExpr;
+}
+
+ArrayIndexExpression::~ArrayIndexExpression()
+{
+	delete indexExpr;
+	delete base;
+}
+
+SharedValue ArrayIndexExpression::Evaluate(Environment* _env)
+{
+	SharedValue baseVal = base->Evaluate(_env);
+	ValueType baseValType = baseVal->GetType();
+
+	if(baseValType == VEXCEPTION) { return baseVal; }
+	else
+	{
+		FuncValue* indexFunc = baseVal->GetIntrinsicEnv()->GetValue("__index__", _position, false)->AsFunc();
+		std::vector<IExpression*> args({ indexExpr });
+		return indexFunc->Call(_env, args, _position);
+	}
+}
+
+IExpression* ArrayIndexExpression::GetCopy() { return new ArrayIndexExpression(base->GetCopy(), indexExpr->GetCopy(), _position); }
 #pragma endregion

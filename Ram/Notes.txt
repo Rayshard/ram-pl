@@ -1,7 +1,15 @@
+DONE:
+	- implemented array functions: index(with brackets too), append, appendRange, insert, insertRange, removeAt, removeRange,
+	clear, size
+	- implemented intrinsic index member function which uses []
+	- implemented string index function
+	- fixed error with double printing stack trace
+	- added function names to stack trace
 TO CHECK:
 	- Check all binops are right
+TO IMPLEMENT:
+	- string.substring
 TODO:
-	- IValue.GetCopy() should take in execPos so that new values have the right pos
 	- only have return, break and continue in appropriate places
 	- Handle Stack overflows
 	- create right exceptions
@@ -11,8 +19,10 @@ TODO:
 		- has definition operator
 
 		Binary: =, ==, !=, ^, %, &, |, ||, &&, <<, >>, +=, -=, *=, /=, ^=, %=, &=, |=, .
-	- add arrays and lists
 	- dll stuff
+	- When implementing char
+		- change string index function to return char
+	- add ability to declare func in typedef
 	- add more primitive types: short, char, long
 	- add 'num' primitive type
 		- it represents any number (internally stored as a string)

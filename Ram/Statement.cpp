@@ -38,11 +38,10 @@ SharedValue CodeBlock::Execute(Environment* _env)
 	Environment* env = createSubEnv ? new Environment(_env, name) : _env;
 	SharedValue returnVal(nullptr);
 
-	for(int i = 0; i < statements.size(); i++)
+	for(auto statement : statements)
 	{
-		IStatement* statement = statements[i];
 		SharedValue val = statement->Execute(env);
-		PRINT_LINE(env->filePath, statements[i]->_position.line);
+		PRINT_LINE(env->filePath, statement->_position.line);
 
 		if(val->GetType() == VEXCEPTION)
 		{
@@ -60,7 +59,7 @@ SharedValue CodeBlock::Execute(Environment* _env)
 	if(createSubEnv)
 		delete env;
 
-	return returnVal ? returnVal : SHARE(new VoidValue(_position));
+	return returnVal ? returnVal : SHARE_VOID(_position);
 }
 
 IStatement* CodeBlock::GetCopy()
@@ -89,7 +88,7 @@ SharedValue LetStatement::Execute(Environment* _env)
 	SharedValue val = expr->Evaluate(_env);
 
 	if(val->GetType() == VEXCEPTION) { return val; }
-	else { return _env->AddVariable(identifier, SHARE(val->GetCopy()), _position); }
+	else { return _env->AddVariable(identifier, SHARE_COPY(val), _position); }
 }
 
 IStatement* LetStatement::GetCopy() { return new LetStatement(identifier, expr->GetCopy(), _position); }
@@ -200,7 +199,7 @@ SharedValue ForLoop::Execute(Environment* _env)
 		PRINT_LINE(env.filePath, finallyStmnt->_position.line);
 	}
 
-	return SHARE(new VoidValue(_position));
+	return SHARE_VOID(_position);
 }
 
 IStatement* ForLoop::GetCopy() { return new ForLoop((LetStatement*)initLet->GetCopy(), conditionExpr->GetCopy(), statement->GetCopy(), finallyStmnt->GetCopy(), _position); }
@@ -255,7 +254,7 @@ SharedValue IfStatement::Execute(Environment* _env)
 
 	if(evalCondVal->AsBool()->value) { return thenBranch->Execute(&env); }
 	else if(elseBranch) { return elseBranch->Execute(&env); }
-	else { return SHARE(new VoidValue(_position)); }
+	else { return SHARE_VOID(_position); }
 }
 
 IStatement* IfStatement::GetCopy() { return new IfStatement(conditionExpr->GetCopy(), thenBranch->GetCopy(), elseBranch->GetCopy(), _position); }
@@ -314,7 +313,7 @@ SharedValue WhileStatement::Execute(Environment* _env)
 			break;
 	}
 
-	return SHARE(new VoidValue(_position));
+	return SHARE_VOID(_position);
 }
 
 IStatement* WhileStatement::GetCopy() { return new WhileStatement(conditionExpr->GetCopy(), statement->GetCopy(), _position); }
@@ -385,7 +384,7 @@ SharedValue FuncDeclaration::Execute(Environment* _env)
 	if(val->GetType() == VEXCEPTION) { return val; }
 	else { retSig = val->AsString()->value; }
 
-	SharedValue func = SHARE(new FuncValue(_env, body, argNames, argSigs, retSig, _position));
+	SharedValue func = SHARE(new FuncValue(_env, identifier, body, argNames, argSigs, retSig, _position));
 	return _env->AddFuncDeclaration(identifier, func, _position);
 }
 

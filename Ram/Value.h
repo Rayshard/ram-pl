@@ -5,16 +5,18 @@ class Environment;
 struct Position;
 class IStatement;
 
-enum ValueType : char { VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION,
-						VVOID, VMEMBERED, VFUNC, VNAMEDSPACE, VARRAY };
+enum ValueType : char {
+	VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION,
+	VVOID, VMEMBERED, VFUNC, VNAMEDSPACE, VARRAY
+};
 
 class IValue
 {
 protected:
 	Environment* intrinsicEnv;
 public:
-	ValueType _type;
-	Position _position;
+	ValueType type;
+	Position position;
 
 	IValue(ValueType _type, Position _pos, Environment* _intrEnv);
 	virtual ~IValue();
@@ -53,6 +55,8 @@ inline IValue* Exception_DivisionByZero(Trace _trace) { return new ExceptionValu
 inline IValue* Exception_WrongNumArgs(int _org, int _passed, Trace _trace) { return new ExceptionValue("Wrong Number of Arguments", std::to_string(_org) + " arguments(s) were expected but " + std::to_string(_passed) + " were given.", _trace); }
 inline IValue* Exception_MissingReturn(Trace _trace) { return new ExceptionValue("Missing Return", "A return statement is needed.", _trace); }
 inline IValue* Exception_Format(std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Format", _msg, _trace); }
+inline IValue* Exception_OutOfRange(std::string _identifier, Trace _trace) { return new ExceptionValue("Out of Range", "'" + _identifier + "' is out of range!", _trace); }
+inline IValue* Exception_InvailArgument(std::string _argName, std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Argument", "'" + _argName + "' : " + _msg, _trace); }
 
 class VoidValue : public IValue
 {
@@ -110,7 +114,7 @@ class FuncValue : public IValue
 private:
 	enum BodyType { BUILT_IN, DECLARED };
 
-	FuncValue(Environment* _defEnv, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
 public:
 	typedef std::function<SharedValue(Environment*, Position)> built_in;
 
@@ -118,6 +122,7 @@ public:
 	built_in pointer;
 	BodyType bodyType;
 	bool needsReturn;
+	std::string name;
 
 	std::vector<std::string> argNames;
 	std::vector<TypeSig> argSigs;
@@ -126,8 +131,8 @@ public:
 
 	Environment* defEnvironment;
 
-	FuncValue(Environment* _defEnv, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
-	FuncValue(Environment* _defEnv, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
 
 	SharedValue Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
 	IValue* GetCopy();
@@ -159,19 +164,19 @@ inline PrimitiveValue<T>::PrimitiveValue(T _value, Position _pos)
 {
 	value = _value;
 
-	if(std::is_same<T, int>()) { _type = VINT; }
-	else if(std::is_same<T, float>()) { _type = VFLOAT; }
-	else if(std::is_same<T, std::string>()) { _type = VSTRING; }
-	else if(std::is_same<T, bool>()) { _type = VBOOL; }
+	if(std::is_same<T, int>()) { type = VINT; }
+	else if(std::is_same<T, float>()) { type = VFLOAT; }
+	else if(std::is_same<T, std::string>()) { type = VSTRING; }
+	else if(std::is_same<T, bool>()) { type = VBOOL; }
 }
 
 template<typename T>
-inline IValue * PrimitiveValue<T>::GetCopy() { return new PrimitiveValue(value, _position); }
+inline IValue * PrimitiveValue<T>::GetCopy() { return new PrimitiveValue(value, position); }
 
 template<typename T>
 inline TypeSig PrimitiveValue<T>::GetTypeSig()
 {
-	switch(_type)
+	switch(type)
 	{
 		case VINT: return "<INT>";
 		case VFLOAT: return "<FLOAT>";
@@ -184,7 +189,7 @@ inline TypeSig PrimitiveValue<T>::GetTypeSig()
 template<typename T>
 inline std::string PrimitiveValue<T>::ToString()
 {
-	switch(_type)
+	switch(type)
 	{
 		case VINT: return std::to_string(((IntValue*)this)->value);
 		case VFLOAT: return std::to_string(((FloatValue*)this)->value);
@@ -204,8 +209,8 @@ public:
 
 	SharedValue Set(Environment* _execEnv, IValue * _val, Position _execPos);
 
-	ValueType GetType() { return value->_type; }
-	Position GetPosition() { return value->_position; }
+	ValueType GetType() { return value->type; }
+	Position GetPosition() { return value->position; }
 	IValue* GetCopy() { return value->GetCopy(); }
 	TypeSig GetTypeSig() { return value->GetTypeSig(); }
 	std::string ToString() { return value->ToString(); }
@@ -220,4 +225,5 @@ public:
 	FloatValue* AsFloat() { return (FloatValue*)value; }
 	StringValue* AsString() { return (StringValue*)value; }
 	BoolValue* AsBool() { return (BoolValue*)value; }
+	ArrayValue* AsArray() { return (ArrayValue*)value; }
 };

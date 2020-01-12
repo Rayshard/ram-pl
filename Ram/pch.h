@@ -37,6 +37,7 @@ typedef std::shared_ptr<Value> SharedValue;
 
 #define SHARE(v) SharedValue(new Value(v))
 #define SHARE_VOID(pos) SHARE(new VoidValue(pos))
+#define SHARE_COPY(val) SHARE(val->GetCopy())
 #define SYS_SEP std::string(1, std::experimental::filesystem::path::preferred_separator)
 
 inline std::string GetFileName(std::string _filePath, bool _includeExt)
