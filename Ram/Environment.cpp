@@ -130,8 +130,6 @@ SharedValue Environment::AddNamedspace(Environment * _ns, Position _execPos, boo
 	return addResult;
 }
 
-
-
 SharedValue Environment::GetValue(std::string _identifier, Position _execPos, bool _checkParent)
 {
 	std::string scopedID = name + "." + _identifier;
@@ -178,6 +176,14 @@ SharedValue Environment::OpenNamedspace(NamedspaceValue* _nsVal, Position _execP
 
 SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
 {
+	if(_typeName[0] == '[')
+	{
+		SharedValue base = GetTypeSig(_typeName.substr(1, _typeName.size() - 2), _execPos);
+
+		if(base->GetType() == VEXCEPTION) { return base; }
+		else { return SHARE(new StringValue("[" + base->AsString()->value + "]", _execPos)); }
+	}
+
 	std::string scopedTypeName = name + "." + _typeName;
 	auto search = typeDefs.find(scopedTypeName);
 

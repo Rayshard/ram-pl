@@ -1,0 +1,8 @@
+def Something = {
+  array : [int]
+};
+
+let myArray = [5];
+myArray.add(7);
+
+printEnv();

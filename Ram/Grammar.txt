@@ -5,7 +5,14 @@ codeblock = LBRACKET (statement SEMICOLON)* RBRACKET
 typeDef = LBRACKET (memberDef SEMICOLON)+ RBRACKET
 memberDef = IDENTIFIER COLON IDENTIFIER
 argDefList = LPAREN (memberDef (COMMA memberDef)*) RPAREN
-argInList = LPAREN (expr (COMMA expr)*) RPAREN
+exprList = (expr (COMMA expr)*)?
+argInList = LPAREN exprList RPAREN
+
+typeName =
+	| IDENTIFIER (PERIOD IDENTIFIER)* 
+	| arrayDef
+
+arrayDef = LSQRBRACKET typeName RSQRBRACKET
 
 statement =
 	| expr 
@@ -39,13 +46,18 @@ singular =
 	| LPAREN expr RPAREN
 	| IDENTIFIER
 	| membered
+	| array
 	| INT_LIT
 	| FLOAT_LIT
 	| STRING_LIT
 	| "true"
 	| "false"
-	| singular PERIOD (IDENTIFIER | argInlist)
+	| functionCall
+	| arrayAccess
+	| access
 
+array = LSQRBRACKET exprList RSQRBRACKET
+access = singular PERIOD (IDENTIFIER | argInlist)
+arrayAccess = singular LSQRBRACKET singular RSQRBRACKET
 membered = <LBRACKET (assigment SEMICOLON)+ RBRACKET>
-
 func_call = singular LPAREN argList? RPAREN

@@ -57,8 +57,6 @@ SharedValue CodeBlock::Execute(Environment* _env)
 		else if(canContinue && env->IsVariable("continue", false)) { break; }
 	}
 
-	PRINT_ENV(*env);
-
 	if(createSubEnv)
 		delete env;
 

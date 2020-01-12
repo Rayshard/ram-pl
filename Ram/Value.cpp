@@ -35,7 +35,7 @@ Environment * IValue::GetIntrinsicEnv()
 
 #pragma region ExceptionValue
 ExceptionValue::ExceptionValue(std::string _name, std::string _msg, StackTrace & _stackTrace)
-	: IValue(VEXCEPTION, _stackTrace[0].position, 0)
+	: IValue(VEXCEPTION, _stackTrace[0].position, nullptr)
 {
 	name = _name;
 	message = _msg;
@@ -67,7 +67,7 @@ std::string ExceptionValue::ToString()
 #pragma endregion
 
 #pragma region VoidValue
-VoidValue::VoidValue(Position _pos) : IValue(VVOID, _pos, 0) { }
+VoidValue::VoidValue(Position _pos) : IValue(VVOID, _pos, nullptr) { }
 IValue* VoidValue::GetCopy() { return new VoidValue(_position); }
 TypeSig VoidValue::GetTypeSig() { return "<VOID>"; }
 std::string VoidValue::ToString() { return "void"; }
@@ -96,6 +96,55 @@ std::string MemberedValue::ToString()
 	str.pop_back();
 	str.pop_back();
 	str += " }";
+
+	return str;
+}
+#pragma endregion
+
+#pragma region ArrayValue
+ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElems, Position _pos)
+	: IValue(VARRAY, _pos, nullptr)
+{
+	elemTypeSig = _elemTypeSig;
+	elements = _initElems;
+
+	GetIntrinsicEnv(); //Setting the intrinsic env so it has the basic stuff plus what I'm about to add
+
+	FuncValue::built_in add_body = [this](Environment* _env, Position _execPos)
+	{
+		elements.push_back(_env->GetValue("value", _execPos, false));
+		return SHARE_VOID(_execPos);
+	};
+	std::vector<std::string> add_argNames({ "value" }), add_argSigs({ elemTypeSig });
+	SharedValue func_add = SHARE(new FuncValue(intrinsicEnv, add_body, add_argNames, add_argSigs, "<VOID>", _position));
+
+	intrinsicEnv->AddFuncDeclaration("add", func_add, _position);
+}
+
+ArrayValue::~ArrayValue() { elements.clear(); }
+
+IValue* ArrayValue::GetCopy()
+{
+	std::vector<SharedValue> copyElems;
+
+	for(auto it : elements)
+		copyElems.push_back(SHARE(it->GetCopy()));
+
+	return new ArrayValue(elemTypeSig, copyElems, _position);
+}
+
+TypeSig ArrayValue::GetTypeSig() { return "<[" + elemTypeSig + "]>"; }
+
+std::string ArrayValue::ToString()
+{
+	std::string str = "[ ";
+
+	for(int i = 0; i < elements.size(); i++)
+		str += elements[i]->ToString() + ", ";
+
+	str.pop_back();
+	str.pop_back();
+	str += " ]";
 
 	return str;
 }

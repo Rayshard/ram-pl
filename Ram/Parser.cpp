@@ -5,6 +5,44 @@
 #include "Expression.h"
 #include "Environment.h"
 
+ExpressionResult GetExprList(TokenReader _reader, TokenType _delimiter, std::vector<IExpression*>& _outList)
+{
+	ExpressionResult exprResult = GetExpression(_reader); // Expecting at least one arg
+
+	if(exprResult.success)
+	{
+		TokenReader reader = exprResult.reader;
+		std::vector<IExpression*> exprList({ exprResult.value });
+
+		while(true)
+		{
+			if(reader.GetCurType() == _delimiter)
+			{
+				reader.Advance();
+				exprResult = GetExpression(reader);
+
+				if(exprResult.success)
+				{
+					reader = exprResult.reader;
+					exprList.push_back(exprResult.value);
+				}
+				else
+				{
+					for(auto it : exprList)
+						delete it;
+
+					return ExpressionResult::GenFailure("Expected expression.", reader);
+				}
+			}
+			else { break; }
+		}
+
+		_outList = exprList;
+		return ExpressionResult::GenSuccess(nullptr, reader.GetCurPtr());
+	}
+	else { return ExpressionResult::GenFailure(exprResult.message, _reader); }
+}
+
 ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
 {
 	if(_reader.GetCurType() == TT_LPAREN)
@@ -15,37 +53,10 @@ ExpressionResult GetFuncCall(IExpression* _base, TokenReader _reader)
 
 		if(reader.GetCurType() != TT_RPAREN) // Expecting at least on arg
 		{
-			ExpressionResult argExprResult = GetExpression(reader);
+			ExpressionResult argExprsResult = GetExprList(reader, TT_COMMA, argExprs);
 
-			if(argExprResult.success)
-			{
-				reader = argExprResult.reader;
-				argExprs.push_back(argExprResult.value);
-
-				while(true)
-				{
-					if(reader.GetCurType() == TT_COMMA)
-					{
-						reader.Advance();
-						argExprResult = GetExpression(reader);
-
-						if(argExprResult.success)
-						{
-							reader = argExprResult.reader;
-							argExprs.push_back(argExprResult.value);
-						}
-						else
-						{
-							for(auto it : argExprs)
-								delete it;
-
-							return ExpressionResult::GenFailure("Expected function argument.", reader);
-						}
-					}
-					else { break; }
-				}
-			}
-			else { return ExpressionResult::GenFailure("Expected function argument or ')'.", reader); }
+			if(argExprsResult.success) { reader = argExprsResult.reader; }
+			else { return argExprsResult; }
 		}
 
 		if(reader.GetCurType() == TT_RPAREN)
@@ -86,39 +97,35 @@ ExpressionResult GetAccess(IExpression* _base, TokenReader _reader)
 
 ExpressionResult GetMembered(TokenReader _reader)
 {
-	if(_reader.GetCurType() == TT_LBRACKET)
+	auto parser = [](TokenReader _r) { return GetLet(_r, false); }; // Looks only for let statments without the let keyword
+	StatementResult result = GetCodeBlock(_reader, "<MEMBERED>", parser);
+
+	if(result.success)
 	{
-		TokenReader reader = TokenReader(_reader);
-		auto parser = [](TokenReader _r) { return GetLet(_r, false); }; // Looks only for let statments without the let keyword
-		StatementResult result = GetCodeBlock(reader, "<MEMBERED>", parser);
+		TokenReader reader = result.reader;
+		auto assignStmnts = ((CodeBlock*)result.value)->statements;
+		std::map<std::string, IExpression*> memAssigns;
 
-		if(result.success)
+		for(auto stmnt : assignStmnts)
 		{
-			auto assignStmnts = ((CodeBlock*)result.value)->statements;
-			std::map<std::string, IExpression*> memAssigns;
+			std::string identifier = ((LetStatement*)stmnt)->identifier;
+			IExpression* expr = ((LetStatement*)stmnt)->expr;
 
-			for(auto stmnt : assignStmnts)
+			if(memAssigns.find(identifier) != memAssigns.end())
 			{
-				std::string identifier = ((LetStatement*)stmnt)->identifier;
-				IExpression* expr = ((LetStatement*)stmnt)->expr;
-
-				if(memAssigns.find(identifier) != memAssigns.end())
-				{
-					ExpressionResult exception = ExpressionResult::GenFailure("The member '" + identifier + "' was already assigned.", reader);
-					delete result.value;
-					return exception;
-				}
-				else { memAssigns.insert_or_assign(identifier, expr->GetCopy()); }
+				ExpressionResult exception = ExpressionResult::GenFailure("The member '" + identifier + "' was already assigned.", reader);
+				delete result.value;
+				return exception;
 			}
-
-			MemberedExpression* memExpr = new MemberedExpression(memAssigns, _reader.GetCurPosition());
-
-			delete result.value;
-			return ExpressionResult::GenSuccess(memExpr, result.reader.GetCurPtr());
+			else { memAssigns.insert_or_assign(identifier, expr->GetCopy()); }
 		}
-		else { return ExpressionResult::GenFailure(result.message, reader); }
+
+		MemberedExpression* memExpr = new MemberedExpression(memAssigns, _reader.GetCurPosition());
+
+		delete result.value;
+		return ExpressionResult::GenSuccess(memExpr, result.reader.GetCurPtr());
 	}
-	else { return ExpressionResult::GenFailure("Expected '{'.", _reader); }
+	else { return ExpressionResult::GenFailure(result.message, result.reader); }
 }
 
 ExpressionResult GetSubExpression(TokenReader _reader)
@@ -152,11 +159,46 @@ ExpressionResult GetIdentifier(TokenReader _reader)
 	else { return ExpressionResult::GenFailure("Expected identifier.", _reader); }
 }
 
-ExpressionResult GetTypeName(TokenReader _reader)
+ExpressionResult GetArray(TokenReader _reader)
+{
+	if(_reader.GetCurType() == TT_LSQRBRACKET)
+	{
+		Position pos = _reader.GetCurPosition();
+		TokenReader reader = TokenReader(_reader.Advance());
+		std::vector<IExpression*> elemExprs;
+
+		if(_reader.GetCurType() != TT_RSQRBRACKET) // Expected at least one expression
+		{
+			ExpressionResult exprsResult = GetExprList(reader, TT_COMMA, elemExprs);
+
+			if(exprsResult.success) { reader = exprsResult.reader; }
+			else { return exprsResult; }
+		}
+
+		if(reader.GetCurType() == TT_RSQRBRACKET)
+		{
+			ArrayExpression* arrayExpr = new ArrayExpression(elemExprs, pos);
+			return ExpressionResult::GenSuccess(arrayExpr, reader.Advance());
+		}
+		else
+		{
+			for(auto it : elemExprs)
+				delete it;
+
+			return ExpressionResult::GenFailure("Expected ']'.", reader);
+		}
+	}
+	else { return ExpressionResult::GenFailure("Expected '['.", _reader); }
+}
+
+ExpressionResult GetTypeName(TokenReader _reader, std::string& _outTypeName)
 {
 	TokenReader reader = TokenReader(_reader.GetCurPtr());
 	Position pos = reader.GetCurPosition();
 	std::string typeName = "";
+
+	if(reader.GetCurType() == TT_LSQRBRACKET)
+		return GetArrayTypeName(_reader, _outTypeName);
 
 	while(true)
 	{
@@ -172,12 +214,36 @@ ExpressionResult GetTypeName(TokenReader _reader)
 			}
 			else
 			{
-				IExpression* expr = new SymbolExpression(typeName, reader.GetCurPosition());
-				return ExpressionResult::GenSuccess(expr, reader.GetCurPtr());
+				_outTypeName = typeName;
+				return ExpressionResult::GenSuccess(nullptr, reader.GetCurPtr());
 			}
 		}
 		else { return ExpressionResult::GenFailure("Expected type name.", reader); }
 	}
+}
+
+ExpressionResult GetArrayTypeName(TokenReader _reader, std::string& _outTypeName)
+{
+	if(_reader.GetCurType() == TT_LSQRBRACKET)
+	{
+		_reader.Advance();
+		std::string typeName;
+		ExpressionResult innerResult = GetTypeName(_reader, typeName);
+
+		if(innerResult.success)
+		{
+			TokenReader reader = innerResult.reader;
+
+			if(reader.GetCurType() == TT_RSQRBRACKET)
+			{
+				_outTypeName = '[' + typeName + ']';
+				return ExpressionResult::GenSuccess(nullptr, reader.Advance());
+			}
+			else { return ExpressionResult::GenFailure("Expected ']'.", reader); }
+		}
+		else { return innerResult; }
+	}
+	else { return ExpressionResult::GenFailure("Expected '['.", _reader); }
 }
 
 ExpressionResult GetSingular(TokenReader _reader)
@@ -188,6 +254,7 @@ ExpressionResult GetSingular(TokenReader _reader)
 	if(token.type == TT_LPAREN) { result = GetSubExpression(_reader); }
 	else if(token.type == TT_IDENTIFIER) { result = GetIdentifier(_reader); }
 	else if(token.type == TT_LBRACKET) { result = GetMembered(_reader); }
+	else if(token.type == TT_LSQRBRACKET) { result = GetArray(_reader); }
 	else
 	{
 		IExpression* expr = nullptr;
@@ -265,15 +332,9 @@ ExpressionResult GetCast(TokenReader _reader)
 		Position pos = _reader.GetCurPosition();
 		TokenReader reader = TokenReader(_reader.Advance());
 		std::string typeName;
+		ExpressionResult typeNameResult = GetTypeName(reader, typeName);
 
-		ExpressionResult typeNameResult = GetTypeName(reader);
-
-		if(typeNameResult.success)
-		{
-			reader = typeNameResult.reader;
-			typeName = ((SymbolExpression*)typeNameResult.value)->symbol;
-			delete typeNameResult.value;
-		}
+		if(typeNameResult.success) { reader = typeNameResult.reader; }
 		else { return typeNameResult; }
 
 		if(reader.GetCurType() == TT_GT)
@@ -507,15 +568,13 @@ StatementResult GetDefinition(TokenReader _reader)
 		if(reader.GetCurType() == TT_COLON)
 		{
 			reader.Advance();
-
-			ExpressionResult typeNameResult = GetTypeName(reader);
+			std::string typeName;
+			ExpressionResult typeNameResult = GetTypeName(reader, typeName);
 
 			if(typeNameResult.success)
 			{
 				reader = typeNameResult.reader;
-				std::string typeName = ((SymbolExpression*)typeNameResult.value)->symbol;
-				delete typeNameResult.value;
-
+				
 				MemberDefinition* memDef = new MemberDefinition(identifier, typeName, pos);
 				return StatementResult::GenSuccess(memDef, reader.GetCurPtr());
 			}

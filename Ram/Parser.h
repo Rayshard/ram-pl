@@ -27,6 +27,7 @@ ExpressionResult GetAccess(IExpression* _base, TokenReader _reader);
 ExpressionResult GetMembered(TokenReader _reader);
 ExpressionResult GetSubExpression(TokenReader _reader);
 ExpressionResult GetIdentifier(TokenReader _reader);
+ExpressionResult GetArrayTypeName(TokenReader _reader, std::string& _outTypeName);
 ExpressionResult GetSingular(TokenReader _reader);
 ExpressionResult GetFactor(TokenReader _reader);
 ExpressionResult GetTerm(TokenReader _reader);

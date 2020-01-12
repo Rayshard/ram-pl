@@ -109,6 +109,19 @@ public:
 	IExpression* GetCopy();
 };
 
+class ArrayExpression : public IExpression
+{
+private:
+	std::vector<IExpression*> elemExprs;
+
+public:
+	ArrayExpression(std::vector<IExpression*>& _elemExpr, Position _pos);
+	~ArrayExpression();
+
+	SharedValue Evaluate(Environment* _env);
+	IExpression* GetCopy();
+};
+
 class AccessExpression : public IExpression
 {
 private:

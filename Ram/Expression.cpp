@@ -237,7 +237,7 @@ SharedValue UnopExpression::Evaluate(Environment* _env)
 		case MakeUnop(VBOOL, NOT): result = new BoolValue(!val->AsBool(), _position); break;
 		case MakeUnop(VINT, BIN_NOT): result = new IntValue(-val->AsInt()->value, _position); break;
 		case MakeUnop(VFLOAT, BIN_NOT): result = new FloatValue(-val->AsFloat()->value, _position); break;
-		
+
 		default: return SHARE(Exception_InvalidOperation("Cannot perform operation on this type.", Trace(_position, _env->name, _env->filePath)));
 	}
 
@@ -333,7 +333,7 @@ SharedValue MemberedExpression::Evaluate(Environment* _env)
 		// When the exprs are evaluated, they don't have access to the 
 		// members being created along side them that's why I use
 		// _creationEnv instead of membersEnv;
-		SharedValue val = it.second->Evaluate(_env);
+		SharedValue val = SHARE(it.second->Evaluate(_env)->GetCopy());
 
 		if(val->GetType() == VEXCEPTION)
 		{
@@ -364,6 +364,48 @@ IExpression* MemberedExpression::GetCopy()
 		copy_MemAssigns.insert_or_assign(it.first, it.second->GetCopy());
 
 	return new MemberedExpression(copy_MemAssigns, _position);
+}
+#pragma endregion
+
+#pragma region ArrayExpression
+ArrayExpression::ArrayExpression(std::vector<IExpression*>& _elemExprs, Position _pos) : IExpression(_pos, EMEMBERED) { elemExprs = _elemExprs; }
+
+ArrayExpression::~ArrayExpression()
+{
+	for(auto it : elemExprs)
+		delete it;
+}
+
+SharedValue ArrayExpression::Evaluate(Environment* _env)
+{
+	SharedValue firstVal = SHARE(elemExprs[0]->Evaluate(_env)->GetCopy());
+
+	if(firstVal->GetType() == VEXCEPTION)
+		return firstVal;
+
+	TypeSig elemTypeSig = firstVal->GetTypeSig();
+	std::vector<SharedValue> elements({ firstVal });
+
+	for(auto i = 1; i < elemExprs.size(); i++)
+	{
+		SharedValue val = elemExprs[i]->Evaluate(_env);
+		TypeSig valTypeSig = val->GetTypeSig();
+
+		if(valTypeSig != elemTypeSig) { return SHARE(Exception_MismatchType(elemTypeSig, valTypeSig, Trace(val->GetPosition(), _env->name, _env->filePath))); }
+		else { elements.push_back(val); }
+	}
+
+	return SHARE(new ArrayValue(elemTypeSig, elements, _position));
+}
+
+IExpression* ArrayExpression::GetCopy()
+{
+	std::vector<IExpression*> copyElemExprs;
+
+	for(auto it : elemExprs)
+		copyElemExprs.push_back(it->GetCopy());
+
+	return new ArrayExpression(copyElemExprs, _position);
 }
 #pragma endregion
 

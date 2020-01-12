@@ -272,6 +272,8 @@ std::pair<TokenType, int> MatchChars(char* _chars)
 		case ')': charType = TT_RPAREN; break;
 		case '{': charType = TT_LBRACKET; break;
 		case '}': charType = TT_RBRACKET; break;
+		case '[': charType = TT_LSQRBRACKET; break;
+		case ']': charType = TT_RSQRBRACKET; break;
 		case '~': charType = TT_BIN_NOT; break;
 
 		case '+': if(c2 == '=') { len++; charType = TT_PLUS_EQ; }

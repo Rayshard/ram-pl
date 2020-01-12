@@ -144,6 +144,17 @@ void Interpreter::SetStandardEnvironment()
 	SharedValue func_unscope = SHARE(new FuncValue(env, unscope_body, unscope_argNames, unscope_argSigs, "<VOID>", Position()));
 
 	env->AddFuncDeclaration("unscope", func_unscope, Position());
+
+	//PrintEnv
+	FuncValue::built_in printEnv_body = [](Environment* _env, Position _execPos)
+	{
+		std::cout << _env->parent->ToString() << std::endl;
+		return SHARE_VOID(_execPos);
+	};
+	std::vector<std::string> printEnv_argNames({}), printEnv_argSigs({});
+	SharedValue func_printEnv = SHARE(new FuncValue(env, printEnv_body, printEnv_argNames, printEnv_argSigs, "<VOID>", Position()));
+
+	env->AddFuncDeclaration("printEnv", func_printEnv, Position());
 #pragma endregion
 
 	Interpreter::ENV_STD = env;

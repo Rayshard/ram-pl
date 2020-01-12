@@ -5,7 +5,8 @@ class Environment;
 struct Position;
 class IStatement;
 
-enum ValueType : char { VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION, VVOID, VMEMBERED, VFUNC, VNAMEDSPACE };
+enum ValueType : char { VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION,
+						VVOID, VMEMBERED, VFUNC, VNAMEDSPACE, VARRAY };
 
 class IValue
 {
@@ -69,13 +70,27 @@ public:
 	DefinitionMap memDefinitions;
 	TypeSig typeSig;
 
-public:
 	MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos);
 
 	IValue* GetCopy();
 	TypeSig GetTypeSig();
 	std::string ToString();
 	SharedValue GetMemberValue(std::string _memId, Position _execPos);
+};
+
+class ArrayValue : public IValue
+{
+private:
+	std::vector<SharedValue> elements;
+public:
+	TypeSig elemTypeSig;
+
+	ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElems, Position _pos);
+	~ArrayValue();
+
+	IValue* GetCopy();
+	TypeSig GetTypeSig();
+	std::string ToString();
 };
 
 class NamedspaceValue : public IValue
@@ -140,7 +155,7 @@ typedef PrimitiveValue<bool> BoolValue;
 
 template<typename T>
 inline PrimitiveValue<T>::PrimitiveValue(T _value, Position _pos)
-	: IValue(VUNKNOWN, _pos, 0)
+	: IValue(VUNKNOWN, _pos, nullptr)
 {
 	value = _value;
 
