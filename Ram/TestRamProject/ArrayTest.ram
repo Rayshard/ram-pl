@@ -5,6 +5,13 @@ def Something = {
 let object = { array = [5, 2] };
 print(<string>object.array[0] + "\n");
 print(<string>object.array[1] + "\n");
-print("Hello"[5] + "\n");
+
+let str = "Hello World";
+let chars = [""];
+for i = 0 if i < str.length() then
+  chars.append(str[i])
+finally i++;
+chars[0] = "~";
+print(<string>chars);
 
 printEnv();

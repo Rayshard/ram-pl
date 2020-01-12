@@ -46,6 +46,14 @@ Environment * IValue::GetIntrinsicEnv()
 
 			intrinsicEnv->AddFuncDeclaration("__index__", func_index, position);
 #pragma endregion
+
+#pragma region StringValue Length Function
+			FuncValue::built_in length_body = [this](Environment* _env, Position _execPos) { return SHARE(new IntValue(((StringValue*)this)->value.size(), _execPos)); };
+			std::vector<std::string> length_argNames({}), length_argSigs({});
+			SharedValue func_length = SHARE(new FuncValue(intrinsicEnv, "length", length_body, length_argNames, length_argSigs, "<INT>", position));
+
+			intrinsicEnv->AddFuncDeclaration("length", func_length, position);
+#pragma endregion
 #pragma endregion
 		}
 	}
@@ -166,7 +174,7 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
-		if(index < 0 || index > (int)elements.size())
+		if(index < 0 || index >(int)elements.size())
 			return SHARE(Exception_OutOfRange("index", Trace(_execPos, _env->name, _env->filePath)));
 
 		elements.insert(elements.begin() + index, _env->GetValue("value", _execPos, false));
@@ -183,7 +191,7 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
-		if(index < 0 || index > (int)elements.size())
+		if(index < 0 || index >(int)elements.size())
 			return SHARE(Exception_OutOfRange("index", Trace(_execPos, _env->name, _env->filePath)));
 
 		ArrayValue* arr = _env->GetValue("array", _execPos, false)->AsArray();
@@ -196,7 +204,7 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		return SHARE_VOID(_execPos);
 	};
 	std::vector<std::string> insertArray_argNames({ "array", "index" }), insertArray_argSigs({ "<[" + elemTypeSig + "]>", "<INT>" });
-	SharedValue func_insertArray = SHARE(new FuncValue(intrinsicEnv,"insertArray", insertArray_body, insertArray_argNames, insertArray_argSigs, "<VOID>", position));
+	SharedValue func_insertArray = SHARE(new FuncValue(intrinsicEnv, "insertArray", insertArray_body, insertArray_argNames, insertArray_argSigs, "<VOID>", position));
 
 	intrinsicEnv->AddFuncDeclaration("insertArray", func_insertArray, position);
 #pragma endregion
@@ -223,7 +231,7 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 	{
 		int start = _env->GetValue("start", _execPos, false)->AsInt()->value;
 
-		if(start < 0 || start > (int)elements.size())
+		if(start < 0 || start >(int)elements.size())
 			return SHARE(Exception_OutOfRange("start", Trace(_execPos, _env->name, _env->filePath)));
 
 		int count = _env->GetValue("count", _execPos, false)->AsInt()->value;
@@ -291,7 +299,7 @@ std::string ArrayValue::ToString()
 {
 	std::string str = "[ ";
 
-for(auto it : elements)
+	for(auto it : elements)
 		str += it->ToString() + ", ";
 
 	str.pop_back();

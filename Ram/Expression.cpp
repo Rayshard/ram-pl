@@ -378,9 +378,9 @@ SharedValue ArrayExpression::Evaluate(Environment* _env)
 	TypeSig elemTypeSig = firstVal->GetTypeSig();
 	std::vector<SharedValue> elements({ firstVal });
 
-	for(auto it : elemExprs)
+	for(int i = 1; i < (int)elemExprs.size(); i++)
 	{
-		SharedValue val = it->Evaluate(_env);
+		SharedValue val = elemExprs[i]->Evaluate(_env);
 		TypeSig valTypeSig = val->GetTypeSig();
 
 		if(valTypeSig != elemTypeSig) { return SHARE(Exception_MismatchType(elemTypeSig, valTypeSig, Trace(val->GetPosition(), _env->name, _env->filePath))); }
