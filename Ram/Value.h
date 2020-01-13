@@ -7,14 +7,32 @@ class IStatement;
 
 enum ValueType : char {
 	VUNKNOWN, VINT, VFLOAT, VSTRING, VBOOL, VEXCEPTION,
-	VVOID, VMEMBERED, VFUNC, VNAMEDSPACE, VARRAY
+	VVOID, VMEMBERED, VFUNC, VNAMEDSPACE,
+
+	VARRAY, VPOINTER
 };
 
 class IValue
 {
 protected:
 	Environment* intrinsicEnv;
+	std::map<Signature, builtInFunc> castingFuncs; //Return Val Signature to Function
 public:
+#pragma region Signatures
+	static const std::string SIGNATURE_VOID;
+	static const std::string SIGNATURE_UNKNOWN;
+	static const std::string SIGNATURE_EXCEPTION;
+	static const std::string SIGNATURE_MEMBERED;
+	static const std::string SIGNATURE_ARRAY;
+	static const std::string SIGNATURE_FUNC;
+	static const std::string SIGNATURE_NAMEDSPACE;
+	static const std::string SIGNATURE_POINTER;
+	static const std::string SIGNATURE_INT;
+	static const std::string SIGNATURE_FLOAT;
+	static const std::string SIGNATURE_BOOL;
+	static const std::string SIGNATURE_STRING;
+#pragma endregion
+
 	ValueType type;
 	Position position;
 
@@ -22,12 +40,43 @@ public:
 	virtual ~IValue();
 
 	virtual IValue* GetCopy() = 0;
-	virtual TypeSig GetTypeSig() = 0;
+	virtual Signature GetSignature() = 0;
 	virtual std::string ToString() = 0;
 
 	Environment* GetIntrinsicEnv();
+	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos);
+
+	void AddCast(Signature _retSig, builtInFunc _func) { castingFuncs.insert_or_assign(_retSig, _func); }
 };
 
+#pragma region VoidValue
+class VoidValue : public IValue
+{
+public:
+	VoidValue(Position _pos) : IValue(VVOID, _pos, nullptr) { }
+	IValue* GetCopy() { return new VoidValue(position); }
+	Signature GetSignature() { return SIGNATURE_VOID; }
+	std::string ToString() { return "void"; }
+};
+#pragma endregion
+
+#pragma region UnknownValue
+class UnknownValue : public IValue
+{
+public:
+	IValue* value;
+	bool resolved;
+
+	UnknownValue(IValue* _val, Position _pos);
+	~UnknownValue();
+
+	IValue* GetCopy() { return new UnknownValue(value->GetCopy(), position); }
+	Signature GetSignature() { return SIGNATURE_UNKNOWN; }
+	std::string ToString() { return SIGNATURE_UNKNOWN; }
+};
+#pragma endregion
+
+#pragma region ExceptionValue
 class ExceptionValue : public IValue
 {
 private:
@@ -39,12 +88,14 @@ public:
 
 	ExceptionValue(std::string _name, std::string _msg, Trace _trace);
 
-	IValue* GetCopy();
-	TypeSig GetTypeSig();
-	void ExtendStackTrace(Trace _trace);
 	std::string ToString();
+
+	IValue* GetCopy() { return new ExceptionValue(name, message, stackTrace); }
+	Signature GetSignature() { return SIGNATURE_EXCEPTION; }
+	void ExtendStackTrace(Trace _trace) { stackTrace.push_back(_trace); }
 };
 
+#pragma region Exceptions
 inline IValue* Exception_CompilationError(std::string _msg, Trace _trace) { return new ExceptionValue("Compilation Error", _msg, _trace); }
 inline IValue* Exception_File(std::string _msg, Trace _trace) { return new ExceptionValue("File Error", _msg, _trace); }
 inline IValue* Exception_SymbolNotFound(std::string _symbolName, Trace _trace) { return new ExceptionValue("Symbol Not Found", "The symbol \"" + _symbolName + "\" does not exist.", _trace); }
@@ -57,89 +108,114 @@ inline IValue* Exception_MissingReturn(Trace _trace) { return new ExceptionValue
 inline IValue* Exception_Format(std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Format", _msg, _trace); }
 inline IValue* Exception_OutOfRange(std::string _identifier, Trace _trace) { return new ExceptionValue("Out of Range", "'" + _identifier + "' is out of range!", _trace); }
 inline IValue* Exception_InvailArgument(std::string _argName, std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Argument", "'" + _argName + "' : " + _msg, _trace); }
+inline IValue* Exception_DLLLoadFail(std::string _dllPath, Trace _trace) { return new ExceptionValue("DLL Load Fail", "Could not load dll at " + _dllPath, _trace); }
+inline IValue* Exception_PointerExpired(Trace _trace) { return new ExceptionValue("Pointer Expired", "The value to which the pointer pointed no longer exists!", _trace); }
+inline IValue* Exception_NotResolved(Trace _trace) { return new ExceptionValue("Not Resolved", "This unknown value must be resolved before use. Try casting it first.", _trace); }
+inline IValue* Exception_Resolved(Trace _trace) { return new ExceptionValue("Resolved", "This unknown value has already been resolved. You cannot reuse it.", _trace); }
+inline IValue* Exception_CastNotFound(Signature _retSig, Trace _trace) { return new ExceptionValue("Cast Not Found", "This value cannot be cast to '" + _retSig + "'.", _trace); }
+#pragma endregion
+#pragma endregion
 
-class VoidValue : public IValue
-{
-public:
-	VoidValue(Position _pos);
-
-	IValue* GetCopy();
-	TypeSig GetTypeSig();
-	std::string ToString();
-};
-
+#pragma region MemberedValue
 class MemberedValue : public IValue
 {
 public:
 	DefinitionMap memDefinitions;
-	TypeSig typeSig;
+	Signature signature;
 
-	MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos);
+	MemberedValue(DefinitionMap& _memDefs, Signature _sig, Environment* _intrEnv, Position _pos);
 
 	IValue* GetCopy();
-	TypeSig GetTypeSig();
 	std::string ToString();
 	SharedValue GetMemberValue(std::string _memId, Position _execPos);
-};
 
+	Signature GetSignature() { return signature; }
+};
+#pragma endregion
+
+#pragma region ArrayValue
 class ArrayValue : public IValue
 {
-private:
-	std::vector<SharedValue> elements;
 public:
-	TypeSig elemTypeSig;
+	std::vector<SharedValue> elements;
+	Signature elemSignature;
 
-	ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElems, Position _pos);
-	~ArrayValue();
+	ArrayValue(Signature _elemSignature, std::vector<SharedValue>& _initElems, Position _pos);
+	~ArrayValue() { elements.clear(); }
 
 	IValue* GetCopy();
-	TypeSig GetTypeSig();
 	std::string ToString();
-};
 
+	Signature GetSignature() { return elemSignature + "|" + SIGNATURE_ARRAY; }
+};
+#pragma endregion
+
+#pragma region PointerValue
+class PointerValue : public IValue
+{
+public:
+	ObservedValue value;
+
+	PointerValue(ObservedValue _val, Position _pos) : IValue(VPOINTER, _pos, nullptr) { value = _val; }
+
+	IValue* GetCopy() { return new PointerValue(value, position); }
+	Signature GetSignature() { return SIGNATURE_POINTER; }
+
+	std::string ToString();
+	SharedValue Resolve(Environment* _env, Position _execPos);
+};
+#pragma endregion
+
+#pragma region NamespacedValue
 class NamedspaceValue : public IValue
 {
 public:
 	Environment* environment;
 
-	NamedspaceValue(Environment* _env, Position _pos);
+	NamedspaceValue(Environment* _env, Position _pos) : IValue(VNAMEDSPACE, _pos, _env) { environment = intrinsicEnv; }
+
+	Signature GetSignature() { return SIGNATURE_NAMEDSPACE; }
+	std::string ToString() { return "namedspace"; }
 
 	IValue* GetCopy();
-	TypeSig GetTypeSig();
-	std::string ToString();
 };
+#pragma endregion
 
+#pragma region FuncValue
 class FuncValue : public IValue
 {
 private:
 	enum BodyType { BUILT_IN, DECLARED };
 
-	FuncValue(Environment* _defEnv, std::string _name, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, TypeName _retTypeName, BodyType _bodyType, Position _pos);
 public:
-	typedef std::function<SharedValue(Environment*, Position)> built_in;
-
 	std::shared_ptr<IStatement> body;
-	built_in pointer;
+	builtInFunc pointer;
 	BodyType bodyType;
 	bool needsReturn;
 	std::string name;
 
 	std::vector<std::string> argNames;
-	std::vector<TypeSig> argSigs;
-	TypeSig returnTypeSig;
-	TypeSig typeSig;
+	std::vector<Signature> argSigs;
+	Signature returnSignature;
+	Signature signature;
 
 	Environment* defEnvironment;
 
-	FuncValue(Environment* _defEnv, std::string _name, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
-	FuncValue(Environment* _defEnv, std::string _name, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, Signature _retSignature, Position _pos);
+	FuncValue(Environment* _defEnv, std::string _name, builtInFunc _ptr, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, Signature _retSignature, Position _pos);
 
 	SharedValue Call(Environment* _execEnv, ArgumentList& _argExprs, Position _execPos);
 	IValue* GetCopy();
-	TypeSig GetTypeSig();
-	std::string ToString();
-};
 
+	Signature GetSignature() { return signature; }
+	std::string ToString() { return GetSignature(); }
+
+	static Signature GenerateSignature(std::vector<Signature> _argSigs, Signature _retSig);
+};
+#pragma endregion
+
+#pragma region PrimitiveValue
 template <typename T>
 class PrimitiveValue : public IValue
 {
@@ -148,9 +224,10 @@ public:
 
 	PrimitiveValue(T _value, Position _pos);
 
-	IValue* GetCopy();
-	TypeSig GetTypeSig();
+	Signature GetSignature();
 	std::string ToString();
+
+	IValue* GetCopy() { return new PrimitiveValue(value, position); }
 };
 
 typedef PrimitiveValue<int> IntValue;
@@ -171,17 +248,14 @@ inline PrimitiveValue<T>::PrimitiveValue(T _value, Position _pos)
 }
 
 template<typename T>
-inline IValue * PrimitiveValue<T>::GetCopy() { return new PrimitiveValue(value, position); }
-
-template<typename T>
-inline TypeSig PrimitiveValue<T>::GetTypeSig()
+inline Signature PrimitiveValue<T>::GetSignature()
 {
 	switch(type)
 	{
-		case VINT: return "<INT>";
-		case VFLOAT: return "<FLOAT>";
-		case VSTRING: return "<STRING>";
-		case VBOOL: return "<BOOL>";
+		case VINT: return SIGNATURE_INT;
+		case VFLOAT: return SIGNATURE_FLOAT;
+		case VSTRING: return SIGNATURE_STRING;
+		case VBOOL: return SIGNATURE_BOOL;
 		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToString()");
 	}
 }
@@ -198,6 +272,7 @@ inline std::string PrimitiveValue<T>::ToString()
 		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToString()");
 	}
 }
+#pragma endregion
 
 class Value
 {
@@ -212,9 +287,10 @@ public:
 	ValueType GetType() { return value->type; }
 	Position GetPosition() { return value->position; }
 	IValue* GetCopy() { return value->GetCopy(); }
-	TypeSig GetTypeSig() { return value->GetTypeSig(); }
+	Signature GetSignature() { return value->GetSignature(); }
 	std::string ToString() { return value->ToString(); }
 	Environment* GetIntrinsicEnv() { return value->GetIntrinsicEnv(); }
+	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos) { return value->Cast(_execEnv, _retSig, _execPos); }
 
 	ExceptionValue* AsException() { return (ExceptionValue*)value; }
 	VoidValue* AsVoid() { return (VoidValue*)value; }

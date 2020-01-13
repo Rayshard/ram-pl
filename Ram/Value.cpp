@@ -5,10 +5,29 @@
 #include "Expression.h"
 #include "Interpreter.h"
 
-IValue::IValue(ValueType _type, Position _pos, Environment* _intrEnv)
-	: type(_type), position(_pos), intrinsicEnv(_intrEnv)
-{
+#pragma region Signatures
+const std::string IValue::SIGNATURE_VOID = "<VOID>";
+const std::string IValue::SIGNATURE_UNKNOWN= "<UNKNOWN>";
+const std::string IValue::SIGNATURE_EXCEPTION = "<EXCEPTION>";
+const std::string IValue::SIGNATURE_MEMBERED = "<MEMBERED>";
+const std::string IValue::SIGNATURE_ARRAY = "<ARRAY>";
+const std::string IValue::SIGNATURE_FUNC = "<FUNC>";
+const std::string IValue::SIGNATURE_NAMEDSPACE = "<NAMEDSPACE>";
+const std::string IValue::SIGNATURE_POINTER = "<POINTER>";
+const std::string IValue::SIGNATURE_INT = "<INT>";
+const std::string IValue::SIGNATURE_FLOAT = "<FLOAT>";
+const std::string IValue::SIGNATURE_BOOL = "<BOOL>";
+const std::string IValue::SIGNATURE_STRING = "<STRING>";
+#pragma endregion
 
+IValue::IValue(ValueType _type, Position _pos, Environment* _intrEnv)
+{
+	type = _type;
+	position = _pos;
+	intrinsicEnv = _intrEnv;
+
+	builtInFunc string_cast_body = [this](Environment* _env, Position _execPos) { return SHARE(new StringValue(this->ToString(), _execPos)); };
+	AddCast(SIGNATURE_STRING, string_cast_body);
 }
 
 IValue::~IValue()
@@ -21,19 +40,13 @@ Environment * IValue::GetIntrinsicEnv()
 {
 	if(!intrinsicEnv)
 	{
-		intrinsicEnv = new Environment(Environment::GLOBAL, GetTypeSig());
-
-		FuncValue::built_in string_cast_body = [this](Environment* _env, Position _execPos) { return SHARE(new StringValue(this->ToString(), _execPos)); };
-		std::vector<std::string> string_cast_argNames({}), string_cast_argSigs({});
-		SharedValue func_string_cast = SHARE(new FuncValue(intrinsicEnv, "__string__", string_cast_body, string_cast_argNames, string_cast_argSigs, "<STRING>", position));
-
-		intrinsicEnv->AddFuncDeclaration("__string__", func_string_cast, position);
+		intrinsicEnv = new Environment(Environment::GLOBAL, GetSignature());
 
 #pragma region StringValue Instrinsic Members
 		if(type == VSTRING)
 		{
 #pragma region StringValue Index Function
-			FuncValue::built_in index_body = [this](Environment* _env, Position _execPos)
+			builtInFunc index_body = [this](Environment* _env, Position _execPos)
 			{
 				std::string value = ((StringValue*)this)->value;
 				int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
@@ -41,24 +54,31 @@ Environment * IValue::GetIntrinsicEnv()
 				if(index < 0 || index >= (int)value.size()) { return SHARE(Exception_OutOfRange("index", Trace(_execPos, intrinsicEnv->name, intrinsicEnv->filePath))); }
 				else { return SHARE(new StringValue(std::string(1, value[index]), _execPos)); }
 			};
-			std::vector<std::string> index_argNames({ "index" }), index_argSigs({ "<INT>" });
-			SharedValue func_index = SHARE(new FuncValue(intrinsicEnv, "__index__", index_body, index_argNames, index_argSigs, "<STRING>", position));
+			std::vector<std::string> index_argNames({ "index" }), index_argSigs({ SIGNATURE_INT });
+			SharedValue func_index = SHARE(new FuncValue(intrinsicEnv, "__index__", index_body, index_argNames, index_argSigs, SIGNATURE_STRING, position));
 
 			intrinsicEnv->AddFuncDeclaration("__index__", func_index, position);
 #pragma endregion
 
 #pragma region StringValue Length Function
-			FuncValue::built_in length_body = [this](Environment* _env, Position _execPos) { return SHARE(new IntValue(((StringValue*)this)->value.size(), _execPos)); };
+			builtInFunc length_body = [this](Environment* _env, Position _execPos) { return SHARE(new IntValue(((StringValue*)this)->value.size(), _execPos)); };
 			std::vector<std::string> length_argNames({}), length_argSigs({});
-			SharedValue func_length = SHARE(new FuncValue(intrinsicEnv, "length", length_body, length_argNames, length_argSigs, "<INT>", position));
+			SharedValue func_length = SHARE(new FuncValue(intrinsicEnv, "length", length_body, length_argNames, length_argSigs, SIGNATURE_INT, position));
 
 			intrinsicEnv->AddFuncDeclaration("length", func_length, position);
 #pragma endregion
-#pragma endregion
 		}
+#pragma endregion
 	}
 
 	return intrinsicEnv;
+}
+
+SharedValue IValue::Cast(Environment* _execEnv, Signature _retSig, Position _execPos)
+{
+	auto search = castingFuncs.find(_retSig);
+	if(search != castingFuncs.end()) { return search->second(_execEnv, _execPos); }
+	else { return SHARE(Exception_CastNotFound(_retSig, Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
 }
 
 #pragma region ExceptionValue
@@ -71,17 +91,12 @@ ExceptionValue::ExceptionValue(std::string _name, std::string _msg, StackTrace &
 }
 
 ExceptionValue::ExceptionValue(std::string _name, std::string _msg, Trace _trace)
-	: IValue(VEXCEPTION, _trace.position, 0)
+	: IValue(VEXCEPTION, _trace.position, nullptr)
 {
 	name = _name;
 	message = _msg;
 	stackTrace.push_back(_trace);
 }
-
-IValue* ExceptionValue::GetCopy() { return new ExceptionValue(name, message, stackTrace); }
-TypeSig ExceptionValue::GetTypeSig() { return "<EXCEPTION>"; }
-
-void ExceptionValue::ExtendStackTrace(Trace _trace) { stackTrace.push_back(_trace); }
 
 std::string ExceptionValue::ToString()
 {
@@ -94,24 +109,15 @@ std::string ExceptionValue::ToString()
 }
 #pragma endregion
 
-#pragma region VoidValue
-VoidValue::VoidValue(Position _pos) : IValue(VVOID, _pos, nullptr) { }
-IValue* VoidValue::GetCopy() { return new VoidValue(position); }
-TypeSig VoidValue::GetTypeSig() { return "<VOID>"; }
-std::string VoidValue::ToString() { return "void"; }
-#pragma endregion
-
 #pragma region MemberedValue
-MemberedValue::MemberedValue(DefinitionMap& _memDefs, TypeSig _typeSig, Environment* _intrEnv, Position _pos)
+MemberedValue::MemberedValue(DefinitionMap& _memDefs, Signature _sig, Environment* _intrEnv, Position _pos)
 	: IValue(VMEMBERED, _pos, _intrEnv)
 {
 	memDefinitions = _memDefs;
-	typeSig = _typeSig;
+	signature = _sig;
 }
 
-IValue* MemberedValue::GetCopy() { return new MemberedValue(memDefinitions, typeSig, intrinsicEnv->GetCopy(), position); }
-TypeSig MemberedValue::GetTypeSig() { return typeSig; }
-
+IValue* MemberedValue::GetCopy() { return new MemberedValue(memDefinitions, signature, intrinsicEnv->GetCopy(), position); }
 SharedValue MemberedValue::GetMemberValue(std::string _memId, Position _execPos) { return intrinsicEnv->GetValue(_memId, _execPos, false); }
 
 std::string MemberedValue::ToString()
@@ -130,29 +136,29 @@ std::string MemberedValue::ToString()
 #pragma endregion
 
 #pragma region ArrayValue
-ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElems, Position _pos)
+ArrayValue::ArrayValue(Signature _elemSignature, std::vector<SharedValue>& _initElems, Position _pos)
 	: IValue(VARRAY, _pos, nullptr)
 {
-	elemTypeSig = _elemTypeSig;
+	elemSignature = _elemSignature;
 	elements = _initElems;
 
 	GetIntrinsicEnv(); //Setting the intrinsic env so it has the basic stuff plus what I'm about to add
 
 #pragma region Intrinsic Functions
 #pragma region Append
-	FuncValue::built_in append_body = [this](Environment* _env, Position _execPos)
+	builtInFunc append_body = [this](Environment* _env, Position _execPos)
 	{
 		elements.push_back(_env->GetValue("value", _execPos, false));
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> append_argNames({ "value" }), append_argSigs({ elemTypeSig });
+	std::vector<std::string> append_argNames({ "value" }), append_argSigs({ elemSignature });
 	SharedValue func_append = SHARE(new FuncValue(intrinsicEnv, "append", append_body, append_argNames, append_argSigs, "<VOID>", position));
 
 	intrinsicEnv->AddFuncDeclaration("append", func_append, position);
 #pragma endregion
 
 #pragma region AppendArray
-	FuncValue::built_in appendArray_body = [this](Environment* _env, Position _execPos)
+	builtInFunc appendArray_body = [this](Environment* _env, Position _execPos)
 	{
 		ArrayValue* arr = _env->GetValue("array", _execPos, false)->AsArray();
 		std::vector<SharedValue> copiedElems;
@@ -163,14 +169,14 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		elements.insert(elements.end(), copiedElems.begin(), copiedElems.end());
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> appendArray_argNames({ "array" }), appendArray_argSigs({ "<[" + elemTypeSig + "]>" });
+	std::vector<std::string> appendArray_argNames({ "array" }), appendArray_argSigs({ elemSignature + "|" + IValue::SIGNATURE_ARRAY });
 	SharedValue func_appendArray = SHARE(new FuncValue(intrinsicEnv, "appendArray", appendArray_body, appendArray_argNames, appendArray_argSigs, "<VOID>", position));
 
 	intrinsicEnv->AddFuncDeclaration("appendArray", func_appendArray, position);
 #pragma endregion
 
 #pragma region Insert
-	FuncValue::built_in insert_body = [this](Environment* _env, Position _execPos)
+	builtInFunc insert_body = [this](Environment* _env, Position _execPos)
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
@@ -180,14 +186,14 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		elements.insert(elements.begin() + index, _env->GetValue("value", _execPos, false));
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> insert_argNames({ "value", "index" }), insert_argSigs({ elemTypeSig, "<INT>" });
-	SharedValue func_insert = SHARE(new FuncValue(intrinsicEnv, "insert", insert_body, insert_argNames, insert_argSigs, "<VOID>", position));
+	std::vector<std::string> insert_argNames({ "value", "index" }), insert_argSigs({ elemSignature, SIGNATURE_INT });
+	SharedValue func_insert = SHARE(new FuncValue(intrinsicEnv, "insert", insert_body, insert_argNames, insert_argSigs, SIGNATURE_VOID, position));
 
 	intrinsicEnv->AddFuncDeclaration("insert", func_insert, position);
 #pragma endregion
 
 #pragma region InsertArray
-	FuncValue::built_in insertArray_body = [this](Environment* _env, Position _execPos)
+	builtInFunc insertArray_body = [this](Environment* _env, Position _execPos)
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
@@ -203,14 +209,14 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		elements.insert(elements.begin() + index, copiedElems.begin(), copiedElems.end());
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> insertArray_argNames({ "array", "index" }), insertArray_argSigs({ "<[" + elemTypeSig + "]>", "<INT>" });
-	SharedValue func_insertArray = SHARE(new FuncValue(intrinsicEnv, "insertArray", insertArray_body, insertArray_argNames, insertArray_argSigs, "<VOID>", position));
+	std::vector<std::string> insertArray_argNames({ "array", "index" }), insertArray_argSigs({ elemSignature + "|" + SIGNATURE_ARRAY, SIGNATURE_INT });
+	SharedValue func_insertArray = SHARE(new FuncValue(intrinsicEnv, "insertArray", insertArray_body, insertArray_argNames, insertArray_argSigs, SIGNATURE_VOID, position));
 
 	intrinsicEnv->AddFuncDeclaration("insertArray", func_insertArray, position);
 #pragma endregion
 
 #pragma region RemoveAt
-	FuncValue::built_in removeAt_body = [this](Environment* _env, Position _execPos)
+	builtInFunc removeAt_body = [this](Environment* _env, Position _execPos)
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
@@ -220,14 +226,14 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		elements.erase(elements.begin() + index);
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> removeAt_argNames({ "index" }), removeAt_argSigs({ "<INT>" });
-	SharedValue func_removeAt = SHARE(new FuncValue(intrinsicEnv, "removeAt", removeAt_body, removeAt_argNames, removeAt_argSigs, "<VOID>", position));
+	std::vector<std::string> removeAt_argNames({ "index" }), removeAt_argSigs({ SIGNATURE_INT });
+	SharedValue func_removeAt = SHARE(new FuncValue(intrinsicEnv, "removeAt", removeAt_body, removeAt_argNames, removeAt_argSigs, SIGNATURE_VOID, position));
 
 	intrinsicEnv->AddFuncDeclaration("removeAt", func_removeAt, position);
 #pragma endregion
 
 #pragma region RemoveRange
-	FuncValue::built_in removeRange_body = [this](Environment* _env, Position _execPos)
+	builtInFunc removeRange_body = [this](Environment* _env, Position _execPos)
 	{
 		int start = _env->GetValue("start", _execPos, false)->AsInt()->value;
 
@@ -239,14 +245,14 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 		elements.erase(elements.begin() + start, elements.begin() + count);
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> removeRange_argNames({ "start", "count" }), removeRange_argSigs({ "<INT>", "<INT>" });
-	SharedValue func_removeRange = SHARE(new FuncValue(intrinsicEnv, "removeRange", removeRange_body, removeRange_argNames, removeRange_argSigs, "<VOID>", position));
+	std::vector<std::string> removeRange_argNames({ "start", "count" }), removeRange_argSigs({ SIGNATURE_INT, SIGNATURE_INT });
+	SharedValue func_removeRange = SHARE(new FuncValue(intrinsicEnv, "removeRange", removeRange_body, removeRange_argNames, removeRange_argSigs, SIGNATURE_VOID, position));
 
 	intrinsicEnv->AddFuncDeclaration("removeRange", func_removeRange, position);
 #pragma endregion
 
 #pragma region Clear
-	FuncValue::built_in clear_body = [this](Environment* _env, Position _execPos)
+	builtInFunc clear_body = [this](Environment* _env, Position _execPos)
 	{
 		elements.clear();
 		return SHARE_VOID(_execPos);
@@ -258,30 +264,28 @@ ArrayValue::ArrayValue(TypeSig _elemTypeSig, std::vector<SharedValue>& _initElem
 #pragma endregion
 
 #pragma region Size
-	FuncValue::built_in size_body = [this](Environment* _env, Position _execPos) { return SHARE(new IntValue(elements.size(), _execPos)); };
+	builtInFunc size_body = [this](Environment* _env, Position _execPos) { return SHARE(new IntValue(elements.size(), _execPos)); };
 	std::vector<std::string> size_argNames({}), size_argSigs({});
-	SharedValue func_size = SHARE(new FuncValue(intrinsicEnv, "size", size_body, size_argNames, size_argSigs, "<INT>", position));
+	SharedValue func_size = SHARE(new FuncValue(intrinsicEnv, "size", size_body, size_argNames, size_argSigs, SIGNATURE_INT, position));
 
 	intrinsicEnv->AddFuncDeclaration("size", func_size, position);
 #pragma endregion
 
 #pragma region Index
-	FuncValue::built_in index_body = [this](Environment* _env, Position _execPos)
+	builtInFunc index_body = [this](Environment* _env, Position _execPos)
 	{
 		int index = _env->GetValue("index", _execPos, false)->AsInt()->value;
 
 		if(index < 0 || index >= (int)elements.size()) { return SHARE(Exception_OutOfRange("index", Trace(_execPos, intrinsicEnv->name, intrinsicEnv->filePath))); }
 		else { return elements[index]; }
 	};
-	std::vector<std::string> index_argNames({ "index" }), index_argSigs({ "<INT>" });
-	SharedValue func_index = SHARE(new FuncValue(intrinsicEnv, "__index__", index_body, index_argNames, index_argSigs, elemTypeSig, position));
+	std::vector<std::string> index_argNames({ "index" }), index_argSigs({ SIGNATURE_INT });
+	SharedValue func_index = SHARE(new FuncValue(intrinsicEnv, "__index__", index_body, index_argNames, index_argSigs, elemSignature, position));
 
 	intrinsicEnv->AddFuncDeclaration("__index__", func_index, position);
 #pragma endregion
 #pragma endregion
 }
-
-ArrayValue::~ArrayValue() { elements.clear(); }
 
 IValue* ArrayValue::GetCopy()
 {
@@ -290,10 +294,8 @@ IValue* ArrayValue::GetCopy()
 	for(auto it : elements)
 		copyElems.push_back(SHARE_COPY(it));
 
-	return new ArrayValue(elemTypeSig, copyElems, position);
+	return new ArrayValue(elemSignature, copyElems, position);
 }
-
-TypeSig ArrayValue::GetTypeSig() { return "<[" + elemTypeSig + "]>"; }
 
 std::string ArrayValue::ToString()
 {
@@ -310,57 +312,42 @@ std::string ArrayValue::ToString()
 }
 #pragma endregion
 
-#pragma region NamedspaceValue
-NamedspaceValue::NamedspaceValue(Environment* _env, Position _pos)
-	: IValue(VNAMEDSPACE, _pos, _env)
-{
-	environment = intrinsicEnv;
-}
+#pragma region PointerValue
+std::string PointerValue::ToString() { return "Pointing to => " + Resolve(intrinsicEnv, position)->ToString(); }
 
+SharedValue PointerValue::Resolve(Environment* _env, Position _execPos)
+{
+	if(value.expired()) { return SHARE(Exception_PointerExpired(Trace(_execPos, _env->name, _env->filePath))); }
+	else { return SharedValue(value); }
+}
+#pragma endregion
+
+#pragma region NamedspaceValue
 IValue* NamedspaceValue::GetCopy() { return new NamedspaceValue(environment->GetCopy(), position); }
-TypeSig NamedspaceValue::GetTypeSig() { return "<NAMEDSPACE>"; }
-std::string NamedspaceValue::ToString() { return "namedspace"; }
 #pragma endregion
 
 #pragma region FuncValue
-FuncValue::FuncValue(Environment * _defEnv, std::string _name, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, BodyType _bodyType, Position _pos)
+FuncValue::FuncValue(Environment * _defEnv, std::string _name, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, Signature _retSignature, BodyType _bodyType, Position _pos)
 	: IValue(VFUNC, _pos, new Environment(_defEnv, _name))
 {
 	defEnvironment = _defEnv;
 	name = _name;
 	argNames = _argNames;
 	argSigs = _argSigs;
-	returnTypeSig = _retTypeSig;
+	returnSignature = _retSignature;
 	bodyType = _bodyType;
-
-#pragma region Construt Func Type Sig
-	typeSig = "<FUNC>";
-
-	if(argSigs.size() == 0) { typeSig += "(void)"; }
-	else
-	{
-		typeSig += "(";
-
-		for(auto it : argSigs)
-			typeSig += it + ",";
-
-		typeSig.pop_back();
-		typeSig += ")";
-	}
-
-	typeSig += "->" + _retTypeSig;
-#pragma endregion
+	signature = GenerateSignature(argSigs, returnSignature);
 }
 
-FuncValue::FuncValue(Environment* _defEnv, std::string _name, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
-	: FuncValue(_defEnv, _name, _argNames, _argSigs, _retTypeSig, DECLARED, _pos)
+FuncValue::FuncValue(Environment* _defEnv, std::string _name, std::shared_ptr<IStatement> _body, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, Signature _retSignature, Position _pos)
+	: FuncValue(_defEnv, _name, _argNames, _argSigs, _retSignature, DECLARED, _pos)
 {
 	body = _body;
 	needsReturn = body->_type == SCODE_BLOCK;
 }
 
-FuncValue::FuncValue(Environment* _defEnv, std::string _name, built_in _ptr, std::vector<std::string>& _argNames, std::vector<TypeSig>& _argSigs, TypeSig _retTypeSig, Position _pos)
-	: FuncValue(_defEnv, _name, _argNames, _argSigs, _retTypeSig, BUILT_IN, _pos)
+FuncValue::FuncValue(Environment* _defEnv, std::string _name, builtInFunc _ptr, std::vector<std::string>& _argNames, std::vector<Signature>& _argSigs, Signature _retSignature, Position _pos)
+	: FuncValue(_defEnv, _name, _argNames, _argSigs, _retSignature, BUILT_IN, _pos)
 {
 	pointer = _ptr;
 }
@@ -380,10 +367,10 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 	for(int i = 0; i < (int)_argExprs.size(); i++)
 	{
 		SharedValue argVal = _argExprs[i]->Evaluate(_execEnv);
-		TypeSig argSig = argSigs[i];
+		Signature argSig = argSigs[i];
 
 		if(argVal->GetType() == VEXCEPTION) { return argVal; }
-		else if(argVal->GetTypeSig() != argSig) { return SHARE(Exception_MismatchType(argSig, argVal->GetTypeSig(), Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
+		else if(argVal->GetSignature() != argSig) { return SHARE(Exception_MismatchType(argSig, argVal->GetSignature(), Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
 		else { env.AddVariable(argNames[i], SHARE_COPY(argVal), _execPos); }
 	}
 
@@ -409,10 +396,10 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 			else { retVal = varRetVal; }
 		}
 
-		TypeSig retValTypeSig = retVal->GetTypeSig();
+		Signature retValSignature = retVal->GetSignature();
 
-		if(retValTypeSig != returnTypeSig)
-			return SHARE(Exception_MismatchType(returnTypeSig, retValTypeSig, trace));
+		if(retValSignature != returnSignature)
+			return SHARE(Exception_MismatchType(returnSignature, retValSignature, trace));
 	}
 
 	return retVal;
@@ -420,24 +407,66 @@ SharedValue FuncValue::Call(Environment* _execEnv, ArgumentList& _argExprs, Posi
 
 IValue* FuncValue::GetCopy()
 {
-	if(bodyType == DECLARED) { return new FuncValue(defEnvironment, name, body, argNames, argSigs, returnTypeSig, position); }
-	else { return new FuncValue(defEnvironment, name, pointer, argNames, argSigs, returnTypeSig, position); }
+	if(bodyType == DECLARED) { return new FuncValue(defEnvironment, name, body, argNames, argSigs, returnSignature, position); }
+	else { return new FuncValue(defEnvironment, name, pointer, argNames, argSigs, returnSignature, position); }
 }
 
-TypeSig FuncValue::GetTypeSig() { return typeSig; }
-std::string FuncValue::ToString() { return GetTypeSig(); }
+Signature FuncValue::GenerateSignature(std::vector<Signature> _argSigs, Signature _retSig)
+{
+	Signature signature;
+
+	if(_argSigs.size() == 0) { signature += "(void)"; }
+	else
+	{
+		signature += "(";
+
+		for(auto it : _argSigs)
+			signature += it + ",";
+
+		signature.pop_back();
+		signature += ")";
+	}
+
+	signature += ":" + _retSig + "#" + SIGNATURE_FUNC;
+	return signature;
+}
+#pragma endregion
+
+#pragma region UnkonwnValue
+UnknownValue::UnknownValue(IValue * _val, Position _pos)
+	: IValue(VUNKNOWN, _pos, nullptr)
+{
+	value = _val;
+
+	//Casting Function
+	builtInFunc body = [this](Environment* _env, Position _execPos)
+	{
+		if(resolved)
+			return SHARE(Exception_Resolved(Trace(_execPos, _env->name, _env->filePath)));
+
+		resolved = true;
+		return SHARE(value);
+	};
+	AddCast(value->GetSignature(), body);
+}
+
+UnknownValue::~UnknownValue()
+{
+	if(!resolved)
+		delete value;
+}
 #pragma endregion
 
 SharedValue Value::Set(Environment* _execEnv, IValue * _val, Position _execPos)
 {
-	TypeSig orgTypeSig = value->GetTypeSig();
-	TypeSig valTypeSig = _val->GetTypeSig();
+	Signature orgSignature = value->GetSignature();
+	Signature valSignature = _val->GetSignature();
 
-	if(orgTypeSig == valTypeSig)
+	if(orgSignature == valSignature)
 	{
 		delete value;
 		value = _val;
 		return SHARE_VOID(_execPos);
 	}
-	else { return SHARE(Exception_MismatchType(orgTypeSig, valTypeSig, Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
+	else { return SHARE(Exception_MismatchType(orgSignature, valSignature, Trace(_execPos, _execEnv->name, _execEnv->filePath))); }
 }

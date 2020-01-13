@@ -15,10 +15,19 @@
 #include <locale>
 #include <iterator>
 #include <filesystem>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
 #include "Result.h"
 #include "Lexer.h"
 #include "Grammar.h"
-#include <chrono>
+#include "Ram.h"
+
+namespace Windows
+{
+#define WINDOWS_LEAN_AND_MEAN
+#include <Windows.h>
+};
 
 class IValue;
 class Value;
@@ -26,19 +35,80 @@ class IStatement;
 class IExpression;
 class Environment;
 
-typedef std::string TypeName, TypeSig;
-typedef std::map<TypeName, TypeSig> TypeSigMap;
+typedef std::string TypeName, Signature;
+typedef std::map<TypeName, Signature> SignatureMap;
 typedef std::vector<IExpression*> ArgumentList;
 typedef std::map<std::string, IExpression*> AssignmentMap;
-typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->TypeSig
+typedef std::pair<std::string, std::string> Definition; // Either Identifier->TypeDef or Identifier->Signature
 typedef std::vector<Definition> DefinitionList;
 typedef std::map<std::string, TypeName> DefinitionMap;
+
 typedef std::shared_ptr<Value> SharedValue;
+typedef std::weak_ptr<Value> ObservedValue;
+typedef std::function<SharedValue(Environment*, Position)> builtInFunc;
 
 #define SHARE(v) SharedValue(new Value(v))
 #define SHARE_VOID(pos) SHARE(new VoidValue(pos))
 #define SHARE_COPY(val) SHARE(val->GetCopy())
 #define SYS_SEP std::string(1, std::experimental::filesystem::path::preferred_separator)
+
+struct RamVoid : RamValue
+{
+	RamVoid() {}
+
+	int AsCInt() { throw std::runtime_error("Value is void."); }
+	float AsCFloat() { throw std::runtime_error("Value is void."); }
+	const char *AsCString() { throw std::runtime_error("Value is void."); }
+	bool AsCBool() { throw std::runtime_error("Value is void."); }
+};
+
+struct RamInt : RamValue
+{
+	int value;
+
+	RamInt(int _val) { value = _val; }
+
+	int AsCInt() { return value; }
+	float AsCFloat() { throw std::runtime_error("Value is an int."); }
+	const char *AsCString() { throw std::runtime_error("Value is an int."); }
+	bool AsCBool() { throw std::runtime_error("Value is an int."); }
+};
+
+struct RamFloat : RamValue
+{
+	float value;
+
+	RamFloat(float _val) { value = _val; }
+
+	float AsCFloat() { return value; }
+	int AsCInt() { throw std::runtime_error("Value is a float."); }
+	const char *AsCString() { throw std::runtime_error("Value is a float."); }
+	bool AsCBool() { throw std::runtime_error("Value is a float."); }
+};
+
+struct RamBool : RamValue
+{
+	bool value;
+
+	RamBool(bool _val) { value = _val; }
+
+	bool AsCBool() { return value; }
+	int AsCInt() { throw std::runtime_error("Value is a bool."); }
+	float AsCFloat() { throw std::runtime_error("Value is a bool."); }
+	const char *AsCString() { throw std::runtime_error("Value is a bool."); }
+};
+
+struct RamString : RamValue
+{
+	std::string value;
+
+	RamString(std::string _val) { value = _val; }
+
+	const char *AsCString() { return value.c_str(); }
+	bool AsCBool() { throw std::runtime_error("Value is a string."); }
+	int AsCInt() { throw std::runtime_error("Value is a string."); }
+	float AsCFloat() { throw std::runtime_error("Value is a string."); }
+};
 
 inline std::string GetFileName(std::string _filePath, bool _includeExt)
 {

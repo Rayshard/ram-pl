@@ -132,7 +132,7 @@ ExpressionResult GetAccess(IExpression* _base, TokenReader _reader)
 ExpressionResult GetMembered(TokenReader _reader)
 {
 	auto parser = [](TokenReader _r) { return GetLet(_r, false); }; // Looks only for let statments without the let keyword
-	StatementResult result = GetCodeBlock(_reader, "<MEMBERED>", parser);
+	StatementResult result = GetCodeBlock(_reader, IValue::SIGNATURE_MEMBERED, parser);
 
 	if(result.success)
 	{
@@ -270,7 +270,7 @@ ExpressionResult GetArrayTypeName(TokenReader _reader, std::string& _outTypeName
 
 			if(reader.GetCurType() == TT_RSQRBRACKET)
 			{
-				_outTypeName = '[' + typeName + ']';
+				_outTypeName = typeName + "|" + IValue::SIGNATURE_ARRAY;
 				return ExpressionResult::GenSuccess(nullptr, reader.Advance());
 			}
 			else { return ExpressionResult::GenFailure("Expected ']'.", reader); }
@@ -278,6 +278,59 @@ ExpressionResult GetArrayTypeName(TokenReader _reader, std::string& _outTypeName
 		else { return innerResult; }
 	}
 	else { return ExpressionResult::GenFailure("Expected '['.", _reader); }
+}
+
+ExpressionResult GetFuncSignature(TokenReader _reader, std::vector<std::string>& _argTypeNames, std::string& _retTypeName)
+{
+	if(_reader.GetCurType() == TT_LPAREN)
+	{
+		TokenReader reader = TokenReader(_reader.Advance());
+		std::vector<std::string> argTypeNames;
+
+		if(reader.GetCurType() != TT_RPAREN) // Expecting at least one arg
+		{
+			while(true)
+			{
+				std::string argTypeName;
+				ExpressionResult argTypeNameResult = GetTypeName(reader, argTypeName);
+
+				if(argTypeNameResult.success)
+				{
+					argTypeNames.push_back(argTypeName);
+					reader = argTypeNameResult.reader;
+
+					if(reader.GetCurType() == TT_COMMA) { reader.Advance(); }
+					else if(reader.GetCurType() == TT_RPAREN)
+					{
+						reader.Advance();
+						break;
+					}
+					else { return ExpressionResult::GenFailure("Expected ')'.", reader); }
+				}
+				else { return argTypeNameResult; }
+			}
+		}
+		else
+		{
+			argTypeNames.push_back("void");
+			reader.Advance();
+		}
+
+		if(reader.GetCurType() == TT_COLON) { reader.Advance(); }
+		else { return ExpressionResult::GenFailure("Expected ':'.", reader); }
+
+		std::string retTypeName;
+		ExpressionResult retTypeNameResult = GetTypeName(reader, retTypeName);
+
+		if(retTypeNameResult.success)
+		{
+			_argTypeNames = argTypeNames;
+			_retTypeName = retTypeName;
+			return ExpressionResult::GenSuccess(nullptr, retTypeNameResult.reader.GetCurPtr());
+		}
+		else { return retTypeNameResult; }
+	}
+	else { return ExpressionResult::GenFailure("Expected '('", _reader); }
 }
 
 ExpressionResult GetSingular(TokenReader _reader)
@@ -968,7 +1021,20 @@ StatementResult GetTypeDefinition(TokenReader _reader)
 
 					return StatementResult::GenFailure("Expected '}'. ", reader);
 				}
-				else { return StatementResult::GenFailure("Expected '{'. ", _reader); }
+				else if(reader.GetCurType() == TT_LPAREN)
+				{
+					std::vector<std::string> argTypeNames;
+					std::string retTypeName;
+					ExpressionResult funcSigResult = GetFuncSignature(reader, argTypeNames, retTypeName);
+
+					if(funcSigResult.success)
+					{
+						TypeDefinition* typeDefiniton = new TypeDefinition(identifier, argTypeNames, retTypeName, pos);
+						return StatementResult::GenSuccess(typeDefiniton, funcSigResult.reader.GetCurPtr());
+					}
+					else { return StatementResult::GenFailure(funcSigResult.message, funcSigResult.reader); }
+				}
+				else { return StatementResult::GenFailure("Expected type definition. ", _reader); }
 			}
 			else { return StatementResult::GenFailure("Expected = after identifier.", reader); }
 		}

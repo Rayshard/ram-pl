@@ -4,6 +4,7 @@
 #include "Statement.h"
 #include "Environment.h"
 #include "Value.h"
+#include "RamDLL.h"
 
 std::map<std::string, std::vector<std::string>> Interpreter::SRC_LINES = std::map<std::string, std::vector<std::string>>();
 std::chrono::time_point<std::chrono::steady_clock> Interpreter::INIT_TIME = std::chrono::high_resolution_clock::now();
@@ -12,6 +13,8 @@ std::string Interpreter::MainFilePath = "";
 
 void Interpreter::Init(const char* _mainFilePath)
 {
+	srand(time(NULL));
+
 	Interpreter::MainFilePath = _mainFilePath;
 	Interpreter::INIT_TIME = std::chrono::high_resolution_clock::now();
 	Interpreter::SetStandardEnvironment();
@@ -22,52 +25,54 @@ void Interpreter::SetStandardEnvironment()
 	Environment* env = new Environment(0, "STD", "internal");
 
 	//Type Defs
-	env->typeDefs.insert_or_assign("STD.int", "<INT>");
-	env->typeDefs.insert_or_assign("STD.float", "<FLOAT>");
-	env->typeDefs.insert_or_assign("STD.string", "<STRING>");
-	env->typeDefs.insert_or_assign("STD.bool", "<BOOL>");
-	env->typeDefs.insert_or_assign("STD.void", "<VOID>");
+	env->typeDefs.insert_or_assign("STD.int", IValue::SIGNATURE_INT);
+	env->typeDefs.insert_or_assign("STD.float", IValue::SIGNATURE_FLOAT);
+	env->typeDefs.insert_or_assign("STD.string", IValue::SIGNATURE_STRING);
+	env->typeDefs.insert_or_assign("STD.bool", IValue::SIGNATURE_BOOL);
+	env->typeDefs.insert_or_assign("STD.void", IValue::SIGNATURE_VOID);
 
 #pragma region Functions
-	Trace trace = Trace(Position(), "STD", "std");
-
-	//Print
-	FuncValue::built_in print_body = [](Environment* _env, Position _execPos)
+#pragma region Print
+	builtInFunc print_body = [](Environment* _env, Position _execPos)
 	{
 		std::cout << _env->GetValue("arg", _execPos, false)->ToString();
 		return SHARE_VOID(_execPos);
 	};
-	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ "<STRING>" });
-	SharedValue func_print = SHARE(new FuncValue(env, "print", print_body, print_argNames, print_argSigs, "<VOID>", Position()));
+	std::vector<std::string> print_argNames({ "arg" }), print_argSigs({ IValue::SIGNATURE_STRING });
+	SharedValue func_print = SHARE(new FuncValue(env, "print", print_body, print_argNames, print_argSigs, IValue::SIGNATURE_VOID, Position()));
 
 	env->AddFuncDeclaration("print", func_print, Position());
+#pragma endregion
 
-	//GetInput
-	FuncValue::built_in getInput_body = [](Environment* _env, Position _execPos)
+#pragma region GetInput
+	builtInFunc getInput_body = [](Environment* _env, Position _execPos)
 	{
 		std::string input;
 		std::getline(std::cin, input);
 		return SHARE(new StringValue(input, _execPos));
 	};
-	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ "<STRING>" });
-	SharedValue func_getInput = SHARE(new FuncValue(env, "getInput", getInput_body, getInput_argNames, getInput_argSigs, "<STRING>", Position()));
+	std::vector<std::string> getInput_argNames({}), getInput_argSigs({ IValue::SIGNATURE_STRING });
+	SharedValue func_getInput = SHARE(new FuncValue(env, "getInput", getInput_body, getInput_argNames, getInput_argSigs, IValue::SIGNATURE_STRING, Position()));
 
 	env->AddFuncDeclaration("getInput", func_getInput, Position());
+#pragma endregion
 
-	//Time
-	FuncValue::built_in time_body = [](Environment* _env, Position _execPos)
+#pragma region Time
+	builtInFunc time_body = [](Environment* _env, Position _execPos)
 	{
 		auto time = std::chrono::high_resolution_clock::now();
 		return SHARE(new StringValue(std::to_string((time - Interpreter::INIT_TIME).count()), _execPos));
 	};
 	std::vector<std::string> time_argNames({}), time_argSigs({});
-	SharedValue func_time = SHARE(new FuncValue(env, "time", time_body, time_argNames, time_argSigs, "<STRING>", Position()));
+	SharedValue func_time = SHARE(new FuncValue(env, "time", time_body, time_argNames, time_argSigs, IValue::SIGNATURE_STRING, Position()));
 
 	env->AddFuncDeclaration("time", func_time, Position());
+#pragma endregion
 
-	//GetElapsedTime
-	FuncValue::built_in getElapsedTime_body = [trace](Environment* _env, Position _execPos)
+#pragma region GetElapsedTime
+	builtInFunc getElapsedTime_body = [](Environment* _env, Position _execPos)
 	{
+		Trace trace = Trace(_execPos, "STD", "std");
 		std::string start = _env->GetValue("start", _execPos, false)->ToString();
 		std::string end = _env->GetValue("end", _execPos, false)->ToString();
 		long double convStart = 0.0, convEnd = 0.0;
@@ -89,14 +94,16 @@ void Interpreter::SetStandardEnvironment()
 
 		return SHARE(new StringValue(std::to_string(elapsed), _execPos));
 	};
-	std::vector<std::string> getElapsedTime_argNames({ "start", "end", "precision" }), getElapsedTime_ardSigs({ "<STRING>", "<STRING>", "<STRING>" });
-	SharedValue func_getElapsedTime = SHARE(new FuncValue(env, "getElapsedTime", getElapsedTime_body, getElapsedTime_argNames, getElapsedTime_ardSigs, "<STRING>", Position()));
+	std::vector<std::string> getElapsedTime_argNames({ "start", "end", "precision" }), getElapsedTime_ardSigs({ IValue::SIGNATURE_STRING, IValue::SIGNATURE_STRING, IValue::SIGNATURE_STRING });
+	SharedValue func_getElapsedTime = SHARE(new FuncValue(env, "getElapsedTime", getElapsedTime_body, getElapsedTime_argNames, getElapsedTime_ardSigs, IValue::SIGNATURE_STRING, Position()));
 
 	env->AddFuncDeclaration("getElapsedTime", func_getElapsedTime, Position());
+#pragma endregion
 
-	//Include
-	FuncValue::built_in include_body = [trace](Environment* _env, Position _execPos)
+#pragma region Include
+	builtInFunc include_body = [](Environment* _env, Position _execPos)
 	{
+		Trace trace = Trace(_execPos, "STD", "std");
 		std::string filePath = _env->GetValue("filePath", _execPos, false)->AsString()->value;
 
 		if(!FileExists(filePath.c_str()))
@@ -129,32 +136,132 @@ void Interpreter::SetStandardEnvironment()
 		Environment::GLOBAL = prevGlobal; // Reset global environment to calling file
 		return retVal;
 	};
-	std::vector<std::string> include_argNames({ "filePath", "name", "open" }), include_argSigs({ "<STRING>", "<STRING>", "<BOOL>" });
-	SharedValue func_include = SHARE(new FuncValue(env, "include", include_body, include_argNames, include_argSigs, "<VOID>", Position()));
+	std::vector<std::string> include_argNames({ "filePath", "name", "open" }), include_argSigs({ IValue::SIGNATURE_STRING, IValue::SIGNATURE_STRING, IValue::SIGNATURE_BOOL });
+	SharedValue func_include = SHARE(new FuncValue(env, "include", include_body, include_argNames, include_argSigs, IValue::SIGNATURE_VOID, Position()));
 
 	env->AddFuncDeclaration("include", func_include, Position());
+#pragma endregion
 
-	//Unscope
-	FuncValue::built_in unscope_body = [trace](Environment* _env, Position _execPos)
+#pragma region Unscope
+	builtInFunc unscope_body = [](Environment* _env, Position _execPos)
 	{
 		SharedValue ns = _env->GetValue("namedspace", _execPos, false);
 		return _env->parent->OpenNamedspace(ns->AsNamedspace(), _execPos);
 	};
-	std::vector<std::string> unscope_argNames({ "namedspace" }), unscope_argSigs({ "<NAMEDSPACE>" });
-	SharedValue func_unscope = SHARE(new FuncValue(env, "unscope", unscope_body, unscope_argNames, unscope_argSigs, "<VOID>", Position()));
+	std::vector<std::string> unscope_argNames({ "namedspace" }), unscope_argSigs({ IValue::SIGNATURE_NAMEDSPACE });
+	SharedValue func_unscope = SHARE(new FuncValue(env, "unscope", unscope_body, unscope_argNames, unscope_argSigs, IValue::SIGNATURE_VOID, Position()));
 
 	env->AddFuncDeclaration("unscope", func_unscope, Position());
+#pragma endregion
 
-	//PrintEnv
-	FuncValue::built_in printEnv_body = [](Environment* _env, Position _execPos)
+#pragma region PrintEnv
+	builtInFunc printEnv_body = [](Environment* _env, Position _execPos)
 	{
 		std::cout << _env->parent->ToString() << std::endl;
 		return SHARE_VOID(_execPos);
 	};
 	std::vector<std::string> printEnv_argNames({}), printEnv_argSigs({});
-	SharedValue func_printEnv = SHARE(new FuncValue(env, "printEnv", printEnv_body, printEnv_argNames, printEnv_argSigs, "<VOID>", Position()));
+	SharedValue func_printEnv = SHARE(new FuncValue(env, "printEnv", printEnv_body, printEnv_argNames, printEnv_argSigs, IValue::SIGNATURE_VOID, Position()));
 
 	env->AddFuncDeclaration("printEnv", func_printEnv, Position());
+#pragma endregion
+
+#pragma region DLLOpen
+	{
+		builtInFunc body = [](Environment* _env, Position _execPos)
+		{
+			Trace trace = Trace(_execPos, "STD", "std");
+			std::string dllPath = _env->GetValue("filePath", _execPos, false)->AsString()->value;
+			int dllID = RamDLL::Load(dllPath.c_str());
+
+			if(dllID == DLL_NOT_LOADED) { return SHARE(Exception_DLLLoadFail(dllPath, trace)); }
+			else
+			{
+				std::cout << "Loaded DLL at " + dllPath << std::endl;
+				return SHARE(new IntValue(dllID, _execPos));
+			}
+		};
+		std::vector<std::string> argNames({ "filePath" }), argSigs({ IValue::SIGNATURE_STRING });
+		SharedValue funcVal = SHARE(new FuncValue(env, "dllOpen", body, argNames, argSigs, IValue::SIGNATURE_INT, Position()));
+
+		env->AddFuncDeclaration(funcVal->AsFunc()->name, funcVal, Position());
+	}
+#pragma endregion
+
+#pragma region DLLClose
+	{
+		builtInFunc body = [](Environment* _env, Position _execPos)
+		{
+			Trace trace = Trace(_execPos, "STD", "std");
+
+			int id = _env->GetValue("id", _execPos, false)->AsInt()->value;
+
+			if(!RamDLL::Free(id)) { return SHARE(new ExceptionValue("ID Not Found", "There was no loaded DLL with the id '" + std::to_string(id) + "'", trace)); }
+			else { return SHARE_VOID(_execPos); }
+		};
+		std::vector<std::string> argNames({ "id" }), argSigs({ IValue::SIGNATURE_INT });
+		SharedValue funcVal = SHARE(new FuncValue(env, "dllClose", body, argNames, argSigs, IValue::SIGNATURE_VOID, Position()));
+
+		env->AddFuncDeclaration(funcVal->AsFunc()->name, funcVal, Position());
+	}
+#pragma endregion
+
+#pragma region DLLLoadFunc
+	{
+		builtInFunc body = [](Environment* _env, Position _execPos)
+		{
+			Trace trace = Trace(_execPos, "STD", "std");
+
+			int dllID = _env->GetValue("dllID", _execPos, false)->AsInt()->value;
+			std::string funcName = _env->GetValue("funcName", _execPos, false)->AsString()->value;
+
+			int funcID = RamDLL::LoadFunc(dllID, funcName.c_str());
+
+			if(funcID == DLL_NOT_LOADED) { return SHARE(new ExceptionValue("ID Not Found", "There was no loaded DLL with the id '" + std::to_string(dllID) + "'", trace)); }
+			else if(funcID == DLL_FUNC_NOT_FOUND) { return SHARE(Exception_SymbolNotFound(funcName, trace)); }
+			else { return SHARE(new IntValue(funcID, _execPos)); }
+		};
+		std::vector<std::string> argNames({ "dllID", "funcName" }), argSigs({ IValue::SIGNATURE_INT, IValue::SIGNATURE_STRING });
+		SharedValue funcVal = SHARE(new FuncValue(env, "dllLoadFunc", body, argNames, argSigs, IValue::SIGNATURE_INT, Position()));
+
+		env->AddFuncDeclaration(funcVal->AsFunc()->name, funcVal, Position());
+	}
+#pragma endregion
+
+#pragma region DLLGetFunc
+	{
+		builtInFunc body = [](Environment* _env, Position _execPos)
+		{
+			Trace trace = Trace(_execPos, "STD", "std");
+
+			int dllFuncID = _env->GetValue("dllFuncID", _execPos, false)->AsInt()->value;
+			ArrayValue* argTypesVal = _env->GetValue("argTypes", _execPos, false)->AsArray();
+
+			std::vector<Signature> argSigs;
+
+			for(auto it : argTypesVal->elements)
+			{
+			
+			}
+
+			int dllFuncID = _env->GetValue("dllFuncID", _execPos, false)->AsInt()->value;
+
+			FuncValue* funcVal = RamDLL::GetFuncValue(dllFuncID, _env->parent, _execPos);
+
+			if(!funcVal) { return SHARE(new ExceptionValue("ID Not Found", "There was no loaded DLL with a function with the id '" + std::to_string(dllFuncID) + "'", trace)); }
+			else
+			{
+				std::cout << "Loaded DLL Func" << std::endl;
+				return SHARE(new UnknownValue(funcVal, _execPos));
+			}
+		};
+		std::vector<std::string> argNames({ "dllFuncID", "argTypes", "retType" });
+		std::vector<std::string> argSigs({ IValue::SIGNATURE_INT, IValue::SIGNATURE_STRING + "|" + IValue::SIGNATURE_ARRAY, IValue::SIGNATURE_STRING });
+		SharedValue funcVal = SHARE(new FuncValue(env, "dllGetFunc", body, argNames, argSigs, IValue::SIGNATURE_UNKNOWN, Position()));
+
+		env->AddFuncDeclaration(funcVal->AsFunc()->name, funcVal, Position());
+	}
+#pragma endregion
 #pragma endregion
 
 	Interpreter::ENV_STD = env;

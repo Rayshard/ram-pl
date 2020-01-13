@@ -1,13 +1,13 @@
 DONE:
-	- implemented array functions: index(with brackets too), append, appendRange, insert, insertRange, removeAt, removeRange,
-	clear, size
-	- implemented intrinsic index member function which uses []
-	- implemented string index function
-	- fixed error with double printing stack trace
-	- added function names to stack trace
+	- 
 TO CHECK:
+	- Make sure that unknown values must be cast/resolved before use, i.e, you can't assign a variable
+	an unknown value or use them in expressions. They're basically like exceptions that can be cast to
+	a valid type.
+	- Allow function type definition to have a function sig as a return type
 	- Check all binops are right
 TO IMPLEMENT:
+	- make id that is given by dllOpen and dllGet random numbers
 	- string.substring
 TODO:
 	- only have return, break and continue in appropriate places

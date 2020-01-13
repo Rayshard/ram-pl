@@ -3,6 +3,7 @@
 #include "Value.h"
 #include "Parser.h"
 #include "Interpreter.h"
+#include "RamDLL.h"
 
 int main(int argc, char *argv[])
 {
@@ -26,5 +27,6 @@ int main(int argc, char *argv[])
 
 	delete Environment::GLOBAL;
 	Interpreter::SRC_LINES.clear();
+	RamDLL::FreeAll();
 	return 0;
 }

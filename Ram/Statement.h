@@ -1,7 +1,9 @@
 #pragma once
 
-enum StatementType { SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL,
-					 SRETURN, SBREAK, SCONTINUE, SWHILE, SIF };
+enum StatementType {
+	SBASE, SEXPR, SCODE_BLOCK, SLET, SASSIGNMENT, SFOR_LOOP, SMEMBER_DEF, STYPE_DEF, SFUNC_DECL,
+	SRETURN, SBREAK, SCONTINUE, SWHILE, SIF
+};
 
 class IStatement
 {
@@ -34,7 +36,7 @@ public:
 	std::string name;
 	std::vector<IStatement*> statements;
 	bool createSubEnv, canReturn, canBreak, canContinue;
-	
+
 	CodeBlock(std::vector<IStatement*>& _statements, Position _pos, std::string _name);
 	~CodeBlock();
 
@@ -141,11 +143,20 @@ public:
 class TypeDefinition : public IStatement
 {
 private:
+	enum Type { TD_MEMBERED, TD_FUNC };
+
 	std::string identifier;
+	Type sigType;
+	
+	//MEMBERED
 	DefinitionMap memDefs;
 
+	//FUNC
+	std::vector<std::string> argTypeNames;
+	std::string retTypeName;
 public:
 	TypeDefinition(std::string _identifier, DefinitionMap& _memDefs, Position _pos);
+	TypeDefinition(std::string _identifier, std::vector<std::string>& _argTypeNames, std::string _retTypeName, Position _pos);
 
 	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
@@ -161,7 +172,7 @@ private:
 
 public:
 	FuncDeclaration(std::string _identifier, DefinitionList& _argDefs, std::string _retTypeName, IStatement* _body, Position _pos);
-	
+
 	SharedValue Execute(Environment* _env);
 	IStatement* GetCopy();
 };

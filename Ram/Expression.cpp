@@ -282,17 +282,10 @@ SharedValue CastExpression::Evaluate(Environment* _env)
 	if(val->GetType() == VEXCEPTION) { return val; }
 	else
 	{
-		Environment* castingEnv = val->GetIntrinsicEnv();
-		std::string castFuncName = "__" + typeName + "__";
-		std::string castFuncSig = "func:(void)->" + typeName;
+		SharedValue retSigVal = _env->GetSignature(typeName, _position);
 
-		std::vector<IExpression*> argExprs({});
-		SharedValue func = castingEnv->GetValue(castFuncName, _position, false);
-		Trace trace = Trace(_position, _env->name, _env->filePath);
-
-		if(func->GetType() == VEXCEPTION) { return func; }
-		else if(func->GetType() != VFUNC) { return SHARE(Exception_MismatchType(castFuncSig, func->GetTypeSig(), trace)); }
-		else { return func->AsFunc()->Call(_env, argExprs, _position); }
+		if(retSigVal->GetType() == VEXCEPTION) { return retSigVal; }
+		else { return val->Cast(_env, retSigVal->AsString()->value, _position); }
 	}
 }
 
@@ -316,9 +309,9 @@ MemberedExpression::~MemberedExpression()
 
 SharedValue MemberedExpression::Evaluate(Environment* _env)
 {
-	Environment* intrinsicEnv = new Environment(_env, "<MEMBERED>");
+	Environment* intrinsicEnv = new Environment(_env, IValue::SIGNATURE_MEMBERED);
 	DefinitionMap memberDefs;
-	TypeSig typeSig = "<MEMBERED>{";
+	Signature signature = "{";
 
 	for(auto it : memAssigns)
 	{
@@ -326,26 +319,31 @@ SharedValue MemberedExpression::Evaluate(Environment* _env)
 		// members being created along side them that's why I use
 		// _creationEnv instead of membersEnv;
 		SharedValue val = SHARE_COPY(it.second->Evaluate(_env));
+		ValueType valType = val->GetType();
 
-		if(val->GetType() == VEXCEPTION)
+		if(valType == VEXCEPTION)
 		{
 			delete intrinsicEnv;
 			return val;
 		}
+		else if(valType == VUNKNOWN)
+		{
+			delete intrinsicEnv;
+			return SHARE(Exception_NotResolved(Trace(_position, _env->name, _env->filePath)));
+		}
+
+		Signature valSignature = val->GetSignature();
 
 		intrinsicEnv->AddVariable(it.first, val, _position);
-
-		TypeSig valTypeSig = val->GetTypeSig();
-
-		memberDefs.insert_or_assign(it.first, valTypeSig);
-		typeSig += it.first + ":" + valTypeSig + "; ";
+		memberDefs.insert_or_assign(it.first, valSignature);
+		signature += it.first + ":" + valSignature + "; ";
 	}
 
-	typeSig.pop_back();
-	typeSig.pop_back();
-	typeSig += "}";
+	signature.pop_back();
+	signature.pop_back();
+	signature += "}#" + IValue::SIGNATURE_MEMBERED;
 
-	return SHARE(new MemberedValue(memberDefs, typeSig, intrinsicEnv, _position));
+	return SHARE(new MemberedValue(memberDefs, signature, intrinsicEnv, _position));
 }
 
 IExpression* MemberedExpression::GetCopy()
@@ -371,23 +369,24 @@ ArrayExpression::~ArrayExpression()
 SharedValue ArrayExpression::Evaluate(Environment* _env)
 {
 	SharedValue firstVal = SHARE_COPY(elemExprs[0]->Evaluate(_env));
+	ValueType firstValType = firstVal->GetType();
 
-	if(firstVal->GetType() == VEXCEPTION)
-		return firstVal;
+	if(firstValType == VEXCEPTION) { return firstVal; }
+	else if(firstValType == VUNKNOWN) { return SHARE(Exception_NotResolved(Trace(_position, _env->name, _env->filePath))); }
 
-	TypeSig elemTypeSig = firstVal->GetTypeSig();
+	Signature elemSignature = firstVal->GetSignature();
 	std::vector<SharedValue> elements({ firstVal });
 
 	for(int i = 1; i < (int)elemExprs.size(); i++)
 	{
 		SharedValue val = elemExprs[i]->Evaluate(_env);
-		TypeSig valTypeSig = val->GetTypeSig();
+		Signature valSignature = val->GetSignature();
 
-		if(valTypeSig != elemTypeSig) { return SHARE(Exception_MismatchType(elemTypeSig, valTypeSig, Trace(val->GetPosition(), _env->name, _env->filePath))); }
+		if(valSignature != elemSignature) { return SHARE(Exception_MismatchType(elemSignature, valSignature, Trace(val->GetPosition(), _env->name, _env->filePath))); }
 		else { elements.push_back(val); }
 	}
 
-	return SHARE(new ArrayValue(elemTypeSig, elements, _position));
+	return SHARE(new ArrayValue(elemSignature, elements, _position));
 }
 
 IExpression* ArrayExpression::GetCopy()
@@ -414,9 +413,11 @@ AccessExpression::~AccessExpression() { delete base; }
 SharedValue AccessExpression::Evaluate(Environment* _env)
 {
 	SharedValue baseVal = base->Evaluate(_env);
+	ValueType baseValType = baseVal->GetType();
 
-	if(baseVal->GetType() == VEXCEPTION) { return baseVal; }
-	else { return baseVal->AsMembered()->GetIntrinsicEnv()->GetValue(memberIdentifer, _position, false); }
+	if(baseValType == VEXCEPTION) { return baseVal; }
+	else if(baseValType == VUNKNOWN) { return SHARE(Exception_NotResolved(Trace(_position, _env->name, _env->filePath))); }
+	else { return baseVal->GetIntrinsicEnv()->GetValue(memberIdentifer, _position, false); }
 }
 
 IExpression* AccessExpression::GetCopy() { return new AccessExpression(base->GetCopy(), memberIdentifer, _position); }
@@ -479,11 +480,19 @@ SharedValue ArrayIndexExpression::Evaluate(Environment* _env)
 	ValueType baseValType = baseVal->GetType();
 
 	if(baseValType == VEXCEPTION) { return baseVal; }
+	else if(baseValType == VUNKNOWN) { return SHARE(Exception_NotResolved(Trace(_position, _env->name, _env->filePath))); }
 	else
 	{
-		FuncValue* indexFunc = baseVal->GetIntrinsicEnv()->GetValue("__index__", _position, false)->AsFunc();
-		std::vector<IExpression*> args({ indexExpr });
-		return indexFunc->Call(_env, args, _position);
+		SharedValue indexFunc = baseVal->GetIntrinsicEnv()->GetValue("__index__", _position, false);
+		ValueType indexFuncType = indexFunc->GetType();
+
+		if(indexFuncType == VEXCEPTION) { return indexFunc; }
+		else if(indexFuncType == VUNKNOWN) { return SHARE(Exception_NotResolved(Trace(_position, _env->name, _env->filePath))); }
+		else
+		{
+			std::vector<IExpression*> args({ indexExpr });
+			return indexFunc->AsFunc()->Call(_env, args, _position);
+		}
 	}
 }
 

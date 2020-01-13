@@ -16,7 +16,7 @@ Environment::Environment(Environment* _parent, std::string _name, std::string _f
 	propContinue = true;
 }
 
-Environment::Environment(Environment* _parent, std::string _name, std::string _filePath, TypeSigMap _typeDefs, std::map<ValueType, std::map<std::string, SharedValue>> _values)
+Environment::Environment(Environment* _parent, std::string _name, std::string _filePath, SignatureMap _typeDefs, std::map<ValueType, std::map<std::string, SharedValue>> _values)
 	: Environment(_parent, _name, _filePath)
 {
 	typeDefs = _typeDefs;
@@ -74,45 +74,86 @@ SharedValue Environment::AddValue(ValueType _type, std::string _id, SharedValue 
 	}
 }
 
-SharedValue Environment::AddTypeDefinition(TypeName _typeName, DefinitionMap& _memDefs, Position _execPos)
+SharedValue Environment::AddMemberedTypeDefinition(TypeName _typeName, DefinitionMap& _memDefs, Position _execPos)
 {
-	if(SymbolExists(name, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
+	if(SymbolExists(_typeName, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
 	else
 	{
 		std::string scopedTypeName = name + "." + _typeName;
 		typeDefs.insert_or_assign(scopedTypeName, "<" + scopedTypeName + ">");
 
 #pragma region Construct Type Sig
-		TypeSig typeSig = "<MEMBERED>{";
+		Signature signature = "{";
 
 		for(auto it : _memDefs)
 		{
-			SharedValue retVal = GetTypeSig(it.second, _execPos);
+			SharedValue retVal = GetSignature(it.second, _execPos);
 
 			if(retVal->GetType() == VEXCEPTION)
 			{
 				typeDefs.erase(scopedTypeName);
 				return retVal;
 			}
-			else { typeSig += it.first + ":" + retVal->AsString()->value + "; "; }
+			else { signature += it.first + ":" + retVal->AsString()->value + "; "; }
 		}
 
 		if(_memDefs.size() != 0)
 		{
-			typeSig.pop_back();
-			typeSig.pop_back();
+			signature.pop_back();
+			signature.pop_back();
 		}
 
-		typeSig += "}";
+		signature += "}#" + IValue::SIGNATURE_MEMBERED;
 #pragma endregion
 
-		typeDefs.insert_or_assign(scopedTypeName, typeSig);
+		typeDefs.insert_or_assign(scopedTypeName, signature);
+		return SHARE_VOID(_execPos);
+	}
+}
+
+SharedValue Environment::AddFuncTypeDefinition(TypeName _typeName, std::vector<std::string>& _argTypeNames, std::string _retTypeName, Position _execPos)
+{
+	if(SymbolExists(_typeName, true, true, true, true, false)) { return SHARE(Exception_SymbolInUse(_typeName, Trace(_execPos, name, filePath))); }
+	else
+	{
+		std::string scopedTypeName = name + "." + _typeName;
+		typeDefs.insert_or_assign(scopedTypeName, "<" + scopedTypeName + ">");
+
+#pragma region Construct Type Sig
+		Signature signature;
+		std::vector<Signature> argSigs;
+
+		for(auto it : _argTypeNames)
+		{
+			SharedValue argSigVal = GetSignature(it, _execPos);
+
+			if(argSigVal->GetType() == VEXCEPTION)
+			{
+				typeDefs.erase(scopedTypeName);
+				return argSigVal;
+			}
+			else { argSigs.push_back(argSigVal->AsString()->value); }
+		}
+
+
+		SharedValue retSigVal = GetSignature(_retTypeName, _execPos);
+
+		if(retSigVal->GetType() == VEXCEPTION)
+		{
+			typeDefs.erase(scopedTypeName);
+			return retSigVal;
+		}
+		else { signature = FuncValue::GenerateSignature(argSigs, retSigVal->AsString()->value); }
+#pragma endregion
+
+		typeDefs.insert_or_assign(scopedTypeName, signature);
 		return SHARE_VOID(_execPos);
 	}
 }
 
 SharedValue Environment::AddVariable(std::string _identifier, SharedValue _val, Position _execPos) { return AddValue(VARIABLE, _identifier, _val, _execPos); }
 SharedValue Environment::AddFuncDeclaration(std::string _identifier, SharedValue _val, Position _execPos) { return AddValue(FUNC_DECL, _identifier, _val, _execPos); }
+
 SharedValue Environment::AddNamedspace(Environment * _ns, Position _execPos, bool _openName)
 {
 	NamedspaceValue* nsVal = new NamedspaceValue(_ns, _execPos);
@@ -174,14 +215,19 @@ SharedValue Environment::OpenNamedspace(NamedspaceValue* _nsVal, Position _execP
 	return SHARE_VOID(_execPos);
 }
 
-SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
+SharedValue Environment::GetSignature(TypeName _typeName, Position _execPos)
 {
-	if(_typeName[0] == '[')
+	auto suffixStart = _typeName.find_first_of('|');
+	if(suffixStart != std::string::npos)
 	{
-		SharedValue base = GetTypeSig(_typeName.substr(1, _typeName.size() - 2), _execPos);
+		SharedValue base = GetSignature(_typeName.substr(0, suffixStart), _execPos);
 
 		if(base->GetType() == VEXCEPTION) { return base; }
-		else { return SHARE(new StringValue("[" + base->AsString()->value + "]", _execPos)); }
+		else
+		{ 
+			std::string newTypeName = base->AsString()->value + _typeName.substr(suffixStart, _typeName.size() - suffixStart);
+			return SHARE(new StringValue(newTypeName, _execPos));
+		}
 	}
 
 	std::string scopedTypeName = name + "." + _typeName;
@@ -189,7 +235,7 @@ SharedValue Environment::GetTypeSig(TypeName _typeName, Position _execPos)
 
 	if(search != typeDefs.end()) { return SHARE(new StringValue(search->second, _execPos)); }
 	else if((search = typeDefs.find(_typeName)) != typeDefs.end()) { return SHARE(new StringValue(search->second, _execPos)); }
-	else if(parent) { return parent->GetTypeSig(_typeName, _execPos); }
+	else if(parent) { return parent->GetSignature(_typeName, _execPos); }
 	else { return SHARE(Exception_SymbolNotFound(_typeName, Trace(_execPos, name, filePath))); }
 }
 
@@ -224,15 +270,15 @@ std::string Environment::ToString()
 
 		auto variables = parentEnv->values[VARIABLE];
 		for(auto it = variables.begin(); it != variables.end(); it++)
-			os << prefix << "VAR) " << it->first << ":" << it->second->GetTypeSig() << " = " << it->second->ToString() << std::endl << std::endl;
+			os << prefix << "VAR) " << it->first << ":" << it->second->GetSignature() << " = " << it->second->ToString() << std::endl << std::endl;
 
 		auto funcDecls = parentEnv->values[FUNC_DECL];
 		for(auto it = funcDecls.begin(); it != funcDecls.end(); it++)
-			os << prefix << ("FUNC) ") << it->first << ":" << it->second->GetTypeSig() << " = " << it->second->ToString() << std::endl << std::endl;
+			os << prefix << ("FUNC) ") << it->first << ":" << it->second->GetSignature() << " = " << it->second->ToString() << std::endl << std::endl;
 
 		auto namedspaces = parentEnv->values[NAMEDSPACE];
 		for(auto it = namedspaces.begin(); it != namedspaces.end(); it++)
-			os << prefix << "NAMEDSPACE) " << it->first << ":" << it->second->GetTypeSig() << " = " << it->second->ToString() << std::endl << std::endl;
+			os << prefix << "NAMEDSPACE) " << it->first << ":" << it->second->GetSignature() << " = " << it->second->ToString() << std::endl << std::endl;
 
 		parentEnv = parentEnv->parent;
 		prefix = "(GLOBAL ";

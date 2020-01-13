@@ -1,0 +1,17 @@
+let dllID = dllOpen("C:\\Users\\raysh\\OneDrive\\Desktop\\Dll1\\Debug\\ProjectDLL.dll");
+
+print("DLL ID: " + <string>dllID + "\n");
+
+let funcID = dllLoadFunc(dllID, "HelloWorld");
+
+print("DLL Func ID: " + <string>funcID + "\n");
+
+def FuncSig = (int, int):void;
+
+let myFunc = <FuncSig>dllGetFunc(funcID);
+
+#let ptr = @myFunc;
+#let k = ptr@;
+
+dllClose(dllID);
+printEnv();

@@ -171,7 +171,7 @@ SharedValue ForLoop::Execute(Environment* _env)
 		auto evalCondVal = conditionExpr->Evaluate(&env);
 
 		if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
-		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
+		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetSignature(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
 
 		PRINT_VAL(evalCondVal);
 		PRINT_LINE(env.filePath, conditionExpr->_position.line);
@@ -247,7 +247,7 @@ SharedValue IfStatement::Execute(Environment* _env)
 	auto evalCondVal = conditionExpr->Evaluate(&env);
 
 	if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
-	else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
+	else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetSignature(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
 
 	PRINT_VAL(evalCondVal);
 	PRINT_LINE(env.filePath, conditionExpr->_position.line);
@@ -293,7 +293,7 @@ SharedValue WhileStatement::Execute(Environment* _env)
 		auto evalCondVal = conditionExpr->Evaluate(&env);
 
 		if(evalCondVal->GetType() == VEXCEPTION) { return evalCondVal; }
-		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetTypeSig(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
+		else if(evalCondVal->GetType() != VBOOL) { return SHARE(Exception_MismatchType("bool", evalCondVal->GetSignature(), Trace(evalCondVal->GetPosition(), _env->name, _env->filePath))); }
 
 		PRINT_VAL(evalCondVal);
 		PRINT_LINE(env.filePath, conditionExpr->_position.line);
@@ -333,7 +333,7 @@ SharedValue MemberDefinition::Execute(Environment* _env)
 	if(val->GetType() == VEXCEPTION)
 		return val;
 
-	bool hasType = val->GetTypeSig() == definition.second;
+	bool hasType = val->GetSignature() == definition.second;
 	return SHARE(new BoolValue(hasType, _position));
 }
 
@@ -346,9 +346,23 @@ TypeDefinition::TypeDefinition(std::string _identifier, DefinitionMap& _memDefs,
 {
 	identifier = _identifier;
 	memDefs = _memDefs;
+	sigType = TD_MEMBERED;
 }
 
-SharedValue TypeDefinition::Execute(Environment* _env) { return _env->AddTypeDefinition(identifier, memDefs, _position); }
+TypeDefinition::TypeDefinition(std::string _identifier, std::vector<std::string>& _argTypeNames, std::string _retTypeName, Position _pos)
+	: IStatement(_pos, STYPE_DEF)
+{
+	identifier = _identifier;
+	argTypeNames = _argTypeNames;
+	retTypeName = _retTypeName;
+	sigType = TD_FUNC;
+}
+
+SharedValue TypeDefinition::Execute(Environment* _env)
+{
+	if(sigType == TD_MEMBERED) { return _env->AddMemberedTypeDefinition(identifier, memDefs, _position); }
+	else if(sigType == TD_FUNC) { return _env->AddFuncTypeDefinition(identifier, argTypeNames, retTypeName, _position); }
+}
 IStatement* TypeDefinition::GetCopy() { return new TypeDefinition(identifier, memDefs, _position); }
 #pragma endregion
 
@@ -365,11 +379,11 @@ FuncDeclaration::FuncDeclaration(std::string _identifier, DefinitionList& _argDe
 SharedValue FuncDeclaration::Execute(Environment* _env)
 {
 	std::vector<std::string> argNames, argSigs;
-	TypeSig retSig;
+	Signature retSig;
 
 	for(auto it : argDefs)
 	{
-		SharedValue val = _env->GetTypeSig(it.second, _position);
+		SharedValue val = _env->GetSignature(it.second, _position);
 
 		if(val->GetType() == VEXCEPTION) { return val; }
 		else
@@ -379,7 +393,7 @@ SharedValue FuncDeclaration::Execute(Environment* _env)
 		}
 	}
 
-	SharedValue val = _env->GetTypeSig(retTypeName, _position);
+	SharedValue val = _env->GetSignature(retTypeName, _position);
 
 	if(val->GetType() == VEXCEPTION) { return val; }
 	else { retSig = val->AsString()->value; }

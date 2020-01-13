@@ -28,6 +28,7 @@ ExpressionResult GetMembered(TokenReader _reader);
 ExpressionResult GetSubExpression(TokenReader _reader);
 ExpressionResult GetIdentifier(TokenReader _reader);
 ExpressionResult GetArrayTypeName(TokenReader _reader, std::string& _outTypeName);
+ExpressionResult GetFuncSignature(TokenReader _reader, std::vector<std::string>& _argTypeNames, std::string& _retTypeName);
 ExpressionResult GetSingular(TokenReader _reader);
 ExpressionResult GetFactor(TokenReader _reader);
 ExpressionResult GetTerm(TokenReader _reader);
