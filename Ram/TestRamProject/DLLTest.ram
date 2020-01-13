@@ -8,8 +8,8 @@ print("DLL Func ID: " + <string>funcID + "\n");
 
 def FuncSig = (int, int):void;
 
-let myFunc = <FuncSig>dllGetFunc(funcID);
-
+let myFunc = <FuncSig>dllGetFunc(funcID, ["int", "int"], "void");
+myFunc(10, 4);
 #let ptr = @myFunc;
 #let k = ptr@;
 

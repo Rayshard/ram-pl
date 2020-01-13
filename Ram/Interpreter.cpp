@@ -175,11 +175,7 @@ void Interpreter::SetStandardEnvironment()
 			int dllID = RamDLL::Load(dllPath.c_str());
 
 			if(dllID == DLL_NOT_LOADED) { return SHARE(Exception_DLLLoadFail(dllPath, trace)); }
-			else
-			{
-				std::cout << "Loaded DLL at " + dllPath << std::endl;
-				return SHARE(new IntValue(dllID, _execPos));
-			}
+			else { return SHARE(new IntValue(dllID, _execPos)); }
 		};
 		std::vector<std::string> argNames({ "filePath" }), argSigs({ IValue::SIGNATURE_STRING });
 		SharedValue funcVal = SHARE(new FuncValue(env, "dllOpen", body, argNames, argSigs, IValue::SIGNATURE_INT, Position()));
@@ -241,19 +237,23 @@ void Interpreter::SetStandardEnvironment()
 
 			for(auto it : argTypesVal->elements)
 			{
-			
+				SharedValue argSigVal = _env->GetSignature(it->AsString()->value, _execPos);
+
+				if(argSigVal->GetType() == VEXCEPTION) { return argSigVal; }
+				else { argSigs.push_back(argSigVal->AsString()->value); }
 			}
 
-			int dllFuncID = _env->GetValue("dllFuncID", _execPos, false)->AsInt()->value;
+			std::string retTypeVal = _env->GetValue("retType", _execPos, false)->AsString()->value;
+			SharedValue retSigVal = _env->GetSignature(retTypeVal, _execPos);
+			Signature retSig;
 
-			FuncValue* funcVal = RamDLL::GetFuncValue(dllFuncID, _env->parent, _execPos);
+			if(retSigVal->GetType() == VEXCEPTION) { return retSigVal; }
+			else { retSig = retSigVal->AsString()->value; }
+
+			FuncValue* funcVal = RamDLL::GetFuncValue(dllFuncID, _env, argSigs, retSig, _execPos);
 
 			if(!funcVal) { return SHARE(new ExceptionValue("ID Not Found", "There was no loaded DLL with a function with the id '" + std::to_string(dllFuncID) + "'", trace)); }
-			else
-			{
-				std::cout << "Loaded DLL Func" << std::endl;
-				return SHARE(new UnknownValue(funcVal, _execPos));
-			}
+			else { return SHARE(new UnknownValue(funcVal, _execPos)); }
 		};
 		std::vector<std::string> argNames({ "dllFuncID", "argTypes", "retType" });
 		std::vector<std::string> argSigs({ IValue::SIGNATURE_INT, IValue::SIGNATURE_STRING + "|" + IValue::SIGNATURE_ARRAY, IValue::SIGNATURE_STRING });

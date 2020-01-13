@@ -46,6 +46,7 @@ public:
 	Environment* GetIntrinsicEnv();
 	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos);
 
+	virtual RamValue* ToRamValue() { return new RamVoid(); }
 	void AddCast(Signature _retSig, builtInFunc _func) { castingFuncs.insert_or_assign(_retSig, _func); }
 };
 
@@ -226,6 +227,7 @@ public:
 
 	Signature GetSignature();
 	std::string ToString();
+	RamValue* ToRamValue();
 
 	IValue* GetCopy() { return new PrimitiveValue(value, position); }
 };
@@ -272,6 +274,19 @@ inline std::string PrimitiveValue<T>::ToString()
 		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToString()");
 	}
 }
+
+template<typename T>
+inline RamValue * PrimitiveValue<T>::ToRamValue()
+{
+	switch(type)
+	{
+		case VINT: return new RamInt(((IntValue*)this)->value);
+		case VFLOAT: return new RamFloat(((FloatValue*)this)->value);
+		case VSTRING: return new RamString(((StringValue*)this)->value);
+		case VBOOL: return new RamBool(((BoolValue*)this)->value);
+		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToRamValue()");
+	}
+}
 #pragma endregion
 
 class Value
@@ -290,6 +305,7 @@ public:
 	Signature GetSignature() { return value->GetSignature(); }
 	std::string ToString() { return value->ToString(); }
 	Environment* GetIntrinsicEnv() { return value->GetIntrinsicEnv(); }
+	RamValue* ToRamValue() { return value->ToRamValue(); }
 	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos) { return value->Cast(_execEnv, _retSig, _execPos); }
 
 	ExceptionValue* AsException() { return (ExceptionValue*)value; }

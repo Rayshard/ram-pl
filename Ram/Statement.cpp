@@ -362,6 +362,7 @@ SharedValue TypeDefinition::Execute(Environment* _env)
 {
 	if(sigType == TD_MEMBERED) { return _env->AddMemberedTypeDefinition(identifier, memDefs, _position); }
 	else if(sigType == TD_FUNC) { return _env->AddFuncTypeDefinition(identifier, argTypeNames, retTypeName, _position); }
+	else { throw std::runtime_error("Missing case in TypeDefinition.Execute()"); }
 }
 IStatement* TypeDefinition::GetCopy() { return new TypeDefinition(identifier, memDefs, _position); }
 #pragma endregion

@@ -83,7 +83,7 @@ int RamDLL::LoadFunc(int _dllID, const char* _funcName)
 	return funcID;
 }
 
-FuncValue * RamDLL::GetFuncValue(int _funcID, Environment* _globalEnv, std::vector<Signature> _argSigs, Signature _retSig, Position _execPos)
+FuncValue * RamDLL::GetFuncValue(int _funcID, Environment* _execEnv, std::vector<Signature> _argSigs, Signature _retSig, Position _execPos)
 {
 	auto search = loadedDLLFuncs.find(_funcID);
 	if(search == loadedDLLFuncs.end())
@@ -96,13 +96,12 @@ FuncValue * RamDLL::GetFuncValue(int _funcID, Environment* _globalEnv, std::vect
 	{
 		std::vector<RamValue*> args;
 
-		/*
 		for(int i = 0; i < argCount; i++)
 		{
 			SharedValue argVal = _env->GetValue("arg" + std::to_string(i), _execPos, false);
 			args.push_back(argVal->ToRamValue());
 		}
-		*/
+		
 		funcNameAndPtr.second(args.data());
 		return SHARE_VOID(_execPos);
 	};
@@ -112,5 +111,5 @@ FuncValue * RamDLL::GetFuncValue(int _funcID, Environment* _globalEnv, std::vect
 	for(int i = 0; i < argCount; i++)
 		argNames.push_back("arg" + std::to_string(i));
 
-	return new FuncValue(_globalEnv, funcNameAndPtr.first, body, argNames, _argSigs, _retSig, _execPos);
+	return new FuncValue(_execEnv, funcNameAndPtr.first, body, argNames, _argSigs, _retSig, _execPos);
 }
