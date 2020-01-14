@@ -15,7 +15,7 @@ private:
 	RamDLL(Windows::HINSTANCE _handle, int _id);
 	~RamDLL();
 public:
-	typedef RamValue *(*dll_func)(RamArgs);
+	typedef void(*dll_func)(RamArgs, RamReturnValue*);
 
 	int GetID() { return id; }
 

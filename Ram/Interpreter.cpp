@@ -57,49 +57,6 @@ void Interpreter::SetStandardEnvironment()
 	env->AddFuncDeclaration("getInput", func_getInput, Position());
 #pragma endregion
 
-#pragma region Time
-	builtInFunc time_body = [](Environment* _env, Position _execPos)
-	{
-		auto time = std::chrono::high_resolution_clock::now();
-		return SHARE(new StringValue(std::to_string((time - Interpreter::INIT_TIME).count()), _execPos));
-	};
-	std::vector<std::string> time_argNames({}), time_argSigs({});
-	SharedValue func_time = SHARE(new FuncValue(env, "time", time_body, time_argNames, time_argSigs, IValue::SIGNATURE_STRING, Position()));
-
-	env->AddFuncDeclaration("time", func_time, Position());
-#pragma endregion
-
-#pragma region GetElapsedTime
-	builtInFunc getElapsedTime_body = [](Environment* _env, Position _execPos)
-	{
-		Trace trace = Trace(_execPos, "STD", "std");
-		std::string start = _env->GetValue("start", _execPos, false)->ToString();
-		std::string end = _env->GetValue("end", _execPos, false)->ToString();
-		long double convStart = 0.0, convEnd = 0.0;
-
-		try { convStart = std::stold(start); }
-		catch(...) { return SHARE(Exception_InvalidOperation("Start time was not in the correct format!", trace)); }
-
-		try { convEnd = std::stold(end); }
-		catch(...) { return SHARE(Exception_InvalidOperation("End time was not in the correct format!", trace)); }
-
-		std::string format = _env->GetValue("precision", _execPos, false)->AsString()->value;
-
-		long double elapsed = convEnd - convStart;
-
-		if(format == "s") { elapsed /= 1000000000.0l; }
-		else if(format == "ms") { elapsed /= 1000000.0l; }
-		else if(format == "us") { elapsed /= 1000.0l; }
-		else if(format != "ns") { return SHARE(Exception_Format("Expected format to be 's', 'ms', 'us', or 'ns'!", trace)); }
-
-		return SHARE(new StringValue(std::to_string(elapsed), _execPos));
-	};
-	std::vector<std::string> getElapsedTime_argNames({ "start", "end", "precision" }), getElapsedTime_ardSigs({ IValue::SIGNATURE_STRING, IValue::SIGNATURE_STRING, IValue::SIGNATURE_STRING });
-	SharedValue func_getElapsedTime = SHARE(new FuncValue(env, "getElapsedTime", getElapsedTime_body, getElapsedTime_argNames, getElapsedTime_ardSigs, IValue::SIGNATURE_STRING, Position()));
-
-	env->AddFuncDeclaration("getElapsedTime", func_getElapsedTime, Position());
-#pragma endregion
-
 #pragma region Include
 	builtInFunc include_body = [](Environment* _env, Position _execPos)
 	{
@@ -250,7 +207,7 @@ void Interpreter::SetStandardEnvironment()
 			if(retSigVal->GetType() == VEXCEPTION) { return retSigVal; }
 			else { retSig = retSigVal->AsString()->value; }
 
-			FuncValue* funcVal = RamDLL::GetFuncValue(dllFuncID, _env, argSigs, retSig, _execPos);
+			FuncValue* funcVal = RamDLL::GetFuncValue(dllFuncID, _env->parent, argSigs, retSig, _execPos);
 
 			if(!funcVal) { return SHARE(new ExceptionValue("ID Not Found", "There was no loaded DLL with a function with the id '" + std::to_string(dllFuncID) + "'", trace)); }
 			else { return SHARE(new UnknownValue(funcVal, _execPos)); }

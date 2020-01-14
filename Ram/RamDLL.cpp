@@ -94,16 +94,37 @@ FuncValue * RamDLL::GetFuncValue(int _funcID, Environment* _execEnv, std::vector
 
 	builtInFunc body = [funcNameAndPtr, argCount](Environment* _env, Position _execPos)
 	{
-		std::vector<RamValue*> args;
+		SharedValue retVal = SharedValue(nullptr);
+		std::vector<RamArgValue*> args;
 
 		for(int i = 0; i < argCount; i++)
 		{
 			SharedValue argVal = _env->GetValue("arg" + std::to_string(i), _execPos, false);
-			args.push_back(argVal->ToRamValue());
+			args.push_back(argVal->ToRamArgValue());
 		}
-		
-		funcNameAndPtr.second(args.data());
-		return SHARE_VOID(_execPos);
+
+		try
+		{
+			RamAny* ramRetVal = new RamAny();
+			funcNameAndPtr.second(args.data(), ramRetVal);
+
+			if(ramRetVal->type == RamAny::REXCEPTION) 
+			{
+				std::string exceptionName = ramRetVal->_exception.first;
+				std::string exceptionMsg = ramRetVal->_exception.second;
+				retVal = SHARE(new ExceptionValue(exceptionName, exceptionMsg, Trace(_execPos, _env->name, _env->filePath)));
+			}
+			else { retVal = SHARE(IValue::FromRamValue(ramRetVal, _execPos)); }
+
+			delete ramRetVal;
+		}
+		catch(const std::exception&) { retVal = SHARE(Exception_DLLClosed(Trace(_execPos, _env->name, _env->filePath))); }
+
+		//Delete Args
+		for(auto it : args)
+			delete it;
+
+		return retVal;
 	};
 
 	std::vector<std::string> argNames;

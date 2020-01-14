@@ -52,62 +52,71 @@ typedef std::function<SharedValue(Environment*, Position)> builtInFunc;
 #define SHARE_COPY(val) SHARE(val->GetCopy())
 #define SYS_SEP std::string(1, std::experimental::filesystem::path::preferred_separator)
 
-struct RamVoid : RamValue
-{
-	RamVoid() {}
-
-	int AsCInt() { throw std::runtime_error("Value is void."); }
-	float AsCFloat() { throw std::runtime_error("Value is void."); }
-	const char *AsCString() { throw std::runtime_error("Value is void."); }
-	bool AsCBool() { throw std::runtime_error("Value is void."); }
-};
-
-struct RamInt : RamValue
+struct RamInt : RamArgValue
 {
 	int value;
 
 	RamInt(int _val) { value = _val; }
 
 	int AsCInt() { return value; }
-	float AsCFloat() { throw std::runtime_error("Value is an int."); }
-	const char *AsCString() { throw std::runtime_error("Value is an int."); }
-	bool AsCBool() { throw std::runtime_error("Value is an int."); }
+	float AsCFloat() { return 0; }
+	bool AsCBool() { return false; }
+	const char* AsCString() { return ""; }
 };
 
-struct RamFloat : RamValue
+struct RamFloat : RamArgValue
 {
 	float value;
 
 	RamFloat(float _val) { value = _val; }
 
+	int AsCInt() { return 0; }
 	float AsCFloat() { return value; }
-	int AsCInt() { throw std::runtime_error("Value is a float."); }
-	const char *AsCString() { throw std::runtime_error("Value is a float."); }
-	bool AsCBool() { throw std::runtime_error("Value is a float."); }
+	bool AsCBool() { return false; }
+	const char* AsCString() { return ""; }
 };
 
-struct RamBool : RamValue
+struct RamBool : RamArgValue
 {
 	bool value;
 
 	RamBool(bool _val) { value = _val; }
 
+	int AsCInt() { return 0; }
+	float AsCFloat() { return 0; }
 	bool AsCBool() { return value; }
-	int AsCInt() { throw std::runtime_error("Value is a bool."); }
-	float AsCFloat() { throw std::runtime_error("Value is a bool."); }
-	const char *AsCString() { throw std::runtime_error("Value is a bool."); }
+	const char* AsCString() { return ""; }
 };
 
-struct RamString : RamValue
+struct RamString : RamArgValue
 {
 	std::string value;
 
 	RamString(std::string _val) { value = _val; }
 
-	const char *AsCString() { return value.c_str(); }
-	bool AsCBool() { throw std::runtime_error("Value is a string."); }
-	int AsCInt() { throw std::runtime_error("Value is a string."); }
-	float AsCFloat() { throw std::runtime_error("Value is a string."); }
+	int AsCInt() { return 0; }
+	float AsCFloat() { return 0; }
+	bool AsCBool() { return false; }
+	const char* AsCString() { return value.c_str(); }
+};
+
+struct RamAny : RamReturnValue
+{
+	enum Type { RVOID, RINT, RFLOAT, RBOOL, RSTRING, REXCEPTION };
+
+	Type type = RVOID;
+
+	int _int;
+	float _float;
+	bool _bool;
+	std::string _string;
+	std::pair<std::string, std::string> _exception;
+
+	void SetAsInt(int _i) { _int = _i; type = RINT; }
+	void SetAsFloat(float _f) { _float = _f; type = RFLOAT; }
+	void SetAsBool(bool _b) { _bool = _b; type = RBOOL; }
+	void SetAsString(const char* _s) { _string = _s; type = RSTRING; }
+	void ThrowException(const char* _name, const char* _msg) { _exception = std::make_pair(_name, _msg); type = REXCEPTION; }
 };
 
 inline std::string GetFileName(std::string _filePath, bool _includeExt)

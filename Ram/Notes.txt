@@ -1,3 +1,5 @@
+Compile DLLs with g++ -shared -o <out name>.dll <file name>.cpp 
+
 DONE:
 	- 
 TO CHECK:

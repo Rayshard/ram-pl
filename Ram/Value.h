@@ -46,8 +46,10 @@ public:
 	Environment* GetIntrinsicEnv();
 	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos);
 
-	virtual RamValue* ToRamValue() { return new RamVoid(); }
+	virtual RamArgValue* ToRamArgValue() { return nullptr; }
 	void AddCast(Signature _retSig, builtInFunc _func) { castingFuncs.insert_or_assign(_retSig, _func); }
+
+	static IValue* FromRamValue(RamAny* _ramVal, Position _execPos);
 };
 
 #pragma region VoidValue
@@ -110,6 +112,8 @@ inline IValue* Exception_Format(std::string _msg, Trace _trace) { return new Exc
 inline IValue* Exception_OutOfRange(std::string _identifier, Trace _trace) { return new ExceptionValue("Out of Range", "'" + _identifier + "' is out of range!", _trace); }
 inline IValue* Exception_InvailArgument(std::string _argName, std::string _msg, Trace _trace) { return new ExceptionValue("Invalid Argument", "'" + _argName + "' : " + _msg, _trace); }
 inline IValue* Exception_DLLLoadFail(std::string _dllPath, Trace _trace) { return new ExceptionValue("DLL Load Fail", "Could not load dll at " + _dllPath, _trace); }
+inline IValue* Exception_DLLClosed(Trace _trace) { return new ExceptionValue("DLL Closed", "The dll was closed.", _trace); }
+inline IValue* Exception_DLLFunction(std::string _msg, Trace _trace) { return new ExceptionValue("DLL Function", _msg, _trace); }
 inline IValue* Exception_PointerExpired(Trace _trace) { return new ExceptionValue("Pointer Expired", "The value to which the pointer pointed no longer exists!", _trace); }
 inline IValue* Exception_NotResolved(Trace _trace) { return new ExceptionValue("Not Resolved", "This unknown value must be resolved before use. Try casting it first.", _trace); }
 inline IValue* Exception_Resolved(Trace _trace) { return new ExceptionValue("Resolved", "This unknown value has already been resolved. You cannot reuse it.", _trace); }
@@ -227,7 +231,7 @@ public:
 
 	Signature GetSignature();
 	std::string ToString();
-	RamValue* ToRamValue();
+	RamArgValue* ToRamArgValue();
 
 	IValue* GetCopy() { return new PrimitiveValue(value, position); }
 };
@@ -276,15 +280,15 @@ inline std::string PrimitiveValue<T>::ToString()
 }
 
 template<typename T>
-inline RamValue * PrimitiveValue<T>::ToRamValue()
+inline RamArgValue* PrimitiveValue<T>::ToRamArgValue()
 {
 	switch(type)
 	{
 		case VINT: return new RamInt(((IntValue*)this)->value);
 		case VFLOAT: return new RamFloat(((FloatValue*)this)->value);
-		case VSTRING: return new RamString(((StringValue*)this)->value);
+		case VSTRING: return new RamString(((StringValue*)this)->value.c_str());
 		case VBOOL: return new RamBool(((BoolValue*)this)->value);
-		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToRamValue()");
+		default: throw std::runtime_error("Missing Case in PrimitiveValue.ToRamArgValue()");
 	}
 }
 #pragma endregion
@@ -305,7 +309,7 @@ public:
 	Signature GetSignature() { return value->GetSignature(); }
 	std::string ToString() { return value->ToString(); }
 	Environment* GetIntrinsicEnv() { return value->GetIntrinsicEnv(); }
-	RamValue* ToRamValue() { return value->ToRamValue(); }
+	RamArgValue* ToRamArgValue() { return value->ToRamArgValue(); }
 	SharedValue Cast(Environment* _execEnv, Signature _retSig, Position _execPos) { return value->Cast(_execEnv, _retSig, _execPos); }
 
 	ExceptionValue* AsException() { return (ExceptionValue*)value; }

@@ -7,7 +7,7 @@
 
 #pragma region Signatures
 const std::string IValue::SIGNATURE_VOID = "<VOID>";
-const std::string IValue::SIGNATURE_UNKNOWN= "<UNKNOWN>";
+const std::string IValue::SIGNATURE_UNKNOWN = "<UNKNOWN>";
 const std::string IValue::SIGNATURE_EXCEPTION = "<EXCEPTION>";
 const std::string IValue::SIGNATURE_MEMBERED = "<MEMBERED>";
 const std::string IValue::SIGNATURE_ARRAY = "<ARRAY>";
@@ -72,6 +72,19 @@ Environment * IValue::GetIntrinsicEnv()
 	}
 
 	return intrinsicEnv;
+}
+
+IValue * IValue::FromRamValue(RamAny* _ramVal, Position _execPos)
+{
+	switch(_ramVal->type)
+	{
+		case RamAny::RVOID: return new VoidValue(_execPos);
+		case RamAny::RINT: return new IntValue(_ramVal->_int, _execPos);
+		case RamAny::RFLOAT: return new FloatValue(_ramVal->_float, _execPos);
+		case RamAny::RBOOL: return new BoolValue(_ramVal->_bool, _execPos);
+		case RamAny::RSTRING: { return new StringValue(_ramVal->_string, _execPos); }
+		default: throw std::runtime_error("Missing case in IValue.FromRamValue()");
+	}
 }
 
 SharedValue IValue::Cast(Environment* _execEnv, Signature _retSig, Position _execPos)
