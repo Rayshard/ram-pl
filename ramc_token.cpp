@@ -1,0 +1,90 @@
+#include "pch.h"
+#include "ramc_token.h"
+
+namespace ramc {
+	Token::Token(TokenType _type, Position _pos, std::string _val)
+	{
+		type = _type;
+		position = _pos;
+		value = _val;
+	}
+
+	std::string Token::ToString(bool _includePos)
+	{
+		std::string str = _includePos ? "(" + position.ToString() + ") " : "";
+
+		switch (type)
+		{
+			case TokenType::INT_LIT: str += "Interger Literal: " + value; break;
+			case TokenType::FLOAT_LIT: str += "Float Literal: " + value; break;
+			case TokenType::STRING_LIT: str += "String Literal: " + value; break;
+			
+			case TokenType::KW_TRUE: str += "Keyword: true"; break;
+			case TokenType::KW_FALSE: str += "Keyword: false"; break;
+			
+			case TokenType::IDENTIFIER: str += "Identifier: " + value; break;
+			case TokenType::UNDERSCORE: str += "Underscore"; break;
+			case TokenType::WHITESPACE: str += "Whitespace"; break;
+
+			case TokenType::SEMICOLON: str += "Semicolon"; break;
+			case TokenType::PERIOD: str += "Period"; break;
+			case TokenType::COLON: str += "Colon"; break;
+			case TokenType::COMMA: str += "Comma"; break;
+
+			case TokenType::PLUS: str += "Plus"; break;
+			case TokenType::MINUS: str += "Minus"; break;
+			case TokenType::TIMES: str += "Times"; break;
+			case TokenType::DIVIDE: str += "Divide"; break;
+			case TokenType::POW: str += "Pow"; break;
+			case TokenType::MOD: str += "Mod"; break;
+			case TokenType::PLUS_EQ: str += "PlusEqual"; break;
+			case TokenType::MINUS_EQ: str += "MinusEqual"; break;
+			case TokenType::TIMES_EQ: str += "TimesEqual"; break;
+			case TokenType::DIVIDE_EQ: str += "DivideEqual"; break;
+			case TokenType::POW_EQ: str += "PowEqual"; break;
+			case TokenType::MOD_EQ: str += "ModEqual"; break;
+
+			case TokenType::BIN_AND: str += "BinaryAnd"; break;
+			case TokenType::BIN_OR: str += "BinaryOr"; break;
+			case TokenType::BIN_XOR: str += "BinaryXor"; break;
+			case TokenType::LSHIFT: str += "ShiftLeft"; break;
+			case TokenType::RSHIFT: str += "ShiftRight"; break;
+			case TokenType::BIN_AND_EQ: str += "BinaryAndEqual"; break;
+			case TokenType::BIN_OR_EQ: str += "BinaryOrEqual"; break;
+			case TokenType::BIN_XOR_EQ: str += "BinaryXorEqual"; break;
+			case TokenType::LSHIFT_EQ: str += "ShiftLeftEqual"; break;
+			case TokenType::RSHIFT_EQ: str += "ShiftRightEqual"; break;
+
+			case TokenType::LT: str += "LessThan"; break;
+			case TokenType::GT: str += "GreaterThan"; break;
+			case TokenType::LT_EQ: str += "LessThanEqual"; break;
+			case TokenType::GT_EQ: str += "GreaterThanEqual"; break;
+			case TokenType::EQ_EQ: str += "EqualEqual"; break;
+			case TokenType::NEQ: str += "NotEqual"; break;
+			case TokenType::EQ: str += "Equal"; break;
+			case TokenType::LOG_AND: str += "LogicalAnd"; break;
+			case TokenType::LOG_OR: str += "LogicalOr"; break;
+			case TokenType::LOG_NOT: str += "LogicalNot"; break;
+
+			case TokenType::INC: str += "Increment"; break;
+			case TokenType::DEC: str += "Decrement"; break;
+
+			case TokenType::LPAREN: str += "LeftParenthesis"; break;
+			case TokenType::RPAREN: str += "RightParenthesis"; break;
+			case TokenType::LCBRACKET: str += "LeftCurlyBracket"; break;
+			case TokenType::RCBRACKET: str += "RightCurlyBracket"; break;
+			case TokenType::LSBRACKET: str += "LeftSquareBracket"; break;
+			case TokenType::RSBRACKET: str += "RightSquareBracket"; break;
+
+			case TokenType::COMMENT: str += "Comment: " + value; break;
+			case TokenType::INVALID: str += "Invalid"; break;
+			case TokenType::END_OF_FILE: str += "EOF"; break;
+			default: str += "Token::ToString - TokenType not handled."; break;
+		}
+
+		return str;
+	}
+
+	Token Token::INVALID(Position _pos) { return { TokenType::INVALID, _pos, "" }; }
+	Token Token::END_OF_FILE(Position _pos) { return { TokenType::END_OF_FILE, _pos, "" }; }
+}
