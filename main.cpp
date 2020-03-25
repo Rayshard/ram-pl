@@ -12,7 +12,7 @@ bool OptimizeInstructionSet(ramvm::InstructionSet& _set)
 	ramvm::InstructionSet result;
 	bool changed = false;
 
-	for (int i = 0; i < (int)_set.size(); i++)
+	/*for (int i = 0; i < (int)_set.size(); i++)
 	{
 		auto instr = _set[i];
 
@@ -95,7 +95,7 @@ bool OptimizeInstructionSet(ramvm::InstructionSet& _set)
 		}
 
 		result.push_back(instr);
-	}
+	}*/
 
 	if (changed)
 		_set = result;
@@ -105,7 +105,7 @@ bool OptimizeInstructionSet(ramvm::InstructionSet& _set)
 
 int main()
 {
-	{
+	/*{
 		using namespace ramc;
 
 		std::ifstream stream("Tests/Compiler/test_lex.ram");
@@ -168,7 +168,7 @@ int main()
 		}
 
 		return 0;
-	}
+	}*/
 
 	{
 		using namespace ramvm;
@@ -185,7 +185,7 @@ int main()
 		}
 
 		//Parse Program
-		std::vector<Instruction> program;
+		std::vector<Instruction*> program;
 
 		resInfo.clear();
 		result = ParseProgram(file, program, resInfo);
@@ -210,7 +210,7 @@ int main()
 			else
 			{
 				vm.PrintCurRegisters();
-				vm.PrintMemory(0, 6);
+				vm.PrintMemory(0, 10);
 				vm.PrintStack();
 			}
 		}

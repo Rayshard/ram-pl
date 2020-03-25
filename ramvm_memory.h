@@ -8,9 +8,9 @@ namespace ramvm {
 		{
 			int size;
 			bool free;
-			std::vector<int> data;
+			std::vector<byte> data;
 
-			Block() = default;
+			Block();
 			Block(int _size, bool _free);
 		};
 
@@ -19,14 +19,15 @@ namespace ramvm {
 
 		bool IsAddress(int _addr) { return _addr >= 0 && _addr < GetCapacity(); }
 	public:
-		Memory() = default;
+		Memory();
 		Memory(int _capacity);
 
 		ResultType Malloc(int _size, int& _addr, ResultInfo& _info);
 		ResultType Free(int _addr, ResultInfo& _info);
-		ResultType Read(int _addr, int& _value, ResultInfo& _info);
-		ResultType Read(int _start, int _length, int* buffer, ResultInfo& _info);
-		ResultType Write(int _addr, int _value, ResultInfo& _info);
+		ResultType ReadBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info);
+		ResultType WriteBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info);
+		ResultType Read(int _addr, DataVariant& _value, ResultInfo& _info);
+		ResultType Write(int _addr, DataVariant _value, ResultInfo& _info);
 
 		int GetCapacity() { return capacity; }
 	};

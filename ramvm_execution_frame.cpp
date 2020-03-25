@@ -5,31 +5,43 @@
 namespace ramvm {
 	ExecutionFrame::ExecutionFrame()
 	{
-		retIP = -2;
-		registers = std::vector<int>();
+		retIP = -1;
+		registers = std::vector<DataValue>();
 	}
 
 	ExecutionFrame::ExecutionFrame(int _retIP, int _numRegs)
 	{
 		retIP = _retIP;
-		registers = std::vector<int>(_numRegs);
+		registers = std::vector<DataValue>(_numRegs);
 	}
 
-	ResultType ExecutionFrame::ReadRegister(int _regIndex, int& _value, ResultInfo& _info)
+	ResultType ExecutionFrame::ReadRegister(int _regIndex, DataVariant& _value, ResultInfo& _info)
 	{
 		if (_regIndex < (int)registers.size())
 		{
-			_value = registers[_regIndex];
+			switch (_value.GetType())
+			{
+				case DataType::BYTE: _value = DataVariant(registers[_regIndex].b); break;
+				case DataType::INT: _value = DataVariant(registers[_regIndex].i); break;
+				default: return ResultType::ERR_REG_READ;
+			}
+			
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_REG_IDX_OOB; }
 	}
 
-	ResultType ExecutionFrame::WriteRegister(int _regIndex, int _value, ResultInfo& _info)
+	ResultType ExecutionFrame::WriteRegister(int _regIndex, DataVariant _value, ResultInfo& _info)
 	{
 		if (_regIndex < (int)registers.size())
 		{
-			registers[_regIndex] = _value;
+			switch (_value.GetType())
+			{
+				case DataType::BYTE: registers[_regIndex].b = _value.AsByte(); break;
+				case DataType::INT: registers[_regIndex].i = _value.AsInt(); break;
+				default: return ResultType::ERR_REG_WRTIE;
+			}
+			
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_REG_IDX_OOB; }
@@ -54,7 +66,7 @@ namespace ramvm {
 		std::cout << "---------------------REGISTERS---------------------" << std::endl;
 
 		for (int i = 0; i < (int)registers.size(); i++)
-			std::cout << "R" << i << ": " << registers[i] << std::endl;
+			std::cout << "R" << i << ": " << ToHexString(registers[i].i) << ", " << registers[i].i << std::endl;
 
 		std::cout << "---------------------------------------------------" << std::endl;
 	}

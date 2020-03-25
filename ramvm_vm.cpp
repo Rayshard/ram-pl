@@ -3,119 +3,131 @@
 #include "ramvm_instruction.h"
 
 namespace ramvm {
-	VM::VM(int _numCMDLineArgs, int _maxMemory, std::vector<Instruction>& _instrs)
+	VM::VM(int _numCMDLineArgs, int _maxMemory, std::vector<Instruction*>& _instrs)
 	{
 		memory = Memory(_maxMemory);
 		instructions = _instrs;
-		ip = -1;
+		ip = 0;
 		topLevelExecFrame = ExecutionFrame(0, _numCMDLineArgs);
+	}
+
+	VM::~VM()
+	{
+		for (auto instr : instructions)
+			delete instr;
 	}
 
 	ResultType VM::Run(ResultInfo& _info)
 	{
-		while (++ip < (int)instructions.size())
+		while (ip < (int)instructions.size())
 		{
 			ExecutionFrame& execFrame = execFrames.empty() ? topLevelExecFrame : execFrames.back();
-			Instruction instr = instructions[ip];
+			Instruction* curInstr = instructions[ip];
 
-			switch (instr.GetType())
+			switch (curInstr->GetType())
 			{
 				case InstructionType::HALT: return ResultType::SUCCESS;
 				case InstructionType::MOVE: {
+					InstrMove* instr = (InstrMove*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					int movVal = 0;
+					DataVariant movVal(instr->dataType);
 
-					resType = ReadFromSrcArg(execFrame, instr.GetMoveSrc(), movVal, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src, movVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					resType = WriteToDestArg(execFrame, instr.GetMoveDest(), movVal, _info);
+					resType = WriteToDestArg(execFrame, instr->dest, movVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::MALLOC: {
+					InstrMalloc* instr = (InstrMalloc*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
 
 					//Get Size
-					int size = 0;
-					resType = ReadFromSrcArg(execFrame, instr.GetMallocSize(), size, _info);
+					DataVariant size(DataType::INT);
+					resType = ReadFromSrcArg(execFrame, instr->size, size, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Malloc and Get Address
 					int memAddr = -1;
-					resType = memory.Malloc(size, memAddr, _info);
+					resType = memory.Malloc(size.AsInt(), memAddr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Write Addr to Destination
-					resType = WriteToDestArg(execFrame, instr.GetMallocDest(), memAddr, _info);
+					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(memAddr), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::FREE: {
+					InstrFree* instr = (InstrFree*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
 
 					//Get Address
-					int addr = 0;
-					resType = ReadFromSrcArg(execFrame, instr.GetFreeAddr(), addr, _info);
+					DataVariant addr(DataType::INT);
+					resType = ReadFromSrcArg(execFrame, instr->addr, addr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Free Address
-					resType = memory.Free(addr, _info);
+					resType = memory.Free(addr.AsInt(), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::PRINT: {
+					InstrPrint* instr = (InstrPrint*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
 
-					int memAddr = 0;
-					resType = ReadFromSrcArg(execFrame, instr.GetPrintSrc(), memAddr, _info);
+					DataVariant memAddr(DataType::INT);
+					resType = ReadFromSrcArg(execFrame, instr->start, memAddr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					int length = 0;
-					resType = ReadFromSrcArg(execFrame, instr.GetPrintLength(), length, _info);
+					DataVariant length(DataType::INT);
+					resType = ReadFromSrcArg(execFrame, instr->length, length, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Get Chars
-					std::vector<int> chars(length);
-					resType = memory.Read(memAddr, length, chars.data(), _info);
+					std::vector<char> chars(length.AsInt());
+					resType = memory.ReadBuffer(memAddr.AsInt(), length.AsInt(), (byte*)chars.data(), _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					//Build String
-					std::stringstream stream;
-					for (int c : chars)
-						stream << (char)c;
+					chars.push_back(0);
 
 					//Print
-					printf(stream.str().c_str());
+					printf(chars.data());
 				} break;
-				case InstructionType::JUMP: ip = instr.GetJumpLabelIdx() - 1; break;
+				case InstructionType::JUMP: ip = ((InstrJump*)curInstr)->labelIdx; continue;
 				case InstructionType::CJUMP: {
-					int condVal = 0;
-					ResultType resType = ReadFromSrcArg(execFrame, instr.GetCJumpCondSrc(), condVal, _info);
+					InstrCJump* instr = (InstrCJump*)curInstr;
+					DataVariant condVal(DataType::BYTE);
+					ResultType resType = ReadFromSrcArg(execFrame, instr->condSrc, condVal, _info);
 
 					if (IsErrorResult(resType)) { return resType; }
-					else if (condVal != 0) { ip = instr.GetCJumpLabelIdx() - 1; }
+					else if (condVal.AsByte() != 0)
+					{
+						ip = instr->labelIdx;
+						continue;
+					}
 				} break;
 				case InstructionType::RETURN: {
 					if (execFrames.empty()) { return ResultType::ERR_RET_TOP_LEVEL; }
 					else
 					{
+						InstrReturn* instr = (InstrReturn*)curInstr;
 						ExecutionFrame& parentExecFrame = execFrames.size() == 1 ? topLevelExecFrame : execFrames[execFrames.size() - 2];
 						ResultType resType = ResultType::SUCCESS;
 
-						auto retSrcs = instr.GetReturnSrcs();
-						for (int i = 0; i < instr.GetReturnNumSrcs(); i++)
+						for (int i = 0; i < (int)instr->srcs.size(); i++)
 						{
-							int retVal = 0;
+							DataVariant retVal(DataType::INT);
 
 							//Read from current exec frame
-							resType = ReadFromSrcArg(execFrame, retSrcs[i], retVal, _info);
+							resType = ReadFromSrcArg(execFrame, instr->srcs[i], retVal, _info);
 							if (IsErrorResult(resType))
 								return resType;
 
@@ -132,19 +144,20 @@ namespace ramvm {
 
 						execFrames.pop_back();
 						ip = execFrame.GetRetIP();
+						continue;
 					}
 				} break;
 				case InstructionType::CALL: {
-					ExecutionFrame newExecFrame = ExecutionFrame(ip, instr.GetCallRegCount());
+					InstrCall* instr = (InstrCall*)curInstr;
+					ExecutionFrame newExecFrame = ExecutionFrame(ip + 1, instr->regCnt);
 					ResultType resType = ResultType::SUCCESS;
 
-					auto argSrcs = instr.GetCallArgSrcs();
-					for (int i = 0; i < instr.GetCallNumSrcs(); i++)
+					for (int i = 0; i < (int)instr->argSrcs.size(); i++)
 					{
-						int argVal = 0;
+						DataVariant argVal(DataType::INT);
 
 						//Read from current exec frame
-						resType = ReadFromSrcArg(execFrame, argSrcs[i], argVal, _info);
+						resType = ReadFromSrcArg(execFrame, instr->argSrcs[i], argVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
@@ -154,142 +167,133 @@ namespace ramvm {
 							return resType;
 					}
 
-					auto retDests = instr.GetCallRetDests();
-					execFrame.SetReturnDests(retDests);
-
+					execFrame.SetReturnDests(instr->retDests);
 					execFrames.push_back(newExecFrame);
-					ip = instr.GetCallLabelIdx() - 1;
+					ip = instr->labelIdx;
+					continue;
 				} break;
 				case InstructionType::BINOP: {
+					InstrBinop* instr = (InstrBinop*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					int val1 = 0, val2 = 0;
+					DataVariant val1(DataType::INT), val2(DataType::INT);
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr.GetBinopSrc1(), val1, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src1, val1, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					resType = ReadFromSrcArg(execFrame, instr.GetBinopSrc2(), val2, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src2, val2, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Calculate
-					int resVal = 0;
+					DataVariant resVal;
+					resType = DoBinop(instr->op, val1, val2, resVal);
+					if (IsErrorResult(resType))
+						return resType;
 
-					switch (instr.GetBinopType()) //Switch on Operation Type
-					{
-						case Binop::ADD: resVal = val1 + val2; break;
-						case Binop::SUB: resVal = val1 - val2; break;
-						case Binop::MUL: resVal = val1 * val2; break;
-						case Binop::DIV: {
-							if (val2 != 0) { resVal = val1 / val2; }
-							else { resType = ResultType::ERR_DIVBYZERO; }
-						} break;
-						case Binop::MOD: {
-							if (val2 != 0) { resVal = val1 % val2; }
-							else { resType = ResultType::ERR_DIVBYZERO; }
-						} break;
-						case Binop::LSHIFT: resVal = val1 << val2; break;
-						case Binop::RSHIFT: resVal = val1 >> val2; break;
-						case Binop::LT: resVal = val1 < val2 ? 1 : 0; break;
-						case Binop::GT: resVal = val1 > val2 ? 1 : 0; break;
-						case Binop::LTEQ: resVal = val1 <= val2 ? 1 : 0; break;
-						case Binop::GTEQ: resVal = val1 >= val2 ? 1 : 0; break;
-						case Binop::EQ: resVal = val1 == val2 ? 1 : 0; break;
-						case Binop::NEQ: resVal = val1 != val2 ? 1 : 0; break;
-						case Binop::BIT_AND: resVal = val1 & val2; break;
-						case Binop::BIT_OR: resVal = val1 | val2; break;
-						case Binop::BIT_XOR: resVal = val1 ^ val2; break;
-						case Binop::LOG_AND: resVal = (bool)val1 && (bool)val2 ? 1 : 0; break;
-						case Binop::LOG_OR: resVal = (bool)val1 || (bool)val2 ? 1 : 0; break;
-					}
+					//remove this 
+					resVal = DataVariant(DataType::INT, resVal.GetValue());
+					//////
 
-					resType = WriteToDestArg(execFrame, instr.GetBinopDest(), resVal, _info);
+					resType = WriteToDestArg(execFrame, instr->dest, resVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::UNOP: {
+					InstrUnop* instr = (InstrUnop*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					int val = 0;
+					DataVariant val(DataType::INT);
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr.GetUnopSrc(), val, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src, val, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Calculate
-					switch (instr.GetUnopType()) //Switch on Operation Type
-					{
-						case Unop::LOG_NOT: resType = WriteToDestArg(execFrame, instr.GetUnopDest(), !((bool)val), _info); break;
-						case Unop::NEG: resType = WriteToDestArg(execFrame, instr.GetUnopDest(), -val, _info); break;
-					}
+					DataVariant resVal;
+					resType = DoUnop(instr->op, val, resVal);
+					if (IsErrorResult(resType))
+						return resType;
+
+					//remove this 
+					resVal = DataVariant(DataType::INT, resVal.GetValue());
+					//////
 
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::PUSH: {
+					InstrPush* instr = (InstrPush*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
 
-					auto pushSrcs = instr.GetPushSrcs();
-					for (int i = 0; i < instr.GetPushNumSrcs(); i++)
+					for (int i = 0; i < (int)instr->srcs.size(); i++)
 					{
-						int pushVal = 0;
+						DataVariant pushVal(DataType::INT);
 
 						//Read Value
-						resType = ReadFromSrcArg(execFrame, pushSrcs[i], pushVal, _info);
+						resType = ReadFromSrcArg(execFrame, instr->srcs[i], pushVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
 						//Push Value
-						stack.push_back(pushVal);
+						int writeStart = GetSP() + 1;
+						stack.resize(stack.size() + pushVal.GetSize());
+						WriteStack(writeStart, pushVal);
 					}
 				} break;
 				case InstructionType::POP: {
+					InstrPop* instr = (InstrPop*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					int amt = 0;
+					DataVariant amt(DataType::INT);
 
 					//Read Amount
-					resType = ReadFromSrcArg(execFrame, instr.GetPopAmt(), amt, _info);
+					resType = ReadFromSrcArg(execFrame, instr->amt, amt, _info);
 					if (IsErrorResult(resType))
 						return resType;
+
+					//Scale Amount
+					amt = DataVariant(amt.AsInt() * instr->scale);
 
 					//Pop Amount
 					int sp = GetSP();
 
-					if (amt < 0 || sp < amt - 1) { return ResultType::ERR_POP_AMT; }
-					else if (amt == 0) { return ResultType::SUCCESS; }
+					if (amt.AsInt() < 0 || sp < amt.AsInt() - 1) { return ResultType::ERR_POP_AMT; }
+					else if (amt.AsInt() == 0) { return ResultType::SUCCESS; }
 					else if (sp == 0) { stack.clear(); }
-					else { stack.erase(stack.begin() + sp - amt + 1, stack.end()); }
+					else { stack.erase(stack.begin() + sp - amt.AsInt() + 1, stack.end()); }
 				} break;
 				default: return ResultType::ERR_UNKNOWNINSTR;
 			}
+
+			ip++;
 		}
 
 		return ResultType::ERR_NOHALT;
 	}
 
-	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _arg, int& _value, ResultInfo& _info)
+	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _arg, DataVariant& _value, ResultInfo& _info)
 	{
 		switch (_arg.type)
 		{
 			case ArgType::VALUE: {
-				_value = _arg.value;
+				_value = DataVariant(_arg.value);
 				return ResultType::SUCCESS;
 			}
 			case ArgType::REGISTER: return _execFrame.ReadRegister(_arg.value, _value, _info);
 			case ArgType::MEM_REG: {
-				int addr = 0;
+				DataVariant addr(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value, addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return memory.Read(addr, _value, _info); }
+				else { return memory.Read(addr.AsInt(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
-				int pos = 0;
+				DataVariant pos(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value, pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return ReadStack(pos, _value); }
+				else { return ReadStack(pos.AsInt(), _value); }
 			}
 			case ArgType::STACK_PTR: {
 				_value = GetSP();
@@ -300,52 +304,47 @@ namespace ramvm {
 		}
 	}
 
-	ResultType VM::WriteToDestArg(ExecutionFrame& _execFrame, Argument _arg, int _value, ResultInfo& _info)
+	ResultType VM::WriteToDestArg(ExecutionFrame& _execFrame, Argument _arg, DataVariant _value, ResultInfo& _info)
 	{
 		switch (_arg.type)
 		{
 			case ArgType::REGISTER: return _execFrame.WriteRegister(_arg.value, _value, _info);
 			case ArgType::MEM_REG: {
-				int addr = 0;
+				DataVariant addr(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value, addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return memory.Write(addr, _value, _info); }
+				else { return memory.Write(addr.AsInt(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
-				int pos = 0;
+				DataVariant pos(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value, pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return WriteStack(pos, _value); }
+				else { return WriteStack(pos.AsInt(), _value); }
 			}
-			case ArgType::SP_OFFSET: {
-				if (_arg.value == 1)
-				{
-					stack.push_back(_value);
-					return ResultType::SUCCESS;
-				}
-				else { return WriteStack(GetSP() + _arg.value, _value); }
-			}
+			case ArgType::SP_OFFSET: return WriteStack(GetSP() + _arg.value, _value);
 			default: return ResultType::ERR_INVALID_DEST;
 		}
 	}
 
-	ResultType VM::ReadStack(int _pos, int& _value)
+	ResultType VM::ReadStack(int _pos, DataVariant& _value)
 	{
-		if (_pos >= 0 && _pos < (int)stack.size())
+		if (_pos >= 0 && _pos + _value.GetSize() <= (int)stack.size())
 		{
-			_value = stack[_pos];
+			_value = BufferToDataValue(_value.GetType(), &stack[_pos]);
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_STACK_READ; }
 	}
 
-	ResultType VM::WriteStack(int _pos, int _value)
+	ResultType VM::WriteStack(int _pos, DataVariant _value)
 	{
-		if (_pos >= 0 && _pos < (int)stack.size())
+		if (_pos >= 0 && _pos + _value.GetSize() <= (int)stack.size())
 		{
-			stack[_pos] = _value;
+			if (_value.GetType() == DataType::BYTE) { stack[_pos] = _value.AsByte(); }
+			else { DataValueToBuffer(&stack[_pos], _value); }
+
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_STACK_WRITE; }
@@ -362,11 +361,11 @@ namespace ramvm {
 		std::cout << "---------------------MEMORY---------------------" << std::endl;
 
 		ResultInfo resInfo;
-		std::vector<int> buffer(_length);
-		memory.Read(_startAddr, _length, buffer.data(), resInfo);
+		std::vector<byte> buffer(_length);
+		memory.ReadBuffer(_startAddr, _length, buffer.data(), resInfo);
 
 		for (int i = 0; i < _length; i++)
-			std::cout << _startAddr + i << ": " << buffer[i] << std::endl;
+			std::cout << _startAddr + i << ": " << std::to_string(buffer[i]) << std::endl;
 
 		std::cout << "---------------------------------------------------" << std::endl;
 	}
@@ -378,7 +377,7 @@ namespace ramvm {
 		int sp = GetSP();
 
 		for (int i = 0; i < (int)stack.size(); i++)
-			std::cout << i << ": " << stack[i] << (i == sp ? "  <- SP" : "") << std::endl;
+			std::cout << i << ": " << ToHexString(stack[i]) << ", " << std::to_string(stack[i]) << (i == sp ? "  <- SP" : "") << std::endl;
 
 		std::cout << "--------------------------------------------------" << std::endl;
 	}

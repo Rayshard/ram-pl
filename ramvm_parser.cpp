@@ -91,17 +91,17 @@ namespace ramvm {
 		return result;
 	}
 
-	ResultType ParseHalt(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseHalt(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		if (_tokens.size() != 1) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 		else
 		{
-			_instr = Instruction::CreateHalt();
+			_instr = new InstrHalt();
 			return ResultType::SUCCESS;
 		}
 	}
 
-	ResultType ParseReturn(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseReturn(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -109,11 +109,11 @@ namespace ramvm {
 		if (IsErrorResult(result))
 			return result;
 
-		_instr = Instruction::CreateReturn(args);
+		_instr = new InstrReturn(args);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParseMove(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseMove(std::vector<std::string>& _tokens, Instruction*& _instr, DataType _type)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -125,13 +125,13 @@ namespace ramvm {
 
 		if (IsDestArgument(dest.type))
 		{
-			_instr = Instruction::CreateMove(src, dest);
+			_instr = new InstrMove(_type, src, dest);
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::PARSE_ERR_INVALID_ARG; }
 	}
 
-	ResultType ParseMalloc(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseMalloc(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -139,11 +139,11 @@ namespace ramvm {
 		if (IsErrorResult(result)) { return result; }
 		else if (args.size() != 2) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 
-		_instr = Instruction::CreateMalloc(args[0], args[1]);
+		_instr = new InstrMalloc(args[0], args[1]);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParseFree(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseFree(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -151,11 +151,11 @@ namespace ramvm {
 		if (IsErrorResult(result)) { return result; }
 		else if (args.size() != 1) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 
-		_instr = Instruction::CreateFree(args[0]);
+		_instr = new InstrFree(args[0]);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParsePrint(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParsePrint(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -163,25 +163,25 @@ namespace ramvm {
 		if (IsErrorResult(result)) { return result; }
 		else if (args.size() != 2) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 
-		_instr = Instruction::CreatePrint(args[0], args[1]);
+		_instr = new InstrPrint(args[0], args[1]);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParseJump(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseJump(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		if (_tokens.size() != 2) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 		else
 		{
 			if (IsLabelArg(_tokens[1]))
 			{
-				_instr = Instruction::CreateJump(-1);
+				_instr = new InstrJump(-1);
 				return ResultType::SUCCESS;
 			}
 			else { return ResultType::PARSE_ERR_INVALID_ARG; }
 		}
 	}
 
-	ResultType ParseCJump(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseCJump(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		if (_tokens.size() != 3) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 		else
@@ -195,12 +195,12 @@ namespace ramvm {
 			if (IsErrorResult(result))
 				return result;
 
-			_instr = Instruction::CreateCJump(-1, args[0]);
+			_instr = new InstrCJump(-1, args[0]);
 			return ResultType::SUCCESS;
 		}
 	}
 
-	ResultType ParseCall(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseCall(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		if (_tokens.size() < 5) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 		else
@@ -234,12 +234,12 @@ namespace ramvm {
 				retDests.push_back(retDest);
 			}
 
-			_instr = Instruction::CreateCall(-1, regCnt.value, argSrcs, retDests);
+			_instr = new InstrCall(-1, regCnt.value, argSrcs, retDests);
 			return ResultType::SUCCESS;
 		}
 	}
 
-	ResultType ParsePush(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParsePush(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -247,11 +247,11 @@ namespace ramvm {
 		if (IsErrorResult(result)) { return result; }
 		else if (args.size() == 0) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 
-		_instr = Instruction::CreatePush(args);
+		_instr = new InstrPush(args);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParsePop(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParsePop(std::vector<std::string>& _tokens, Instruction*& _instr, int _scale)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -259,11 +259,11 @@ namespace ramvm {
 		if (IsErrorResult(result)) { return result; }
 		else if (args.size() > 1) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
 
-		_instr = Instruction::CreatePop(args[0]);
+		_instr = new InstrPop(args[0], _scale);
 		return ResultType::SUCCESS;
 	}
 
-	ResultType ParseBinop(Binop _op, std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseBinop(Binop _op, std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -275,13 +275,13 @@ namespace ramvm {
 
 		if (IsDestArgument(dest.type))
 		{
-			_instr = Instruction::CreateBinop(_op, arg0, arg1, dest);
+			_instr = new InstrBinop(_op, arg0, arg1, dest);
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::PARSE_ERR_INVALID_ARG; }
 	}
 
-	ResultType ParseUnop(Unop _op, std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseUnop(Unop _op, std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::vector<Argument> args;
 		ResultType result = ParseArguments(_tokens, 1, args);
@@ -293,13 +293,13 @@ namespace ramvm {
 
 		if (IsDestArgument(dest.type))
 		{
-			_instr = Instruction::CreateUnop(_op, arg, dest);
+			_instr = new InstrUnop(_op, arg, dest);
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::PARSE_ERR_INVALID_ARG; }
 	}
 
-	ResultType ParseInstruction(std::vector<std::string>& _tokens, Instruction& _instr)
+	ResultType ParseInstruction(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
 		std::string instrTag = _tokens[0];
 
@@ -308,8 +308,9 @@ namespace ramvm {
 		else if (instrTag == "MALLOC") { return ParseMalloc(_tokens, _instr); }
 		else if (instrTag == "FREE") { return ParseFree(_tokens, _instr); }
 		else if (instrTag == "PUSH") { return ParsePush(_tokens, _instr); }
-		else if (instrTag == "POP") { return ParsePop(_tokens, _instr); }
-		else if (instrTag == "MOV") { return ParseMove(_tokens, _instr); }
+		else if (instrTag == "POPB") { return ParsePop(_tokens, _instr, BYTE_SIZE); }
+		else if (instrTag == "POPI") { return ParsePop(_tokens, _instr, INT_SIZE); }
+		else if (instrTag == "MOV") { return ParseMove(_tokens, _instr, DataType::INT); }
 		else if (instrTag == "PRINT") { return ParsePrint(_tokens, _instr); }
 		else if (instrTag == "JUMP") { return ParseJump(_tokens, _instr); }
 		else if (instrTag == "CJUMP") { return ParseCJump(_tokens, _instr); }
@@ -337,17 +338,18 @@ namespace ramvm {
 		else { return ResultType::PARSE_ERR_UNKNOWN_INSTR; }
 	}
 
-	ResultType ParseProgram(std::ifstream& _stream, std::vector<Instruction>& _program, ResultInfo& _info) {
-		std::vector<Instruction> prog;
+	ResultType ParseProgram(std::ifstream& _stream, std::vector<Instruction*>& _program, ResultInfo& _info) {
+		std::vector<Instruction*> prog;
 		std::map<std::string, int> labels;
 		std::map<int, std::pair<InstructionType, std::string>> jumps;
 		std::string curLine;
-		int lineNum = -1, instrCount = 0;
+		int lineNum = -1;
 
 		while (std::getline(_stream, curLine)) {
 			curLine = TrimString(curLine);
 			lineNum++;
 
+			int instrPtr = prog.size();
 			auto lineStream = std::stringstream(curLine);
 			std::vector<std::string> tokens = GetLineTokens(lineStream, ' ');
 
@@ -355,12 +357,17 @@ namespace ramvm {
 			else if (tokens.size() == 1 && std::regex_match(curLine, std::regex("%[A-Za-z_][A-Za-z0-9_]*%"))) //Check if Line is a label
 			{
 				auto search = labels.find(curLine);
-				if (search == labels.end()) { labels.insert_or_assign(curLine.substr(1, curLine.length() - 2), instrCount); }
-				else { return ResultType::PARSE_ERR_DUPLICATE_LABEL; }
+				if (search == labels.end()) { labels.insert_or_assign(curLine.substr(1, curLine.length() - 2), instrPtr); }
+				else
+				{
+					_info.insert_or_assign("Line#", std::to_string(lineNum));
+					_info.insert_or_assign("Line", curLine);
+					return ResultType::PARSE_ERR_DUPLICATE_LABEL;
+				}
 			}
 			else
 			{
-				Instruction instruction = Instruction::CreateHalt();
+				Instruction* instruction = new InstrHalt();
 				ResultType result = ParseInstruction(tokens, instruction);
 
 				if (IsErrorResult(result))
@@ -371,12 +378,11 @@ namespace ramvm {
 				}
 				else
 				{
-					if (instruction.GetType() == InstructionType::JUMP) { jumps.insert_or_assign(instrCount, std::make_pair(InstructionType::JUMP, tokens[1])); }
-					else if (instruction.GetType() == InstructionType::CJUMP) { jumps.insert_or_assign(instrCount, std::make_pair(InstructionType::CJUMP, tokens[1])); }
-					else if (instruction.GetType() == InstructionType::CALL) { jumps.insert_or_assign(instrCount, std::make_pair(InstructionType::CALL, tokens[1])); }
+					if (instruction->GetType() == InstructionType::JUMP) { jumps.insert_or_assign(instrPtr, std::make_pair(InstructionType::JUMP, tokens[1])); }
+					else if (instruction->GetType() == InstructionType::CJUMP) { jumps.insert_or_assign(instrPtr, std::make_pair(InstructionType::CJUMP, tokens[1])); }
+					else if (instruction->GetType() == InstructionType::CALL) { jumps.insert_or_assign(instrPtr, std::make_pair(InstructionType::CALL, tokens[1])); }
 
 					prog.push_back(instruction);
-					instrCount++;
 				}
 			}
 		}
@@ -388,14 +394,9 @@ namespace ramvm {
 
 			if (search != labels.end())
 			{
-				if (it->second.first == InstructionType::JUMP) { prog[it->first] = Instruction::CreateJump(labels[it->second.second]); }
-				else if (it->second.first == InstructionType::CJUMP) { prog[it->first] = Instruction::CreateCJump(labels[it->second.second], prog[it->first].GetCJumpCondSrc()); }
-				else if (it->second.first == InstructionType::CALL)
-				{
-					Instruction call = prog[it->first];
-					auto argSrcs = call.GetCallArgSrcs(), retDests = call.GetCallRetDests();
-					prog[it->first] = Instruction::CreateCall(labels[it->second.second], call.GetCallRegCount(), argSrcs, retDests);
-				}
+				if (it->second.first == InstructionType::JUMP) { ((InstrJump*)prog[it->first])->labelIdx = labels[it->second.second]; }
+				else if (it->second.first == InstructionType::CJUMP) { ((InstrCJump*)prog[it->first])->labelIdx = labels[it->second.second]; }
+				else if (it->second.first == InstructionType::CALL) { ((InstrCall*)prog[it->first])->labelIdx = labels[it->second.second]; }
 			}
 			else { return ResultType::PARSE_ERR_UNKNOWN_LABEL; }
 		}

@@ -2,6 +2,11 @@
 #include "ramvm_memory.h"
 
 namespace ramvm {
+	Memory::Memory()
+	{
+		capacity = 0;
+	}
+
 	Memory::Memory(int _capacity)
 	{
 		capacity = _capacity;
@@ -84,102 +89,189 @@ namespace ramvm {
 		return ResultType::ERR_FREE;
 	}
 
-	ResultType Memory::Read(int _addr, int& _value, ResultInfo& _info)
+	ResultType Memory::ReadBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info)
 	{
-		if (IsAddress(_addr))
+		int endAddr = _start + _length - 1;
+
+		if (IsAddress(_start) && IsAddress(endAddr))
 		{
-			for (auto const& itBlock : blocks)
+			auto startBlock = blocks.end();
+
+			//Check is block range is allocated
+			for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
 			{
-				int blockAddr = itBlock.first;
-				if (_addr >= blockAddr && _addr < blockAddr + itBlock.second.size)
+				if (startBlock != blocks.end())
 				{
-					if (!itBlock.second.free)
-					{
-						_value = itBlock.second.data[_addr - blockAddr];
-						return ResultType::SUCCESS;
-					}
-					else { return ResultType::ERR_MEMREAD; }
+					if (itBlock->second.free)
+						return ResultType::ERR_MEMREAD; //Free Block between start and end
+
+					if (endAddr >= itBlock->first)
+						break;
+				}
+				else if (_start >= itBlock->first)
+				{
+					if (itBlock->second.free)
+						return ResultType::ERR_MEMREAD;
+
+					startBlock = itBlock; //Set Start Block
+
+					//Check if end address is in
+					if (endAddr < itBlock->first + itBlock->second.size)
+						break;
+				}
+				else { continue; }
+			}
+
+			//Read from buffer to blocks
+			int readOff = _start - startBlock->first, iBuffer = 0;
+
+			while (true)
+			{
+				_buffer[iBuffer++] = startBlock->second.data[readOff++];
+
+				if (iBuffer == _length) { break; }
+				else if (readOff == startBlock->second.size)
+				{
+					readOff = 0;
+					startBlock++;
 				}
 			}
 
-			return ResultType::ERR_MEMREAD;
+			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_MEMREAD; }
 	}
 
-	ResultType Memory::Read(int _start, int _length, int* _buffer, ResultInfo& _info)
+	ResultType Memory::WriteBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info)
 	{
-		if (IsAddress(_start) && IsAddress(_start + _length))
+		int endAddr = _start + _length - 1;
+
+		if (IsAddress(_start) && IsAddress(endAddr))
 		{
+			auto startBlock = blocks.end();
+
+			//Check is block range is allocated
 			for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
 			{
-				if (_start >= itBlock->first)
+				if (startBlock != blocks.end())
 				{
-					//Get Readable Blocks
-					std::vector<std::vector<int>*> blockHeaps;
-					auto curBlock = itBlock;
-					int remainingLength = _length;
+					if (itBlock->second.free)
+						return ResultType::ERR_MEMWRITE; //Free Block between start and end
 
-					while (true)
+					if (endAddr >= itBlock->first)
+						break;
+				}
+				else if (_start >= itBlock->first)
+				{
+					if (itBlock->second.free)
+						return ResultType::ERR_MEMWRITE;
+
+					startBlock = itBlock; //Set Start Block
+
+					//Check if end address is in
+					if (endAddr < itBlock->first + itBlock->second.size)
+						break;
+				}
+				else { continue; }
+			}
+
+			//Write from buffer to blocks
+			int writeOff = _start - startBlock->first, iBuffer = 0;
+
+			while (true)
+			{
+				startBlock->second.data[writeOff++] = _buffer[iBuffer++];
+
+				if (iBuffer == _length) { break; }
+				else if (writeOff == startBlock->second.size)
+				{
+					writeOff = 0;
+					startBlock++;
+				}
+			}
+
+			return ResultType::SUCCESS;
+		}
+		else { return ResultType::ERR_MEMWRITE; }
+	}
+
+	ResultType Memory::Read(int _addr, DataVariant& _value, ResultInfo& _info)
+	{
+		switch (_value.GetType())
+		{
+			case DataType::BYTE: {
+				if (IsAddress(_addr))
+				{
+					for (auto const& itBlock : blocks)
 					{
-						if (curBlock->second.free)
-							return ResultType::ERR_MEMREAD;
-
-						blockHeaps.push_back(&(curBlock->second.data));
-						remainingLength -= curBlock->second.size;
-
-						if (remainingLength <= 0) //Gathered all the blocks
-							break;
-
-						curBlock = std::next(curBlock);
-					}
-
-					//Read from blocks to buffer
-					auto it = blockHeaps.begin();
-					int readOff = _start - itBlock->first, iBuffer = 0;
-
-					while (true)
-					{
-						_buffer[iBuffer++] = (**it)[readOff++];
-
-						if (iBuffer == _length) { break; }
-						else if (readOff == (**it).size())
+						int blockAddr = itBlock.first;
+						if (_addr >= blockAddr && _addr < blockAddr + itBlock.second.size)
 						{
-							readOff = 0;
-							it++;
+							if (!itBlock.second.free)
+							{
+								_value = itBlock.second.data[_addr - blockAddr];
+								return ResultType::SUCCESS;
+							}
+							else { return ResultType::ERR_MEMREAD; }
 						}
 					}
 
+					return ResultType::ERR_MEMREAD;
+				}
+				else { return ResultType::ERR_MEMREAD; }
+			}
+			case DataType::INT: {
+				byte buffer[INT_SIZE];
+				ResultType result = ReadBuffer(_addr, INT_SIZE, buffer, _info);
+
+				if (IsErrorResult(result)) { return result; }
+				else
+				{
+					_value = BufferToDataValue(DataType::INT, buffer);
 					return ResultType::SUCCESS;
 				}
 			}
-
-			return ResultType::ERR_MEMREAD;
+			default: return ResultType::ERR_MEMREAD;
 		}
-		else { return ResultType::ERR_MEMREAD; }
 	}
 
-	ResultType Memory::Write(int _addr, int _value, ResultInfo& _info)
+	ResultType Memory::Write(int _addr, DataVariant _value, ResultInfo& _info)
 	{
-		if (IsAddress(_addr))
+		switch (_value.GetType())
 		{
-			for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
-			{
-				int blockAddr = itBlock->first;
-				if (_addr >= blockAddr && _addr < blockAddr + itBlock->second.size)
+			case DataType::BYTE: {
+				if (IsAddress(_addr))
 				{
-					if (!itBlock->second.free)
+					for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
 					{
-						itBlock->second.data[_addr - itBlock->first] = _value;
-						return ResultType::SUCCESS;
+						int blockAddr = itBlock->first;
+						if (_addr >= blockAddr && _addr < blockAddr + itBlock->second.size)
+						{
+							if (!itBlock->second.free)
+							{
+								itBlock->second.data[_addr - itBlock->first] = _value.AsByte();
+								return ResultType::SUCCESS;
+							}
+							else { return ResultType::ERR_MEMWRITE; }
+						}
 					}
-					else { return ResultType::ERR_MEMWRITE; }
-				}
-			}
 
-			return ResultType::ERR_MEMWRITE;
+					return ResultType::ERR_MEMWRITE;
+				}
+				else { return ResultType::ERR_MEMWRITE; }
+			}
+			case DataType::INT: {
+				int val = _value.AsInt();
+				return WriteBuffer(_addr, INT_SIZE, (byte*)&val, _info);
+			}
+			default: return ResultType::ERR_MEMWRITE;
 		}
-		else { return ResultType::ERR_MEMWRITE; }
+	}
+
+	Memory::Block::Block()
+	{
+		size = 0;
+		free = true;
 	}
 
 	Memory::Block::Block(int _size, bool _free)
@@ -188,6 +280,6 @@ namespace ramvm {
 		free = _free;
 
 		if (!free)
-			data = std::vector<int>(_size);
+			data = std::vector<byte>(_size);
 	}
 }

@@ -303,25 +303,25 @@ namespace ramc {
 
 		switch (op)
 		{
-			case ramc::BinopType::ADD: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::ADD, src1, src2, src1)); break;
-			case ramc::BinopType::SUB: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::SUB, src1, src2, src1)); break;
-			case ramc::BinopType::MUL: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::MUL, src1, src2, src1)); break;
-			case ramc::BinopType::DIV: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::DIV, src1, src2, src1)); break;
-			case ramc::BinopType::MOD: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::MOD, src1, src2, src1)); break;
+			case ramc::BinopType::ADD: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::ADD, src1, src2, src1)); break;
+			case ramc::BinopType::SUB: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::SUB, src1, src2, src1)); break;
+			case ramc::BinopType::MUL: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::MUL, src1, src2, src1)); break;
+			case ramc::BinopType::DIV: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::DIV, src1, src2, src1)); break;
+			case ramc::BinopType::MOD: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::MOD, src1, src2, src1)); break;
 			case ramc::BinopType::POW: throw "BinopExpr::GenerateCode - BinopType not handled!";
-			case ramc::BinopType::BIN_AND: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::BIT_AND, src1, src2, src1)); break;
-			case ramc::BinopType::BIN_OR: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::BIT_OR, src1, src2, src1)); break;
-			case ramc::BinopType::BIN_XOR: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::BIT_XOR, src1, src2, src1)); break;
-			case ramc::BinopType::LSHIFT: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::LSHIFT, src1, src2, src1)); break;
-			case ramc::BinopType::RSHIFT: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::RSHIFT, src1, src2, src1)); break;
-			case ramc::BinopType::LT: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::LT, src1, src2, src1)); break;
-			case ramc::BinopType::GT: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::GT, src1, src2, src1)); break;
-			case ramc::BinopType::LT_EQ: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::LTEQ, src1, src2, src1)); break;
-			case ramc::BinopType::GT_EQ: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::GTEQ, src1, src2, src1)); break;
-			case ramc::BinopType::EQ_EQ: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::EQ, src1, src2, src1)); break;
-			case ramc::BinopType::NEQ: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::NEQ, src1, src2, src1)); break;
-			case ramc::BinopType::LOG_AND: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::LOG_AND, src1, src2, src1)); break;
-			case ramc::BinopType::LOG_OR: instrs.push_back(ramvm::Instruction::CreateBinop(ramvm::Binop::LOG_OR, src1, src2, src1)); break;
+			case ramc::BinopType::BIN_AND: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::BIT_AND, src1, src2, src1)); break;
+			case ramc::BinopType::BIN_OR: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::BIT_OR, src1, src2, src1)); break;
+			case ramc::BinopType::BIN_XOR: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::BIT_XOR, src1, src2, src1)); break;
+			case ramc::BinopType::LSHIFT: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::LSHIFT, src1, src2, src1)); break;
+			case ramc::BinopType::RSHIFT: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::RSHIFT, src1, src2, src1)); break;
+			case ramc::BinopType::LT: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::LT, src1, src2, src1)); break;
+			case ramc::BinopType::GT: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::GT, src1, src2, src1)); break;
+			case ramc::BinopType::LT_EQ: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::LTEQ, src1, src2, src1)); break;
+			case ramc::BinopType::GT_EQ: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::GTEQ, src1, src2, src1)); break;
+			case ramc::BinopType::EQ_EQ: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::EQ, src1, src2, src1)); break;
+			case ramc::BinopType::NEQ: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::NEQ, src1, src2, src1)); break;
+			case ramc::BinopType::LOG_AND: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::LOG_AND, src1, src2, src1)); break;
+			case ramc::BinopType::LOG_OR: instrs.push_back(new ramvm::InstrBinop(ramvm::Binop::LOG_OR, src1, src2, src1)); break;
 			case BinopType::EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
 			case BinopType::ADD_EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
 			case BinopType::SUB_EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
@@ -337,15 +337,17 @@ namespace ramc {
 			default: throw "BinopExpr::GenerateCode - BinopType not handled!";
 		}
 
-		instrs.push_back(ramvm::Instruction::CreatePop(ramvm::Argument(ramvm::ArgType::VALUE, 1)));
+		//TODO gotta change the pop scale to be based on the return type of this binop
+		//This will require you to store the type during typechecking
+		instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
 
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
 		if (!dest.IsStackTop())
 		{
-			instrs.push_back(ramvm::Instruction::CreateMove(ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0), dest));
-			instrs.push_back(ramvm::Instruction::CreatePop(ramvm::Argument(ramvm::ArgType::VALUE, 1)));
+			instrs.push_back(new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0), dest));
+			instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
 		}
 
 		return instrs;
@@ -430,20 +432,30 @@ namespace ramc {
 	ramvm::InstructionSet ASTUnopExpr::GenerateCode(std::map<std::string, std::string> _params)
 	{
 		ramvm::InstructionSet instrs = right->GenerateCode({ {"Dest", "[1]" } });
-
 		auto src = ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0);
-		auto dest = ramvm::Argument();
-		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
-
+		
 		switch (op)
 		{
-			case ramc::UnopType::LOG_NOT: instrs.push_back(ramvm::Instruction::CreateUnop(ramvm::Unop::LOG_NOT, src, dest)); break;
-			case ramc::UnopType::NEG: instrs.push_back(ramvm::Instruction::CreateUnop(ramvm::Unop::NEG, src, dest)); break;
+			case ramc::UnopType::LOG_NOT: instrs.push_back(new ramvm::InstrUnop(ramvm::Unop::LOG_NOT, src, src)); break;
+			case ramc::UnopType::NEG: instrs.push_back(new ramvm::InstrUnop(ramvm::Unop::NEG, src, src)); break;
 			case ramc::UnopType::PRE_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
 			case ramc::UnopType::PRE_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
 			case ramc::UnopType::POST_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
 			case ramc::UnopType::POST_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
 			default: throw "UnopExpr::GenerateCode - UnopType not handled!";
+		}
+
+		
+		auto dest = ramvm::Argument();
+		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
+
+		if (!dest.IsStackTop())
+		{
+			instrs.push_back(new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0), dest));
+
+			//TODO gotta change the pop scale to be based on the return type of this unop
+			//This will require you to store the type during typechecking
+			instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
 		}
 
 		return instrs;
@@ -481,7 +493,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { ramvm::Instruction::CreateMove(ramvm::Argument(ramvm::ArgType::VALUE, GetValue()), dest) };
+		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue()), dest) };
 	}
 
 	ramvm::InstructionSet ASTFloatLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -489,7 +501,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { ramvm::Instruction::CreateMove(ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
+		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
 	}
 
 	ramvm::InstructionSet ASTStringLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -497,7 +509,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { ramvm::Instruction::CreateMove(ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
+		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
 	}
 
 	ramvm::InstructionSet ASTBoolLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -505,7 +517,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { ramvm::Instruction::CreateMove(ramvm::Argument(ramvm::ArgType::VALUE, GetValue() ? 1 : 0), dest) };
+		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue() ? 1 : 0), dest) };
 	}
 #pragma endregion
 }

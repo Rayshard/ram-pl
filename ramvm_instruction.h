@@ -2,28 +2,14 @@
 
 namespace ramvm {
 	enum class InstructionType {
-		HALT,
-		MOVE,
-		BINOP,
-		UNOP,
-		JUMP,
-		CJUMP,
-		CALL,
-		RETURN,
-		PRINT,
-		MALLOC,
-		PUSH,
-		POP,
-		FREE
+		HALT, MOVE, BINOP, UNOP, JUMP,
+		CJUMP, CALL, RETURN, PRINT, MALLOC,
+		PUSH, POP, FREE
 	};
 
 	enum class ArgType {
-		VALUE,
-		REGISTER,
-		MEM_REG,
-		STACK_REG,
-		STACK_PTR,
-		SP_OFFSET,
+		VALUE, REGISTER, MEM_REG,
+		STACK_REG, STACK_PTR, SP_OFFSET,
 		INVALID
 	};
 
@@ -43,24 +29,9 @@ namespace ramvm {
 	};
 
 	enum class Binop {
-		ADD,
-		SUB,
-		MUL,
-		DIV,
-		MOD,
-		LSHIFT,
-		RSHIFT,
-		LT,
-		GT,
-		LTEQ,
-		GTEQ,
-		EQ,
-		NEQ,
-		BIT_AND,
-		BIT_OR,
-		BIT_XOR,
-		LOG_AND,
-		LOG_OR,
+		ADD, SUB, MUL, DIV, MOD,
+		LSHIFT, RSHIFT, BIT_AND, BIT_OR, BIT_XOR, LOG_AND, LOG_OR,
+		LT, GT, LTEQ, GTEQ, EQ, NEQ,
 	};
 
 	enum class Unop {
@@ -68,97 +39,151 @@ namespace ramvm {
 		LOG_NOT,
 	};
 
+	ResultType DoBinop(Binop _op, DataVariant& _val1, DataVariant& _val2, DataVariant& _result);
+	ResultType DoUnop(Unop _op, DataVariant& _val, DataVariant& _result);
+
 	class Instruction {
 		InstructionType type;
-		std::vector<Argument> args;
-
-		Instruction() = default;
 	public:
-		Instruction(InstructionType _type, std::vector<Argument> _args);
+		Instruction(InstructionType _type) : type(_type) {}
 		InstructionType GetType() { return type; }
 
-		std::string ToString();
+		bool IsSinglePop();
+		virtual std::string ToString() = 0;
+	};
 
-		static Instruction CreateHalt() { return Instruction(InstructionType::HALT, {}); }
+	typedef std::vector<Instruction*> InstructionSet;
+
+#pragma region Halt
+	struct InstrHalt : Instruction {
+		InstrHalt() : Instruction(InstructionType::HALT) { }
+
+		std::string ToString() override { return "HALT"; }
+	};
+#pragma endregion
 
 #pragma region Move
-		static Instruction CreateMove(Argument _src, Argument _dest);
-		Argument GetMoveSrc() { return args[0]; }
-		Argument GetMoveDest() { return args[1]; }
+	struct InstrMove : Instruction {
+		DataType dataType;
+		Argument src, dest;
+
+		InstrMove(DataType _dataType, Argument _src, Argument _dest);
+
+		std::string ToString() override { return "MOV " + src.ToString() + " " + dest.ToString(); }
+	};
 #pragma endregion
 
 #pragma region Binop
-		static Instruction CreateBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest);
-		Binop GetBinopType() { return (Binop)args[0].value; }
-		Argument GetBinopSrc1() { return args[1]; }
-		Argument GetBinopSrc2() { return args[2]; }
-		Argument GetBinopDest() { return args[3]; }
+	struct InstrBinop : Instruction {
+		Binop op;
+		Argument src1, src2, dest;
+
+		InstrBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest);
+		std::string ToString() override;
+	};
 #pragma endregion
 
 #pragma region Unop
-		static Instruction CreateUnop(Unop _op, Argument _src, Argument _dest);
-		Unop GetUnopType() { return (Unop)args[0].value; }
-		Argument GetUnopSrc() { return args[1]; }
-		Argument GetUnopDest() { return args[2]; }
+	struct InstrUnop : Instruction {
+		Unop op;
+		Argument src, dest;
+
+		InstrUnop(Unop _op, Argument _src, Argument _dest);
+		std::string ToString() override;
+	};
 #pragma endregion
 
 #pragma region Call
-		static Instruction CreateCall(int _labelIdx, int _regCnt, std::vector<Argument>& _srcsArgs, std::vector<Argument>& _retDests);
-		int GetCallLabelIdx() { return args[0].value; }
-		int GetCallRegCount() { return args[1].value; }
-		int GetCallNumSrcs() { return args[2].value; }
-		int GetCallNumDests() { return args[3].value; }
-		std::vector<Argument> GetCallArgSrcs();
-		std::vector<Argument> GetCallRetDests();
+	struct InstrCall : Instruction {
+		int labelIdx, regCnt;
+		std::vector<Argument> argSrcs, retDests;
+
+		InstrCall(int _labelIdx, int _regCnt, std::vector<Argument>& _argSrcs, std::vector<Argument>& _retDests);
+
+		std::string ToString() override { return "CALL (NEED TO HANDLE TOSTRING)"; }
+	};
 #pragma endregion
 
 #pragma region Return
-		static Instruction CreateReturn(std::vector<Argument>& _srcs);
-		std::vector<Argument> GetReturnSrcs() { return args; }
-		int GetReturnNumSrcs() { return args.size(); }
+	struct InstrReturn : Instruction {
+		std::vector<Argument> srcs;
+
+		InstrReturn(std::vector<Argument>& _srcs);
+		
+		std::string ToString() override { return "RET (NEED TO HANDLE TOSTRING)"; }
+	};
 #pragma endregion
 
 #pragma region Jump
-		static Instruction CreateJump(int _labelIdx);
-		int GetJumpLabelIdx() { return args[0].value; }
+	struct InstrJump : Instruction {
+		int labelIdx;
+
+		InstrJump(int _labelIdx);
+
+		std::string ToString() override { return "JUMP " + std::to_string(labelIdx); }
+	};
 #pragma endregion
 
 #pragma region CJump
-		static Instruction CreateCJump(int _labelIdx, Argument _condSrc);
-		int GetCJumpLabelIdx() { return args[0].value; }
-		Argument GetCJumpCondSrc() { return args[1]; }
+	struct InstrCJump : Instruction {
+		int labelIdx;
+		Argument condSrc;
+
+		InstrCJump(int _labelIdx, Argument _condSrc);
+
+		std::string ToString() override { return "CJUMP " + std::to_string(labelIdx) + " " + condSrc.ToString(); }
+	};
 #pragma endregion
 
 #pragma region Print
-		static Instruction CreatePrint(Argument _src, Argument _len);
-		Argument GetPrintSrc() { return args[0]; }
-		Argument GetPrintLength() { return args[1]; }
+	struct InstrPrint : Instruction {
+		Argument start, length;
+
+		InstrPrint(Argument _start, Argument _len);
+
+		std::string ToString() override { return "PRINT " + start.ToString() + " " + length.ToString(); }
+	};
 #pragma endregion
 
 #pragma region Malloc
-		static Instruction CreateMalloc(Argument _size, Argument _dest);
-		Argument GetMallocSize() { return args[0]; }
-		Argument GetMallocDest() { return args[1]; }
+	struct InstrMalloc : Instruction {
+		Argument size, dest;
+
+		InstrMalloc(Argument _size, Argument _dest);
+
+		std::string ToString() override { return "MALLOC " + size.ToString() + " " + dest.ToString(); }
+	};
 #pragma endregion
 
 #pragma region Free
-		static Instruction CreateFree(Argument _addr);
-		Argument GetFreeAddr() { return args[0]; }
+	struct InstrFree : Instruction {
+		Argument addr;
+
+		InstrFree(Argument _addr);
+
+		std::string ToString() override { return "FREE " + addr.ToString(); }
+	};
 #pragma endregion
 
 #pragma region Push
-		static Instruction CreatePush(std::vector<Argument>& _srcs);
-		static Instruction CreatePush(Argument _src);
-		std::vector<Argument> GetPushSrcs() { return args; }
-		int GetPushNumSrcs() { return args.size(); }
+	struct InstrPush : Instruction {
+		std::vector<Argument> srcs;
+
+		InstrPush(Argument _src);
+		InstrPush(std::vector<Argument>& _srcs);
+		
+		std::string ToString() override;
+	};
 #pragma endregion
 
 #pragma region Pop
-		static Instruction CreatePop(Argument _amt);
-		Argument GetPopAmt() { return args[0]; }
-		bool IsSinglePop() { return type == InstructionType::POP && args[0].type == ArgType::VALUE && args[0].value == 1; }
-#pragma endregion
-	};
+	struct InstrPop : Instruction {
+		Argument amt;
+		int scale;
 
-	typedef std::vector<Instruction> InstructionSet;
+		InstrPop(Argument _amt, int _scale);
+
+		std::string ToString() override { return "POP " + amt.ToString(); }
+	};
+#pragma endregion
 }

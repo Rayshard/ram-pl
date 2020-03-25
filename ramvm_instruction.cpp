@@ -38,40 +38,147 @@ namespace ramvm {
 		}
 	}
 
-	Instruction::Instruction(InstructionType _type, std::vector<Argument> _args)
+	ResultType DoBinop(Binop _op, DataVariant& _val1, DataVariant& _val2, DataVariant& _result)
 	{
-		type = _type;
-		args = _args;
-	}
-
-	std::string Instruction::ToString()
-	{
-		switch (type)
+		switch (ConcatTriple((byte)_val1.GetType(), (byte)_val2.GetType(), (byte)_op)) //Switch on Operation Type
 		{
-			case ramvm::InstructionType::HALT: return "HALT";
-			case ramvm::InstructionType::MOVE: return "MOV " + GetMoveSrc().ToString() + " " + GetMoveDest().ToString();
-			case ramvm::InstructionType::BINOP: return BinopToString(GetBinopType()) + " " + GetBinopSrc1().ToString() + " " + GetBinopSrc2().ToString() + " " + GetBinopDest().ToString();
-			case ramvm::InstructionType::UNOP: return UnopToString(GetUnopType()) + " " + GetUnopSrc().ToString() + " " + GetUnopDest().ToString();
-			case ramvm::InstructionType::JUMP: return "JUMP " + GetJumpLabelIdx();
-			case ramvm::InstructionType::CJUMP: return "CJUMP " + std::to_string(GetCJumpLabelIdx()) + " " + GetCJumpCondSrc().ToString();
-			case ramvm::InstructionType::CALL: return "CALL (NEED TO HANDLE TOSTRING)";
-			case ramvm::InstructionType::RETURN: return "RETURN (NEED TO HANDLE TOSTRING)";
-			case ramvm::InstructionType::PRINT: return "PRINT " + GetPrintSrc().ToString() + " " + GetPrintLength().ToString();
-			case ramvm::InstructionType::MALLOC: return "MALLOC " + GetMallocSize().ToString() + " " + GetMallocDest().ToString();
-			case ramvm::InstructionType::FREE: return "FREE " + GetFreeAddr().ToString();
-			case ramvm::InstructionType::PUSH: {
-				std::stringstream ss;
-				ss << "PUSH";
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::ADD): _result = DataVariant(byte(_val1.AsByte() + _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::ADD): _result = DataVariant(int(_val1.AsByte() + _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::ADD): _result = DataVariant(int(_val1.AsInt() + _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::ADD): _result = DataVariant(int(_val1.AsInt() + _val2.AsInt())); break;
 
-				for (auto arg : GetPushSrcs())
-					ss << " " << arg.ToString();
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::SUB): _result = DataVariant(byte(_val1.AsByte() - _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::SUB): _result = DataVariant(int(_val1.AsByte() - _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::SUB): _result = DataVariant(int(_val1.AsInt() - _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::SUB): _result = DataVariant(int(_val1.AsInt() - _val2.AsInt())); break;
 
-				return ss.str();
-			}
-			case ramvm::InstructionType::POP: return "POP " + GetPopAmt().ToString();
-			default: return "Instruction::ToString() - InstructionType not handled!";
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::MUL): _result = DataVariant(byte(_val1.AsByte() * _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::MUL): _result = DataVariant(int(_val1.AsByte() * _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::MUL): _result = DataVariant(int(_val1.AsInt() * _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::MUL): _result = DataVariant(int(_val1.AsInt() * _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::DIV): {
+				if (_val2.AsByte() != 0) { _result = DataVariant(byte(_val1.AsByte() / _val2.AsByte())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::DIV): {
+				if (_val2.AsInt() != 0) { _result = DataVariant(int(_val1.AsByte() / _val2.AsInt())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::DIV): {
+				if (_val2.AsByte() != 0) { _result = DataVariant(int(_val1.AsInt() / _val2.AsByte())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::DIV): {
+				if (_val2.AsInt() != 0) { _result = DataVariant(int(_val1.AsInt() / _val2.AsInt())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::MOD): {
+				if (_val2.AsByte() != 0) { _result = DataVariant(byte(_val1.AsByte() % _val2.AsByte())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::MOD): {
+				if (_val2.AsInt() != 0) { _result = DataVariant(int(_val1.AsByte() % _val2.AsInt())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::MOD): {
+				if (_val2.AsByte() != 0) { _result = DataVariant(int(_val1.AsInt() % _val2.AsByte())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::MOD): {
+				if (_val2.AsInt() != 0) { _result = DataVariant(int(_val1.AsInt() % _val2.AsInt())); }
+				else { return ResultType::ERR_DIVBYZERO; }
+			} break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LSHIFT): _result = DataVariant(byte(_val1.AsByte() << _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LSHIFT): _result = DataVariant(int(_val1.AsByte() << _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LSHIFT): _result = DataVariant(int(_val1.AsInt() << _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LSHIFT): _result = DataVariant(int(_val1.AsInt() << _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::RSHIFT): _result = DataVariant(byte(_val1.AsByte() >> _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::RSHIFT): _result = DataVariant(int(_val1.AsByte() >> _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::RSHIFT): _result = DataVariant(int(_val1.AsInt() >> _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::RSHIFT): _result = DataVariant(int(_val1.AsInt() >> _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LT): _result = DataVariant(byte(_val1.AsByte() < _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LT): _result = DataVariant(byte(_val1.AsByte() < _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LT): _result = DataVariant(byte(_val1.AsInt() < _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LT): _result = DataVariant(byte(_val1.AsInt() < _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::GT): _result = DataVariant(byte(_val1.AsByte() > _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::GT): _result = DataVariant(byte(_val1.AsByte() > _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::GT): _result = DataVariant(byte(_val1.AsInt() > _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::GT): _result = DataVariant(byte(_val1.AsInt() > _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LTEQ): _result = DataVariant(byte(_val1.AsByte() <= _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LTEQ): _result = DataVariant(byte(_val1.AsByte() <= _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LTEQ): _result = DataVariant(byte(_val1.AsInt() <= _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LTEQ): _result = DataVariant(byte(_val1.AsInt() <= _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::GTEQ): _result = DataVariant(byte(_val1.AsByte() >= _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::GTEQ): _result = DataVariant(byte(_val1.AsByte() >= _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::GTEQ): _result = DataVariant(byte(_val1.AsInt() >= _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::GTEQ): _result = DataVariant(byte(_val1.AsInt() >= _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::EQ): _result = DataVariant(byte(_val1.AsByte() == _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::EQ): _result = DataVariant(byte(_val1.AsByte() == _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::EQ): _result = DataVariant(byte(_val1.AsInt() == _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::EQ): _result = DataVariant(byte(_val1.AsInt() == _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::NEQ): _result = DataVariant(byte(_val1.AsByte() != _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::NEQ): _result = DataVariant(byte(_val1.AsByte() != _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::NEQ): _result = DataVariant(byte(_val1.AsInt() != _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::NEQ): _result = DataVariant(byte(_val1.AsInt() != _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_AND): _result = DataVariant(byte(_val1.AsByte() & _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.AsByte() & _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.AsInt() & _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.AsInt() & _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_OR): _result = DataVariant(byte(_val1.AsByte() | _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.AsByte() | _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.AsInt() | _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.AsInt() | _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_XOR): _result = DataVariant(byte(_val1.AsByte() ^ _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.AsByte() ^ _val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.AsInt() ^ _val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.AsInt() ^ _val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte((bool)_val1.AsByte() && (bool)_val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte((bool)_val1.AsByte() && (bool)_val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte((bool)_val1.AsInt() && (bool)_val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte((bool)_val1.AsInt() && (bool)_val2.AsInt())); break;
+
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte((bool)_val1.AsByte() || (bool)_val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte((bool)_val1.AsByte() || (bool)_val2.AsInt())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte((bool)_val1.AsInt() || (bool)_val2.AsByte())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte((bool)_val1.AsInt() || (bool)_val2.AsInt())); break;
+		
+			default: return ResultType::ERR_DO_BINOP;
 		}
+
+		return ResultType::SUCCESS;
 	}
+
+	ResultType DoUnop(Unop _op, DataVariant& _val, DataVariant& _result)
+	{
+		switch (ConcatDouble((byte)_val.GetType(), (byte)_op)) //Switch on Operation Type
+		{
+			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::NEG): _result = DataVariant(byte(-_val.AsByte())); break;
+			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::LOG_NOT): _result = DataVariant(byte(!(bool)_val.AsByte())); break;
+					   							    
+			case ConcatDouble((byte)DataType::INT, (byte)Unop::NEG): _result = DataVariant(int(-_val.AsInt())); break;
+			case ConcatDouble((byte)DataType::INT, (byte)Unop::LOG_NOT): _result = DataVariant(int(!(bool)_val.AsInt())); break;
+
+			default: return ResultType::ERR_DO_UNOP;
+		}
+
+		return ResultType::SUCCESS;
+	}
+
+	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value == 1; }
 
 	Argument::Argument(ArgType _type, int _val)
 	{
@@ -94,143 +201,125 @@ namespace ramvm {
 		}
 	}
 
-	Instruction Instruction::CreateMove(Argument _src, Argument _dest)
+	InstrMove::InstrMove(DataType _dataType, Argument _src, Argument _dest)
+		: Instruction(InstructionType::MOVE)
 	{
-		Instruction instr;
-		instr.type = InstructionType::MOVE;
-		instr.args.push_back(_src);
-		instr.args.push_back(_dest);
-		return instr;
+		dataType = _dataType;
+		src = _src;
+		dest = _dest;
 	}
 
-	Instruction Instruction::CreateBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest)
+	InstrBinop::InstrBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest)
+		: Instruction(InstructionType::BINOP)
 	{
-		Instruction instr;
-		instr.type = InstructionType::BINOP;
-		instr.args.push_back(Argument(ArgType::VALUE, (int)_op));
-		instr.args.push_back(_src1);
-		instr.args.push_back(_src2);
-		instr.args.push_back(_dest);
-		return instr;
+		op = _op;
+		src1 = _src1;
+		src2 = _src2;
+		dest = _dest;
 	}
 
-	Instruction Instruction::CreateUnop(Unop _op, Argument _src, Argument _dest)
+	std::string InstrBinop::ToString()
 	{
-		Instruction instr;
-		instr.type = InstructionType::UNOP;
-		instr.args.push_back(Argument(ArgType::VALUE, (int)_op));
-		instr.args.push_back(_src);
-		instr.args.push_back(_dest);
-		return instr;
+		std::stringstream ss;
+		ss << BinopToString(op) << " ";
+		ss << src1.ToString() << " ";
+		ss << src2.ToString() << " ";
+		ss << dest.ToString();
+		return ss.str();
 	}
 
-	Instruction Instruction::CreateCall(int _labelIdx, int _regCnt, std::vector<Argument>& _srcsArgs, std::vector<Argument>& _retDests)
+	InstrUnop::InstrUnop(Unop _op, Argument _src, Argument _dest)
+		: Instruction(InstructionType::UNOP)
 	{
-		Instruction instr;
-		instr.type = InstructionType::CALL;
-		instr.args.push_back(Argument(ArgType::VALUE, _labelIdx));
-		instr.args.push_back(Argument(ArgType::VALUE, _regCnt));
-		instr.args.push_back(Argument(ArgType::VALUE, _srcsArgs.size()));
-		instr.args.push_back(Argument(ArgType::VALUE, _retDests.size()));
-		instr.args.insert(instr.args.end(), _srcsArgs.begin(), _srcsArgs.end());
-		instr.args.insert(instr.args.end(), _retDests.begin(), _retDests.end());
-		return instr;
+		op = _op;
+		src = _src;
+		dest = _dest;
 	}
 
-	std::vector<Argument> Instruction::GetCallArgSrcs()
+	std::string InstrUnop::ToString()
 	{
-		std::vector<Argument> srcs;
-		int offset = 4, end = offset + GetCallNumSrcs();
-
-		for (int i = offset; i < end; i++)
-			srcs.push_back(args[i]);
-
-		return srcs;
+		std::stringstream ss;
+		ss << UnopToString(op) << " ";
+		ss << src.ToString() << " ";
+		ss << dest.ToString();
+		return ss.str();
 	}
 
-	std::vector<Argument> Instruction::GetCallRetDests()
+	InstrCall::InstrCall(int _labelIdx, int _regCnt, std::vector<Argument>& _argSrcs, std::vector<Argument>& _retDests)
+		: Instruction(InstructionType::CALL)
 	{
-		std::vector<Argument> dests;
-		int offset = 4 + GetCallNumSrcs(), end = offset + GetCallNumDests();
-
-		for (int i = offset; i < end; i++)
-			dests.push_back(args[i]);
-
-		return dests;
+		labelIdx = _labelIdx;
+		regCnt = _regCnt;
+		argSrcs = _argSrcs;
+		retDests = _retDests;
 	}
 
-	Instruction Instruction::CreateReturn(std::vector<Argument>& _srcs)
+	InstrReturn::InstrReturn(std::vector<Argument>& _srcs)
+		: Instruction(InstructionType::RETURN)
 	{
-		Instruction instr;
-		instr.type = InstructionType::RETURN;
-		instr.args = _srcs;
-		return instr;
+		srcs = _srcs;
 	}
 
-	Instruction Instruction::CreateJump(int _labelIdx)
+	InstrJump::InstrJump(int _labelIdx)
+		: Instruction(InstructionType::JUMP)
 	{
-		Instruction instr;
-		instr.type = InstructionType::JUMP;
-		instr.args.push_back(Argument(ArgType::VALUE, _labelIdx));
-		return instr;
+		labelIdx = _labelIdx;
 	}
 
-	Instruction Instruction::CreateCJump(int _labelIdx, Argument _condSrc)
+	InstrCJump::InstrCJump(int _labelIdx, Argument _condSrc)
+		: Instruction(InstructionType::CJUMP)
 	{
-		Instruction instr;
-		instr.type = InstructionType::CJUMP;
-		instr.args.push_back(Argument(ArgType::VALUE, _labelIdx));
-		instr.args.push_back(_condSrc);
-		return instr;
+		labelIdx = _labelIdx;
+		condSrc = _condSrc;
 	}
 
-	Instruction Instruction::CreatePrint(Argument _src, Argument _len)
+	InstrPrint::InstrPrint(Argument _start, Argument _len)
+		: Instruction(InstructionType::PRINT)
 	{
-		Instruction instr;
-		instr.type = InstructionType::PRINT;
-		instr.args.push_back(_src);
-		instr.args.push_back(_len);
-		return instr;
+		start = _start;
+		length = _len;
 	}
 
-	Instruction Instruction::CreateMalloc(Argument _size, Argument _dest)
+	InstrMalloc::InstrMalloc(Argument _size, Argument _dest)
+		: Instruction(InstructionType::MALLOC)
 	{
-		Instruction instr;
-		instr.type = InstructionType::MALLOC;
-		instr.args.push_back(_size);
-		instr.args.push_back(_dest);
-		return instr;
+		size = _size;
+		dest = _dest;
 	}
 
-	Instruction Instruction::CreateFree(Argument _addr)
+	InstrFree::InstrFree(Argument _addr)
+		: Instruction(InstructionType::FREE)
 	{
-		Instruction instr;
-		instr.type = InstructionType::FREE;
-		instr.args.push_back(_addr);
-		return instr;
+		addr = _addr;
 	}
 
-	Instruction Instruction::CreatePush(std::vector<Argument>& _srcs)
+	InstrPush::InstrPush(Argument _src)
+		: Instruction(InstructionType::PUSH)
 	{
-		Instruction instr;
-		instr.type = InstructionType::PUSH;
-		instr.args = _srcs;
-		return instr;
+		srcs = { _src };
 	}
 
-	Instruction Instruction::CreatePush(Argument _src)
+	InstrPush::InstrPush(std::vector<Argument>& _srcs)
+		: Instruction(InstructionType::PUSH)
 	{
-		Instruction instr;
-		instr.type = InstructionType::PUSH;
-		instr.args = { _src };
-		return instr;
+		srcs = _srcs;
 	}
 
-	Instruction Instruction::CreatePop(Argument _amt)
+	std::string InstrPush::ToString()
 	{
-		Instruction instr;
-		instr.type = InstructionType::POP;
-		instr.args.push_back(_amt);
-		return instr;
+		std::stringstream ss;
+		ss << "PUSH";
+
+		for (auto src : srcs)
+			ss << " " << src.ToString();
+
+		return ss.str();
+	}
+
+	InstrPop::InstrPop(Argument _amt, int _scale)
+		: Instruction(InstructionType::POP)
+	{
+		amt = _amt;
+		scale = _scale;
 	}
 }

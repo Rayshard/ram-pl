@@ -10,21 +10,22 @@ namespace ramvm {
 	{
 	private:
 		Memory memory;
-		std::vector<int> stack;
+		std::vector<byte> stack;
 		std::vector<ExecutionFrame> execFrames;
-		std::vector<Instruction> instructions;
+		std::vector<Instruction*> instructions;
 		ExecutionFrame topLevelExecFrame;
 		int ip;
 
 	public:
-		VM(int _numCMDLineArgs, int _maxMemory, std::vector<Instruction>& _instrs);
+		VM(int _numCMDLineArgs, int _maxMemory, std::vector<Instruction*>& _instrs);
+		~VM();
 
 		ResultType Run(ResultInfo& _info);
 
-		ResultType ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _src, int& _value, ResultInfo& _info);
-		ResultType WriteToDestArg(ExecutionFrame& _execFrame, Argument _dest, int _value, ResultInfo& _info);
-		ResultType ReadStack(int _pos, int& _value);
-		ResultType WriteStack(int _pos, int _value);
+		ResultType ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _src, DataVariant& _value, ResultInfo& _info);
+		ResultType WriteToDestArg(ExecutionFrame& _execFrame, Argument _dest, DataVariant _value, ResultInfo& _info);
+		ResultType ReadStack(int _pos, DataVariant& _value);
+		ResultType WriteStack(int _pos, DataVariant _value);
 
 		int GetSP() { return stack.size() - 1; }
 

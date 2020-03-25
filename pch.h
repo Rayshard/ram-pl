@@ -9,66 +9,61 @@
 #include <unordered_map>
 #include <regex>
 #include <functional>
+#include <iterator>
 
 #define IGNORE(x) (void)(x)
 
-enum class ResultType {
-	SUCCESS,
-	ERR_MALLOC,
-	ERR_FREE,
-	ERR_MEMREAD,
-	ERR_MEMWRITE,
-	ERR_NOHALT,
-	ERR_UNKNOWNINSTR,
-	ERR_REG_IDX_OOB,
-	ERR_DIVBYZERO,
-	ERR_INVALID_DEST,
-	ERR_ARGUMENT,
-	ERR_NO_EXEC_FRAMES,
-	ERR_RET_TOP_LEVEL,
-	ERR_RET_DEST_IDX_OOB,
-	ERR_MEMORY_LIMIT,
-	ERR_STACK_READ,
-	ERR_STACK_WRITE,
-	ERR_POP_AMT,
-	PARSE_ERR_UNKNOWN_INSTR,
-	PARSE_ERR_WRONG_NUM_ARGS,
-	PARSE_ERR_INVALID_ARG,
-	PARSE_ERR_DUPLICATE_LABEL,
-	PARSE_ERR_UNKNOWN_LABEL
+typedef unsigned char byte;
+
+#define BYTE_SIZE 1
+#define INT_SIZE 4
+
+enum class DataType { UNKNOWN, BYTE, INT };
+
+union DataValue
+{
+	byte b;
+	int i = 0; //Set biggest one to 0
 };
 
-typedef std::map<std::string, std::string> ResultInfo;
+class DataVariant {
+	DataType type;
+	DataValue value;
 
-inline void PrintResult(ResultType _type)
-{
-	switch (_type)
+public:
+	DataVariant() : type(DataType::UNKNOWN) { }
+	DataVariant(DataType _type) : type(_type) { }
+	DataVariant(DataType _type, DataValue _val) : type(_type), value(_val) { }
+	DataVariant(byte _value) : type(DataType::BYTE) { value.b = _value; }
+	DataVariant(int _value) : type(DataType::INT) { value.i = _value; }
+	DataVariant(const DataVariant& _org) : type(_org.type), value(_org.value) { }
+
+	int GetSize()
 	{
-		case ResultType::SUCCESS: std::cout << "Success" << std::endl; break;
-		case ResultType::ERR_MALLOC: std::cout << "Error: Malloc" << std::endl; break;
-		case ResultType::ERR_FREE: std::cout << "Error: Free" << std::endl; break;
-		case ResultType::ERR_MEMREAD: std::cout << "Error: Memory Read" << std::endl; break;
-		case ResultType::ERR_MEMWRITE: std::cout << "Error: Memory Write" << std::endl; break;
-		case ResultType::ERR_NOHALT: std::cout << "Error: Exit Before HALT" << std::endl; break;
-		case ResultType::ERR_UNKNOWNINSTR: std::cout << "Error: Unknown Instruction" << std::endl; break;
-		case ResultType::ERR_REG_IDX_OOB: std::cout << "Error: Register Index Out of Bounds" << std::endl;  break;
-		case ResultType::ERR_INVALID_DEST: std::cout << "Error: Invalid Destination" << std::endl; break;
-		case ResultType::ERR_ARGUMENT: std::cout << "Error: Argument" << std::endl; break;
-		case ResultType::ERR_NO_EXEC_FRAMES: std::cout << "Error: No Execution Frames" << std::endl; break;
-		case ResultType::ERR_RET_TOP_LEVEL: std::cout << "Error: Cannot Return From Top Level" << std::endl; break;
-		case ResultType::ERR_RET_DEST_IDX_OOB: std::cout << "Error: Return Destination Index Out of Bounds" << std::endl; break;
-		case ResultType::ERR_MEMORY_LIMIT: std::cout << "Error: Computer Ran Out of Memory" << std::endl; break;
-		case ResultType::ERR_STACK_READ: std::cout << "Error: Stack Read" << std::endl; break;
-		case ResultType::ERR_STACK_WRITE: std::cout << "Error: Stack Write" << std::endl; break;
-		case ResultType::ERR_POP_AMT: std::cout << "Error: Pop Amount" << std::endl; break;
-		case ResultType::PARSE_ERR_UNKNOWN_INSTR: std::cout << "Parse Error: Unknown Instruction" << std::endl; break;
-		case ResultType::PARSE_ERR_WRONG_NUM_ARGS: std::cout << "Parse Error: Wrong Number of Arguments" << std::endl; break;
-		case ResultType::PARSE_ERR_INVALID_ARG: std::cout << "Parse Error: Invalid Argument" << std::endl; break;
-		case ResultType::PARSE_ERR_UNKNOWN_LABEL: std::cout << "Parse Error: Unknown Label" << std::endl; break;
+		switch (type)
+		{
+			case DataType::BYTE: return BYTE_SIZE;
+			case DataType::INT: return INT_SIZE;
+			default: return 0;
+		}
 	}
-}
 
-inline bool IsErrorResult(ResultType _type) { return _type != ResultType::SUCCESS; }
+	DataType GetType() { return type; }
+	DataValue GetValue() { return value; }
+	byte AsByte() { return value.b; }
+	int AsInt() { return value.i; }
+};
+
+template <typename T> std::string ToHexString(T _value) {
+	static const char* digits = "0123456789ABCDEF";
+	int hex_len = sizeof(T) << 1;
+	std::string str(hex_len, '0');
+
+	for (int i = 0, j = (hex_len - 1) * 4; i < hex_len; ++i, j -= 4)
+		str[i] = digits[(_value >> j) & 0x0f];
+
+	return "0x" + str;
+}
 
 inline std::string TrimString(std::string& _str)
 {
@@ -79,4 +74,10 @@ inline std::string TrimString(std::string& _str)
 }
 
 inline std::string CreateIndent(int _indentLvl) { return std::string(_indentLvl * 5, ' '); }
+
+inline constexpr int ConcatTriple(byte _fst, byte _snd, byte _thr) { return (int(_fst) << 16) | (int(_snd) << 8) | _thr; }
+inline constexpr int ConcatDouble(byte _fst, byte _snd) { return (int(_fst) << 8) | _snd; }
+
+#include "ramvm_util.h"
+
 #endif
