@@ -1,5 +1,4 @@
 #pragma once
-#include "ramc_lexer.h"
 
 namespace ramc {
 	class ASTNode; 

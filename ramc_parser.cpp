@@ -1,7 +1,8 @@
 #include "pch.h"
 #include "ramc_parser.h"
+#include "ramc_lexer.h"
 #include "ramc_ast.h"
-#include "ramc_parser_gen.hpp"
+#include "ramc_bison_parser.hpp"
 
 namespace ramc {
 	bool ParseResult::IsSuccess() { return success; }
@@ -36,7 +37,7 @@ namespace ramc {
 
 		try
 		{
-			yy::parser parse(lexer, program, position);
+			bison::Parser parse(lexer, program, position);
 
 			if (parse() == 0) { return ParseResult::GenSuccess(program); }
 			else { return ParseResult::GenError("", position, true); }

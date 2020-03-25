@@ -1,5 +1,4 @@
 #pragma once
-#include "ramc_position.h"
 
 namespace ramc {
 	enum class TokenType {

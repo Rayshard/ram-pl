@@ -280,17 +280,17 @@ namespace ramvm {
 				_value = DataVariant(_arg.value);
 				return ResultType::SUCCESS;
 			}
-			case ArgType::REGISTER: return _execFrame.ReadRegister(_arg.value, _value, _info);
+			case ArgType::REGISTER: return _execFrame.ReadRegister(_arg.value.AsInt(), _value, _info);
 			case ArgType::MEM_REG: {
 				DataVariant addr(DataType::INT);
-				ResultType res = _execFrame.ReadRegister(_arg.value, addr, _info);
+				ResultType res = _execFrame.ReadRegister(_arg.value.AsInt(), addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return memory.Read(addr.AsInt(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
 				DataVariant pos(DataType::INT);
-				ResultType res = _execFrame.ReadRegister(_arg.value, pos, _info);
+				ResultType res = _execFrame.ReadRegister(_arg.value.AsInt(), pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return ReadStack(pos.AsInt(), _value); }
@@ -299,7 +299,7 @@ namespace ramvm {
 				_value = GetSP();
 				return ResultType::SUCCESS;
 			} break;
-			case ArgType::SP_OFFSET: return ReadStack(GetSP() + _arg.value, _value);
+			case ArgType::SP_OFFSET: return ReadStack(GetSP() + _arg.value.AsInt(), _value);
 			default: return ResultType::ERR_ARGUMENT;
 		}
 	}
@@ -308,22 +308,22 @@ namespace ramvm {
 	{
 		switch (_arg.type)
 		{
-			case ArgType::REGISTER: return _execFrame.WriteRegister(_arg.value, _value, _info);
+			case ArgType::REGISTER: return _execFrame.WriteRegister(_arg.value.AsInt(), _value, _info);
 			case ArgType::MEM_REG: {
 				DataVariant addr(DataType::INT);
-				ResultType res = _execFrame.ReadRegister(_arg.value, addr, _info);
+				ResultType res = _execFrame.ReadRegister(_arg.value.AsInt(), addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return memory.Write(addr.AsInt(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
 				DataVariant pos(DataType::INT);
-				ResultType res = _execFrame.ReadRegister(_arg.value, pos, _info);
+				ResultType res = _execFrame.ReadRegister(_arg.value.AsInt(), pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return WriteStack(pos.AsInt(), _value); }
 			}
-			case ArgType::SP_OFFSET: return WriteStack(GetSP() + _arg.value, _value);
+			case ArgType::SP_OFFSET: return WriteStack(GetSP() + _arg.value.AsInt(), _value);
 			default: return ResultType::ERR_INVALID_DEST;
 		}
 	}

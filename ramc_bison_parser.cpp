@@ -34,116 +34,114 @@
 // are private implementation details.  Do not rely on them.
 
 // "%code top" blocks.
-#line 9 "ramc_grammar.yy"
+#line 11 "ramc_grammar.yy"
 
   #include "pch.h"
   #include "ramc_lexer.h"
-  #include "ramc_position.h"
 
-  using namespace ramc;
-
-#line 46 "ramc_parser_gen.cpp"
+#line 43 "ramc_bison_parser.cpp"
 
 
 
 
-#include "ramc_parser_gen.hpp"
+#include "ramc_bison_parser.hpp"
 
 
 // Unqualified %code blocks.
-#line 21 "ramc_grammar.yy"
+#line 20 "ramc_grammar.yy"
 
-  namespace yy
-  {
-    // Return the next token.
-    auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> parser::symbol_type
-    {
-      LexerResult readRes = _lexer.GetNextToken(true, true);
-
-      if (!readRes.IsSuccess())
-        throw std::runtime_error(readRes.ToString());
-
-      Token token = readRes.GetToken();
-      _pos = token.position;
-
-      switch (token.type)
+    namespace ramc {
+      namespace bison {
+      // Return the next token.
+      auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
       {
-        case TokenType::INT_LIT: {
-          ASTIntLit const* node = new ASTIntLit(std::stoi(token.value), token.position);
-          return parser::make_INT_LIT(node);
-        }
-        case TokenType::IDENTIFIER: {
+        LexerResult readRes = _lexer.GetNextToken(true, true);
+
+        if (!readRes.IsSuccess())
+          throw std::runtime_error(readRes.ToString());
+
+        Token token = readRes.GetToken();
+        _pos = token.position;
+
+        switch (token.type)
+        {
+          case TokenType::INT_LIT: {
+            ASTIntLit const* node = new ASTIntLit(std::stoi(token.value), token.position);
+            return Parser::make_INT_LIT(node);
+          }
+          case TokenType::IDENTIFIER: {
             ASTIdentifier const* node = new ASTIdentifier(token.value, token.position);
-            return parser::make_IDENTIFIER(node);
-        }
-        case TokenType::UNDERSCORE: return parser::make_UNDERSCORE();
-        case TokenType::STRING_LIT: {
+            return Parser::make_IDENTIFIER(node);
+          }
+          case TokenType::UNDERSCORE: return Parser::make_UNDERSCORE();
+          case TokenType::STRING_LIT: {
             ASTStringLit const* node = new ASTStringLit(token.value, token.position);
-            return parser::make_STRING_LIT(node);
-        }
-        case TokenType::FLOAT_LIT: {
+            return Parser::make_STRING_LIT(node);
+          }
+          case TokenType::FLOAT_LIT: {
             ASTFloatLit const* node = new ASTFloatLit(std::stof(token.value), token.position);
-            return parser::make_FLOAT_LIT(node);
-        }
-        case TokenType::KW_TRUE: {
+            return Parser::make_FLOAT_LIT(node);
+          }
+          case TokenType::KW_TRUE: {
             ASTBoolLit const* node = new ASTBoolLit(true, token.position);
-            return parser::make_KW_TRUE(node);
-        }
-        case TokenType::KW_FALSE: {
+            return Parser::make_KW_TRUE(node);
+          }
+          case TokenType::KW_FALSE: {
             ASTBoolLit const* node = new ASTBoolLit(false, token.position);
-            return parser::make_KW_FALSE(node);
+            return Parser::make_KW_FALSE(node);
+          }
+          case TokenType::PLUS: return Parser::make_PLUS();
+          case TokenType::MINUS: return Parser::make_MINUS();
+          case TokenType::TIMES: return Parser::make_TIMES();
+          case TokenType::DIVIDE: return Parser::make_DIVIDE();
+          case TokenType::MOD: return Parser::make_MOD();
+          case TokenType::POW: return Parser::make_POW();
+          case TokenType::BIN_AND: return Parser::make_BIN_AND();
+          case TokenType::BIN_OR: return Parser::make_BIN_OR();
+          case TokenType::BIN_XOR: return Parser::make_BIN_XOR();
+          case TokenType::LSHIFT: return Parser::make_LSHIFT();
+          case TokenType::RSHIFT: return Parser::make_RSHIFT();
+          case TokenType::LT: return Parser::make_LT();
+          case TokenType::GT: return Parser::make_GT();
+          case TokenType::LT_EQ: return Parser::make_LT_EQ();
+          case TokenType::GT_EQ: return Parser::make_GT_EQ();
+          case TokenType::EQ_EQ: return Parser::make_EQ_EQ();
+          case TokenType::NEQ: return Parser::make_NEQ();
+          case TokenType::LOG_AND: return Parser::make_LOG_AND();
+          case TokenType::LOG_OR: return Parser::make_LOG_OR();
+          case TokenType::LOG_NOT: return Parser::make_LOG_NOT();
+          case TokenType::EQ: return Parser::make_EQ();
+          case TokenType::PLUS_EQ: return Parser::make_ADD_EQ();
+          case TokenType::MINUS_EQ: return Parser::make_SUB_EQ();
+          case TokenType::TIMES_EQ: return Parser::make_MUL_EQ();
+          case TokenType::DIVIDE_EQ: return Parser::make_DIV_EQ();
+          case TokenType::MOD_EQ: return Parser::make_MOD_EQ();
+          case TokenType::POW_EQ: return Parser::make_POW_EQ();
+          case TokenType::BIN_AND_EQ: return Parser::make_BIN_AND_EQ();
+          case TokenType::BIN_OR_EQ: return Parser::make_BIN_OR_EQ();
+          case TokenType::BIN_XOR_EQ: return Parser::make_BIN_XOR_EQ();
+          case TokenType::LSHIFT_EQ: return Parser::make_LSHIFT_EQ();
+          case TokenType::RSHIFT_EQ: return Parser::make_RSHIFT_EQ();
+          case TokenType::INC: return Parser::make_INC();
+          case TokenType::DEC: return Parser::make_DEC();
+          case TokenType::LPAREN: return Parser::make_LPAREN();
+          case TokenType::RPAREN: return Parser::make_RPAREN();
+          case TokenType::LCBRACKET: return Parser::make_LCBRACKET();
+          case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
+          case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
+          case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
+          case TokenType::SEMICOLON: return Parser::make_SEMICOLON();
+          case TokenType::PERIOD: return Parser::make_PERIOD();
+          case TokenType::COLON: return Parser::make_COLON();
+          case TokenType::COMMA: return Parser::make_COMMA();
+          case TokenType::END_OF_FILE: return Parser::make_END_OF_FILE();
+          default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
         }
-        case TokenType::PLUS: return parser::make_PLUS();
-        case TokenType::MINUS: return parser::make_MINUS();
-        case TokenType::TIMES: return parser::make_TIMES();
-        case TokenType::DIVIDE: return parser::make_DIVIDE();
-        case TokenType::MOD: return parser::make_MOD();
-        case TokenType::POW: return parser::make_POW();
-        case TokenType::BIN_AND: return parser::make_BIN_AND();
-        case TokenType::BIN_OR: return parser::make_BIN_OR();
-        case TokenType::BIN_XOR: return parser::make_BIN_XOR();
-        case TokenType::LSHIFT: return parser::make_LSHIFT();
-        case TokenType::RSHIFT: return parser::make_RSHIFT();
-        case TokenType::LT: return parser::make_LT();
-        case TokenType::GT: return parser::make_GT();
-        case TokenType::LT_EQ: return parser::make_LT_EQ();
-        case TokenType::GT_EQ: return parser::make_GT_EQ();
-        case TokenType::EQ_EQ: return parser::make_EQ_EQ();
-        case TokenType::NEQ: return parser::make_NEQ();
-        case TokenType::LOG_AND: return parser::make_LOG_AND();
-        case TokenType::LOG_OR: return parser::make_LOG_OR();
-        case TokenType::LOG_NOT: return parser::make_LOG_NOT();
-        case TokenType::EQ: return parser::make_EQ();
-        case TokenType::PLUS_EQ: return parser::make_ADD_EQ();
-        case TokenType::MINUS_EQ: return parser::make_SUB_EQ();
-        case TokenType::TIMES_EQ: return parser::make_MUL_EQ();
-        case TokenType::DIVIDE_EQ: return parser::make_DIV_EQ();
-        case TokenType::MOD_EQ: return parser::make_MOD_EQ();
-        case TokenType::POW_EQ: return parser::make_POW_EQ();
-        case TokenType::BIN_AND_EQ: return parser::make_BIN_AND_EQ();
-        case TokenType::BIN_OR_EQ: return parser::make_BIN_OR_EQ();
-        case TokenType::BIN_XOR_EQ: return parser::make_BIN_XOR_EQ();
-        case TokenType::LSHIFT_EQ: return parser::make_LSHIFT_EQ();
-        case TokenType::RSHIFT_EQ: return parser::make_RSHIFT_EQ();
-        case TokenType::INC: return parser::make_INC();
-        case TokenType::DEC: return parser::make_DEC();
-        case TokenType::LPAREN: return parser::make_LPAREN();
-        case TokenType::RPAREN: return parser::make_RPAREN();
-        case TokenType::LCBRACKET: return parser::make_LCBRACKET();
-        case TokenType::RCBRACKET: return parser::make_RCBRACKET();
-        case TokenType::LSBRACKET: return parser::make_LSBRACKET();
-        case TokenType::RSBRACKET: return parser::make_RSBRACKET();
-        case TokenType::SEMICOLON: return parser::make_SEMICOLON();
-        case TokenType::PERIOD: return parser::make_PERIOD();
-        case TokenType::COLON: return parser::make_COLON();
-        case TokenType::COMMA: return parser::make_COMMA();
-        case TokenType::END_OF_FILE: return parser::make_END_OF_FILE();
-        default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
       }
     }
   }
 
-#line 147 "ramc_parser_gen.cpp"
+#line 145 "ramc_bison_parser.cpp"
 
 
 #ifndef YY_
@@ -214,12 +212,13 @@
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-namespace yy {
-#line 219 "ramc_parser_gen.cpp"
+#line 8 "ramc_grammar.yy"
+namespace ramc { namespace bison {
+#line 218 "ramc_bison_parser.cpp"
 
 
   /// Build a parser object.
-  parser::parser (ramc::Lexer& lexer_yyarg, ramc::ASTNode*& result_yyarg, ramc::Position& position_yyarg)
+  Parser::Parser (Lexer& lexer_yyarg, ASTNode*& result_yyarg, Position& position_yyarg)
 #if YYDEBUG
     : yydebug_ (false),
       yycdebug_ (&std::cerr),
@@ -231,10 +230,10 @@ namespace yy {
       position (position_yyarg)
   {}
 
-  parser::~parser ()
+  Parser::~Parser ()
   {}
 
-  parser::syntax_error::~syntax_error () YY_NOEXCEPT YY_NOTHROW
+  Parser::syntax_error::~syntax_error () YY_NOEXCEPT YY_NOTHROW
   {}
 
   /*---------------.
@@ -244,33 +243,33 @@ namespace yy {
 
 
   // by_state.
-  parser::by_state::by_state () YY_NOEXCEPT
+  Parser::by_state::by_state () YY_NOEXCEPT
     : state (empty_state)
   {}
 
-  parser::by_state::by_state (const by_state& that) YY_NOEXCEPT
+  Parser::by_state::by_state (const by_state& that) YY_NOEXCEPT
     : state (that.state)
   {}
 
   void
-  parser::by_state::clear () YY_NOEXCEPT
+  Parser::by_state::clear () YY_NOEXCEPT
   {
     state = empty_state;
   }
 
   void
-  parser::by_state::move (by_state& that)
+  Parser::by_state::move (by_state& that)
   {
     state = that.state;
     that.clear ();
   }
 
-  parser::by_state::by_state (state_type s) YY_NOEXCEPT
+  Parser::by_state::by_state (state_type s) YY_NOEXCEPT
     : state (s)
   {}
 
-  parser::symbol_number_type
-  parser::by_state::type_get () const YY_NOEXCEPT
+  Parser::symbol_number_type
+  Parser::by_state::type_get () const YY_NOEXCEPT
   {
     if (state == empty_state)
       return empty_symbol;
@@ -278,29 +277,29 @@ namespace yy {
       return yystos_[state];
   }
 
-  parser::stack_symbol_type::stack_symbol_type ()
+  Parser::stack_symbol_type::stack_symbol_type ()
   {}
 
-  parser::stack_symbol_type::stack_symbol_type (YY_RVREF (stack_symbol_type) that)
+  Parser::stack_symbol_type::stack_symbol_type (YY_RVREF (stack_symbol_type) that)
     : super_type (YY_MOVE (that.state))
   {
     switch (that.type_get ())
     {
       case 52: // "true"
       case 53: // "false"
-        value.YY_MOVE_OR_COPY< ramc::ASTBoolLit* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTBoolLit* > (YY_MOVE (that.value));
         break;
 
       case 51: // "FLOAT_LIT"
-        value.YY_MOVE_OR_COPY< ramc::ASTFloatLit* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTFloatLit* > (YY_MOVE (that.value));
         break;
 
       case 48: // "ID"
-        value.YY_MOVE_OR_COPY< ramc::ASTIdentifier* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTIdentifier* > (YY_MOVE (that.value));
         break;
 
       case 49: // "INT_LIT"
-        value.YY_MOVE_OR_COPY< ramc::ASTIntLit* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTIntLit* > (YY_MOVE (that.value));
         break;
 
       case 55: // PROGRAM
@@ -321,19 +320,19 @@ namespace yy {
       case 70: // EXPR13
       case 71: // EXPR14
       case 72: // ATOM
-        value.YY_MOVE_OR_COPY< ramc::ASTNode* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTNode* > (YY_MOVE (that.value));
         break;
 
       case 50: // "STRING_LIT"
-        value.YY_MOVE_OR_COPY< ramc::ASTStringLit* > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
       case 74: // OP_ASSIGN
-        value.YY_MOVE_OR_COPY< ramc::BinopType > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< BinopType > (YY_MOVE (that.value));
         break;
 
       case 73: // STMTS
-        value.YY_MOVE_OR_COPY< std::vector<ramc::ASTNode*> > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< std::vector<ASTNode*> > (YY_MOVE (that.value));
         break;
 
       default:
@@ -346,26 +345,26 @@ namespace yy {
 #endif
   }
 
-  parser::stack_symbol_type::stack_symbol_type (state_type s, YY_MOVE_REF (symbol_type) that)
+  Parser::stack_symbol_type::stack_symbol_type (state_type s, YY_MOVE_REF (symbol_type) that)
     : super_type (s)
   {
     switch (that.type_get ())
     {
       case 52: // "true"
       case 53: // "false"
-        value.move< ramc::ASTBoolLit* > (YY_MOVE (that.value));
+        value.move< ASTBoolLit* > (YY_MOVE (that.value));
         break;
 
       case 51: // "FLOAT_LIT"
-        value.move< ramc::ASTFloatLit* > (YY_MOVE (that.value));
+        value.move< ASTFloatLit* > (YY_MOVE (that.value));
         break;
 
       case 48: // "ID"
-        value.move< ramc::ASTIdentifier* > (YY_MOVE (that.value));
+        value.move< ASTIdentifier* > (YY_MOVE (that.value));
         break;
 
       case 49: // "INT_LIT"
-        value.move< ramc::ASTIntLit* > (YY_MOVE (that.value));
+        value.move< ASTIntLit* > (YY_MOVE (that.value));
         break;
 
       case 55: // PROGRAM
@@ -386,19 +385,19 @@ namespace yy {
       case 70: // EXPR13
       case 71: // EXPR14
       case 72: // ATOM
-        value.move< ramc::ASTNode* > (YY_MOVE (that.value));
+        value.move< ASTNode* > (YY_MOVE (that.value));
         break;
 
       case 50: // "STRING_LIT"
-        value.move< ramc::ASTStringLit* > (YY_MOVE (that.value));
+        value.move< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
       case 74: // OP_ASSIGN
-        value.move< ramc::BinopType > (YY_MOVE (that.value));
+        value.move< BinopType > (YY_MOVE (that.value));
         break;
 
       case 73: // STMTS
-        value.move< std::vector<ramc::ASTNode*> > (YY_MOVE (that.value));
+        value.move< std::vector<ASTNode*> > (YY_MOVE (that.value));
         break;
 
       default:
@@ -410,27 +409,27 @@ namespace yy {
   }
 
 #if YY_CPLUSPLUS < 201103L
-  parser::stack_symbol_type&
-  parser::stack_symbol_type::operator= (const stack_symbol_type& that)
+  Parser::stack_symbol_type&
+  Parser::stack_symbol_type::operator= (const stack_symbol_type& that)
   {
     state = that.state;
     switch (that.type_get ())
     {
       case 52: // "true"
       case 53: // "false"
-        value.copy< ramc::ASTBoolLit* > (that.value);
+        value.copy< ASTBoolLit* > (that.value);
         break;
 
       case 51: // "FLOAT_LIT"
-        value.copy< ramc::ASTFloatLit* > (that.value);
+        value.copy< ASTFloatLit* > (that.value);
         break;
 
       case 48: // "ID"
-        value.copy< ramc::ASTIdentifier* > (that.value);
+        value.copy< ASTIdentifier* > (that.value);
         break;
 
       case 49: // "INT_LIT"
-        value.copy< ramc::ASTIntLit* > (that.value);
+        value.copy< ASTIntLit* > (that.value);
         break;
 
       case 55: // PROGRAM
@@ -451,19 +450,19 @@ namespace yy {
       case 70: // EXPR13
       case 71: // EXPR14
       case 72: // ATOM
-        value.copy< ramc::ASTNode* > (that.value);
+        value.copy< ASTNode* > (that.value);
         break;
 
       case 50: // "STRING_LIT"
-        value.copy< ramc::ASTStringLit* > (that.value);
+        value.copy< ASTStringLit* > (that.value);
         break;
 
       case 74: // OP_ASSIGN
-        value.copy< ramc::BinopType > (that.value);
+        value.copy< BinopType > (that.value);
         break;
 
       case 73: // STMTS
-        value.copy< std::vector<ramc::ASTNode*> > (that.value);
+        value.copy< std::vector<ASTNode*> > (that.value);
         break;
 
       default:
@@ -473,27 +472,27 @@ namespace yy {
     return *this;
   }
 
-  parser::stack_symbol_type&
-  parser::stack_symbol_type::operator= (stack_symbol_type& that)
+  Parser::stack_symbol_type&
+  Parser::stack_symbol_type::operator= (stack_symbol_type& that)
   {
     state = that.state;
     switch (that.type_get ())
     {
       case 52: // "true"
       case 53: // "false"
-        value.move< ramc::ASTBoolLit* > (that.value);
+        value.move< ASTBoolLit* > (that.value);
         break;
 
       case 51: // "FLOAT_LIT"
-        value.move< ramc::ASTFloatLit* > (that.value);
+        value.move< ASTFloatLit* > (that.value);
         break;
 
       case 48: // "ID"
-        value.move< ramc::ASTIdentifier* > (that.value);
+        value.move< ASTIdentifier* > (that.value);
         break;
 
       case 49: // "INT_LIT"
-        value.move< ramc::ASTIntLit* > (that.value);
+        value.move< ASTIntLit* > (that.value);
         break;
 
       case 55: // PROGRAM
@@ -514,19 +513,19 @@ namespace yy {
       case 70: // EXPR13
       case 71: // EXPR14
       case 72: // ATOM
-        value.move< ramc::ASTNode* > (that.value);
+        value.move< ASTNode* > (that.value);
         break;
 
       case 50: // "STRING_LIT"
-        value.move< ramc::ASTStringLit* > (that.value);
+        value.move< ASTStringLit* > (that.value);
         break;
 
       case 74: // OP_ASSIGN
-        value.move< ramc::BinopType > (that.value);
+        value.move< BinopType > (that.value);
         break;
 
       case 73: // STMTS
-        value.move< std::vector<ramc::ASTNode*> > (that.value);
+        value.move< std::vector<ASTNode*> > (that.value);
         break;
 
       default:
@@ -541,7 +540,7 @@ namespace yy {
 
   template <typename Base>
   void
-  parser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
+  Parser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
   {
     if (yymsg)
       YY_SYMBOL_PRINT (yymsg, yysym);
@@ -550,7 +549,7 @@ namespace yy {
 #if YYDEBUG
   template <typename Base>
   void
-  parser::yy_print_ (std::ostream& yyo,
+  Parser::yy_print_ (std::ostream& yyo,
                                      const basic_symbol<Base>& yysym) const
   {
     std::ostream& yyoutput = yyo;
@@ -570,7 +569,7 @@ namespace yy {
 #endif
 
   void
-  parser::yypush_ (const char* m, YY_MOVE_REF (stack_symbol_type) sym)
+  Parser::yypush_ (const char* m, YY_MOVE_REF (stack_symbol_type) sym)
   {
     if (m)
       YY_SYMBOL_PRINT (m, sym);
@@ -578,7 +577,7 @@ namespace yy {
   }
 
   void
-  parser::yypush_ (const char* m, state_type s, YY_MOVE_REF (symbol_type) sym)
+  Parser::yypush_ (const char* m, state_type s, YY_MOVE_REF (symbol_type) sym)
   {
 #if 201103L <= YY_CPLUSPLUS
     yypush_ (m, stack_symbol_type (s, std::move (sym)));
@@ -589,40 +588,40 @@ namespace yy {
   }
 
   void
-  parser::yypop_ (int n)
+  Parser::yypop_ (int n)
   {
     yystack_.pop (n);
   }
 
 #if YYDEBUG
   std::ostream&
-  parser::debug_stream () const
+  Parser::debug_stream () const
   {
     return *yycdebug_;
   }
 
   void
-  parser::set_debug_stream (std::ostream& o)
+  Parser::set_debug_stream (std::ostream& o)
   {
     yycdebug_ = &o;
   }
 
 
-  parser::debug_level_type
-  parser::debug_level () const
+  Parser::debug_level_type
+  Parser::debug_level () const
   {
     return yydebug_;
   }
 
   void
-  parser::set_debug_level (debug_level_type l)
+  Parser::set_debug_level (debug_level_type l)
   {
     yydebug_ = l;
   }
 #endif // YYDEBUG
 
-  parser::state_type
-  parser::yy_lr_goto_state_ (state_type yystate, int yysym)
+  Parser::state_type
+  Parser::yy_lr_goto_state_ (state_type yystate, int yysym)
   {
     int yyr = yypgoto_[yysym - yyntokens_] + yystate;
     if (0 <= yyr && yyr <= yylast_ && yycheck_[yyr] == yystate)
@@ -632,25 +631,25 @@ namespace yy {
   }
 
   bool
-  parser::yy_pact_value_is_default_ (int yyvalue)
+  Parser::yy_pact_value_is_default_ (int yyvalue)
   {
     return yyvalue == yypact_ninf_;
   }
 
   bool
-  parser::yy_table_value_is_error_ (int yyvalue)
+  Parser::yy_table_value_is_error_ (int yyvalue)
   {
     return yyvalue == yytable_ninf_;
   }
 
   int
-  parser::operator() ()
+  Parser::operator() ()
   {
     return parse ();
   }
 
   int
-  parser::parse ()
+  Parser::parse ()
   {
     int yyn;
     /// Length of the RHS of the rule being reduced.
@@ -776,19 +775,19 @@ namespace yy {
     {
       case 52: // "true"
       case 53: // "false"
-        yylhs.value.emplace< ramc::ASTBoolLit* > ();
+        yylhs.value.emplace< ASTBoolLit* > ();
         break;
 
       case 51: // "FLOAT_LIT"
-        yylhs.value.emplace< ramc::ASTFloatLit* > ();
+        yylhs.value.emplace< ASTFloatLit* > ();
         break;
 
       case 48: // "ID"
-        yylhs.value.emplace< ramc::ASTIdentifier* > ();
+        yylhs.value.emplace< ASTIdentifier* > ();
         break;
 
       case 49: // "INT_LIT"
-        yylhs.value.emplace< ramc::ASTIntLit* > ();
+        yylhs.value.emplace< ASTIntLit* > ();
         break;
 
       case 55: // PROGRAM
@@ -809,19 +808,19 @@ namespace yy {
       case 70: // EXPR13
       case 71: // EXPR14
       case 72: // ATOM
-        yylhs.value.emplace< ramc::ASTNode* > ();
+        yylhs.value.emplace< ASTNode* > ();
         break;
 
       case 50: // "STRING_LIT"
-        yylhs.value.emplace< ramc::ASTStringLit* > ();
+        yylhs.value.emplace< ASTStringLit* > ();
         break;
 
       case 74: // OP_ASSIGN
-        yylhs.value.emplace< ramc::BinopType > ();
+        yylhs.value.emplace< BinopType > ();
         break;
 
       case 73: // STMTS
-        yylhs.value.emplace< std::vector<ramc::ASTNode*> > ();
+        yylhs.value.emplace< std::vector<ASTNode*> > ();
         break;
 
       default:
@@ -840,396 +839,396 @@ namespace yy {
             {
   case 2:
 #line 195 "ramc_grammar.yy"
-            { result = new ramc::ASTProgram("Test File", yystack_[0].value.as < std::vector<ramc::ASTNode*> > ()); }
-#line 845 "ramc_parser_gen.cpp"
+            { result = new ASTProgram("Test File", yystack_[0].value.as < std::vector<ASTNode*> > ()); }
+#line 844 "ramc_bison_parser.cpp"
     break;
 
   case 3:
 #line 199 "ramc_grammar.yy"
-                { yylhs.value.as < std::vector<ramc::ASTNode*> > () = { }; }
-#line 851 "ramc_parser_gen.cpp"
+                { yylhs.value.as < std::vector<ASTNode*> > () = { }; }
+#line 850 "ramc_bison_parser.cpp"
     break;
 
   case 4:
 #line 200 "ramc_grammar.yy"
-                { yystack_[1].value.as < std::vector<ramc::ASTNode*> > ().push_back(yystack_[0].value.as < ramc::ASTNode* > ()); yylhs.value.as < std::vector<ramc::ASTNode*> > () = yystack_[1].value.as < std::vector<ramc::ASTNode*> > (); }
-#line 857 "ramc_parser_gen.cpp"
+                { yystack_[1].value.as < std::vector<ASTNode*> > ().push_back(yystack_[0].value.as < ASTNode* > ()); yylhs.value.as < std::vector<ASTNode*> > () = yystack_[1].value.as < std::vector<ASTNode*> > (); }
+#line 856 "ramc_bison_parser.cpp"
     break;
 
   case 5:
 #line 204 "ramc_grammar.yy"
-                   { yylhs.value.as < ramc::ASTNode* > () = yystack_[1].value.as < ramc::ASTNode* > (); }
-#line 863 "ramc_parser_gen.cpp"
+                   { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
+#line 862 "ramc_bison_parser.cpp"
     break;
 
   case 6:
 #line 205 "ramc_grammar.yy"
-                   { yylhs.value.as < ramc::ASTNode* > () = yystack_[1].value.as < ramc::ASTNode* > (); }
-#line 869 "ramc_parser_gen.cpp"
+                   { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
+#line 868 "ramc_bison_parser.cpp"
     break;
 
   case 7:
 #line 209 "ramc_grammar.yy"
-                            { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTIdentifier* > (), yystack_[0].value.as < ramc::ASTNode* > (), yystack_[1].value.as < ramc::BinopType > ()); }
-#line 875 "ramc_parser_gen.cpp"
+                            { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTIdentifier* > (), yystack_[0].value.as < ASTNode* > (), yystack_[1].value.as < BinopType > ()); }
+#line 874 "ramc_bison_parser.cpp"
     break;
 
   case 8:
 #line 210 "ramc_grammar.yy"
-                            { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 881 "ramc_parser_gen.cpp"
+                            { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 880 "ramc_bison_parser.cpp"
     break;
 
   case 9:
 #line 214 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::EQ; }
-#line 887 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::EQ; }
+#line 886 "ramc_bison_parser.cpp"
     break;
 
   case 10:
 #line 215 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::ADD_EQ; }
-#line 893 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::ADD_EQ; }
+#line 892 "ramc_bison_parser.cpp"
     break;
 
   case 11:
 #line 216 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::SUB_EQ; }
-#line 899 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::SUB_EQ; }
+#line 898 "ramc_bison_parser.cpp"
     break;
 
   case 12:
 #line 217 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::MUL_EQ; }
-#line 905 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::MUL_EQ; }
+#line 904 "ramc_bison_parser.cpp"
     break;
 
   case 13:
 #line 218 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::DIV_EQ; }
-#line 911 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::DIV_EQ; }
+#line 910 "ramc_bison_parser.cpp"
     break;
 
   case 14:
 #line 219 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::MOD_EQ; }
-#line 917 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::MOD_EQ; }
+#line 916 "ramc_bison_parser.cpp"
     break;
 
   case 15:
 #line 220 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::POW_EQ; }
-#line 923 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::POW_EQ; }
+#line 922 "ramc_bison_parser.cpp"
     break;
 
   case 16:
 #line 221 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::BIN_AND_EQ; }
-#line 929 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::BIN_AND_EQ; }
+#line 928 "ramc_bison_parser.cpp"
     break;
 
   case 17:
 #line 222 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::BIN_OR_EQ; }
-#line 935 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::BIN_OR_EQ; }
+#line 934 "ramc_bison_parser.cpp"
     break;
 
   case 18:
 #line 223 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::BIN_XOR_EQ; }
-#line 941 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::BIN_XOR_EQ; }
+#line 940 "ramc_bison_parser.cpp"
     break;
 
   case 19:
 #line 224 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::LSHIFT_EQ; }
-#line 947 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::LSHIFT_EQ; }
+#line 946 "ramc_bison_parser.cpp"
     break;
 
   case 20:
 #line 225 "ramc_grammar.yy"
-            { yylhs.value.as < ramc::BinopType > () = ramc::BinopType::RSHIFT_EQ; }
-#line 953 "ramc_parser_gen.cpp"
+            { yylhs.value.as < BinopType > () = BinopType::RSHIFT_EQ; }
+#line 952 "ramc_bison_parser.cpp"
     break;
 
   case 21:
 #line 228 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::LOG_OR); }
-#line 959 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LOG_OR); }
+#line 958 "ramc_bison_parser.cpp"
     break;
 
   case 22:
 #line 229 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 965 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 964 "ramc_bison_parser.cpp"
     break;
 
   case 23:
 #line 233 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::LOG_AND); }
-#line 971 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LOG_AND); }
+#line 970 "ramc_bison_parser.cpp"
     break;
 
   case 24:
 #line 234 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 977 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 976 "ramc_bison_parser.cpp"
     break;
 
   case 25:
 #line 238 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::BIN_OR); }
-#line 983 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_OR); }
+#line 982 "ramc_bison_parser.cpp"
     break;
 
   case 26:
 #line 239 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 989 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 988 "ramc_bison_parser.cpp"
     break;
 
   case 27:
 #line 243 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::BIN_XOR); }
-#line 995 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_XOR); }
+#line 994 "ramc_bison_parser.cpp"
     break;
 
   case 28:
 #line 244 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1001 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1000 "ramc_bison_parser.cpp"
     break;
 
   case 29:
 #line 248 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::BIN_AND); }
-#line 1007 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_AND); }
+#line 1006 "ramc_bison_parser.cpp"
     break;
 
   case 30:
 #line 249 "ramc_grammar.yy"
-                      { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1013 "ramc_parser_gen.cpp"
+                      { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1012 "ramc_bison_parser.cpp"
     break;
 
   case 31:
 #line 253 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::EQ_EQ); }
-#line 1019 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::EQ_EQ); }
+#line 1018 "ramc_bison_parser.cpp"
     break;
 
   case 32:
 #line 254 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::NEQ); }
-#line 1025 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::NEQ); }
+#line 1024 "ramc_bison_parser.cpp"
     break;
 
   case 33:
 #line 255 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1031 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1030 "ramc_bison_parser.cpp"
     break;
 
   case 34:
 #line 259 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::LT); }
-#line 1037 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LT); }
+#line 1036 "ramc_bison_parser.cpp"
     break;
 
   case 35:
 #line 260 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::GT); }
-#line 1043 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::GT); }
+#line 1042 "ramc_bison_parser.cpp"
     break;
 
   case 36:
 #line 261 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::LT_EQ); }
-#line 1049 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LT_EQ); }
+#line 1048 "ramc_bison_parser.cpp"
     break;
 
   case 37:
 #line 262 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::GT_EQ); }
-#line 1055 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::GT_EQ); }
+#line 1054 "ramc_bison_parser.cpp"
     break;
 
   case 38:
 #line 263 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1061 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1060 "ramc_bison_parser.cpp"
     break;
 
   case 39:
 #line 267 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::LSHIFT); }
-#line 1067 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LSHIFT); }
+#line 1066 "ramc_bison_parser.cpp"
     break;
 
   case 40:
 #line 268 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::RSHIFT); }
-#line 1073 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::RSHIFT); }
+#line 1072 "ramc_bison_parser.cpp"
     break;
 
   case 41:
 #line 269 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1079 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1078 "ramc_bison_parser.cpp"
     break;
 
   case 42:
 #line 273 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::ADD); }
-#line 1085 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::ADD); }
+#line 1084 "ramc_bison_parser.cpp"
     break;
 
   case 43:
 #line 274 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::SUB); }
-#line 1091 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::SUB); }
+#line 1090 "ramc_bison_parser.cpp"
     break;
 
   case 44:
 #line 275 "ramc_grammar.yy"
-                       { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1097 "ramc_parser_gen.cpp"
+                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1096 "ramc_bison_parser.cpp"
     break;
 
   case 45:
 #line 279 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::MUL); }
-#line 1103 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::MUL); }
+#line 1102 "ramc_bison_parser.cpp"
     break;
 
   case 46:
 #line 280 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::DIV); }
-#line 1109 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::DIV); }
+#line 1108 "ramc_bison_parser.cpp"
     break;
 
   case 47:
 #line 281 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::MOD); }
-#line 1115 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::MOD); }
+#line 1114 "ramc_bison_parser.cpp"
     break;
 
   case 48:
 #line 282 "ramc_grammar.yy"
-                        { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1121 "ramc_parser_gen.cpp"
+                        { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1120 "ramc_bison_parser.cpp"
     break;
 
   case 49:
 #line 286 "ramc_grammar.yy"
-                 { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[0].value.as < ramc::ASTNode* > (), ramc::UnopType::NEG); }
-#line 1127 "ramc_parser_gen.cpp"
+                 { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::NEG); }
+#line 1126 "ramc_bison_parser.cpp"
     break;
 
   case 50:
 #line 287 "ramc_grammar.yy"
-                 { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[0].value.as < ramc::ASTNode* > (), ramc::UnopType::LOG_NOT); }
-#line 1133 "ramc_parser_gen.cpp"
+                 { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::LOG_NOT); }
+#line 1132 "ramc_bison_parser.cpp"
     break;
 
   case 51:
 #line 288 "ramc_grammar.yy"
-                 { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1139 "ramc_parser_gen.cpp"
+                 { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1138 "ramc_bison_parser.cpp"
     break;
 
   case 52:
 #line 292 "ramc_grammar.yy"
-                         { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTBinopExpr(yystack_[2].value.as < ramc::ASTNode* > (), yystack_[0].value.as < ramc::ASTNode* > (), ramc::BinopType::POW); }
-#line 1145 "ramc_parser_gen.cpp"
+                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::POW); }
+#line 1144 "ramc_bison_parser.cpp"
     break;
 
   case 53:
 #line 293 "ramc_grammar.yy"
-                         { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1151 "ramc_parser_gen.cpp"
+                         { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1150 "ramc_bison_parser.cpp"
     break;
 
   case 54:
 #line 297 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[0].value.as < ramc::ASTNode* > (), ramc::UnopType::PRE_INC); }
-#line 1157 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::PRE_INC); }
+#line 1156 "ramc_bison_parser.cpp"
     break;
 
   case 55:
 #line 298 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[0].value.as < ramc::ASTNode* > (), ramc::UnopType::PRE_DEC); }
-#line 1163 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::PRE_DEC); }
+#line 1162 "ramc_bison_parser.cpp"
     break;
 
   case 56:
 #line 299 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1169 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1168 "ramc_bison_parser.cpp"
     break;
 
   case 57:
 #line 303 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[1].value.as < ramc::ASTNode* > (), ramc::UnopType::POST_INC); }
-#line 1175 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[1].value.as < ASTNode* > (), UnopType::POST_INC); }
+#line 1174 "ramc_bison_parser.cpp"
     break;
 
   case 58:
 #line 304 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = new ramc::ASTUnopExpr(yystack_[1].value.as < ramc::ASTNode* > (), ramc::UnopType::POST_DEC); }
-#line 1181 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[1].value.as < ASTNode* > (), UnopType::POST_DEC); }
+#line 1180 "ramc_bison_parser.cpp"
     break;
 
   case 59:
 #line 305 "ramc_grammar.yy"
-                  { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTNode* > (); }
-#line 1187 "ramc_parser_gen.cpp"
+                  { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
+#line 1186 "ramc_bison_parser.cpp"
     break;
 
   case 60:
 #line 309 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTIntLit* > (); }
-#line 1193 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTIntLit* > (); }
+#line 1192 "ramc_bison_parser.cpp"
     break;
 
   case 61:
 #line 310 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTFloatLit* > (); }
-#line 1199 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTFloatLit* > (); }
+#line 1198 "ramc_bison_parser.cpp"
     break;
 
   case 62:
 #line 311 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTStringLit* > (); }
-#line 1205 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTStringLit* > (); }
+#line 1204 "ramc_bison_parser.cpp"
     break;
 
   case 63:
 #line 312 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTBoolLit* > (); }
-#line 1211 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTBoolLit* > (); }
+#line 1210 "ramc_bison_parser.cpp"
     break;
 
   case 64:
 #line 313 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTBoolLit* > (); }
-#line 1217 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTBoolLit* > (); }
+#line 1216 "ramc_bison_parser.cpp"
     break;
 
   case 65:
 #line 314 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[0].value.as < ramc::ASTIdentifier* > (); }
-#line 1223 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTIdentifier* > (); }
+#line 1222 "ramc_bison_parser.cpp"
     break;
 
   case 66:
 #line 315 "ramc_grammar.yy"
-                    { yylhs.value.as < ramc::ASTNode* > () = yystack_[1].value.as < ramc::ASTNode* > (); }
-#line 1229 "ramc_parser_gen.cpp"
+                    { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
+#line 1228 "ramc_bison_parser.cpp"
     break;
 
 
-#line 1233 "ramc_parser_gen.cpp"
+#line 1232 "ramc_bison_parser.cpp"
 
             default:
               break;
@@ -1393,25 +1392,25 @@ namespace yy {
   }
 
   void
-  parser::error (const syntax_error& yyexc)
+  Parser::error (const syntax_error& yyexc)
   {
     error (yyexc.what ());
   }
 
   // Generate an error message.
   std::string
-  parser::yysyntax_error_ (state_type, const symbol_type&) const
+  Parser::yysyntax_error_ (state_type, const symbol_type&) const
   {
     return YY_("syntax error");
   }
 
 
-  const signed char parser::yypact_ninf_ = -50;
+  const signed char Parser::yypact_ninf_ = -50;
 
-  const signed char parser::yytable_ninf_ = -1;
+  const signed char Parser::yytable_ninf_ = -1;
 
   const signed char
-  parser::yypact_[] =
+  Parser::yypact_[] =
   {
      -50,     7,    -2,   -50,    30,    30,    30,    49,    49,     1,
       80,   -50,   -50,   -50,   -50,   -50,   -50,    10,   -18,    24,
@@ -1426,7 +1425,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yydefact_[] =
+  Parser::yydefact_[] =
   {
        3,     0,     2,     1,     0,     0,     0,     0,     0,     0,
       65,    60,    62,    61,    63,    64,     4,     0,     0,    22,
@@ -1441,7 +1440,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yypgoto_[] =
+  Parser::yypgoto_[] =
   {
      -50,   -50,   -50,   -50,     2,     5,     6,     3,    11,    15,
      -25,   -49,   -29,   -26,    -4,   -50,    -3,   -50,   -50,   -50,
@@ -1449,7 +1448,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yydefgoto_[] =
+  Parser::yydefgoto_[] =
   {
       -1,     1,    16,    17,    18,    19,    20,    21,    22,    23,
       24,    25,    26,    27,    28,    29,    30,    31,    32,     2,
@@ -1457,7 +1456,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yytable_[] =
+  Parser::yytable_[] =
   {
       34,    35,     4,    54,    37,    38,    54,     3,    36,    62,
       63,    64,    65,    86,    87,    88,    89,    70,    71,    72,
@@ -1474,7 +1473,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yycheck_[] =
+  Parser::yycheck_[] =
   {
        4,     5,     4,    21,     7,     8,    21,     0,     6,    14,
       15,    16,    17,    62,    63,    64,    65,     5,     6,     7,
@@ -1491,7 +1490,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yystos_[] =
+  Parser::yystos_[] =
   {
        0,    55,    73,     0,     4,    22,    35,    41,    42,    47,
       48,    49,    50,    51,    52,    53,    56,    57,    58,    59,
@@ -1506,7 +1505,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yyr1_[] =
+  Parser::yyr1_[] =
   {
        0,    54,    55,    73,    73,    56,    56,    57,    57,    74,
       74,    74,    74,    74,    74,    74,    74,    74,    74,    74,
@@ -1518,7 +1517,7 @@ namespace yy {
   };
 
   const signed char
-  parser::yyr2_[] =
+  Parser::yyr2_[] =
   {
        0,     2,     1,     0,     2,     2,     2,     3,     3,     1,
        1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
@@ -1534,7 +1533,7 @@ namespace yy {
   // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
   // First, the terminals, then, starting at \a yyntokens_, nonterminals.
   const char*
-  const parser::yytname_[] =
+  const Parser::yytname_[] =
   {
   "END_OF_FILE", "error", "$undefined", "\"+\"", "\"-\"", "\"*\"",
   "\"/\"", "\"%\"", "\"**\"", "\"&\"", "\"|\"", "\"^\"", "\"<<\"",
@@ -1552,7 +1551,7 @@ namespace yy {
 
 
   const short
-  parser::yyrline_[] =
+  Parser::yyrline_[] =
   {
        0,   195,   195,   199,   200,   204,   205,   209,   210,   214,
      215,   216,   217,   218,   219,   220,   221,   222,   223,   224,
@@ -1565,7 +1564,7 @@ namespace yy {
 
   // Print the state stack on the debug stream.
   void
-  parser::yystack_print_ ()
+  Parser::yystack_print_ ()
   {
     *yycdebug_ << "Stack now";
     for (stack_type::const_iterator
@@ -1578,7 +1577,7 @@ namespace yy {
 
   // Report on the debug stream that the rule \a yyrule is going to be reduced.
   void
-  parser::yy_reduce_print_ (int yyrule)
+  Parser::yy_reduce_print_ (int yyrule)
   {
     int yylno = yyrline_[yyrule];
     int yynrhs = yyr2_[yyrule];
@@ -1593,17 +1592,19 @@ namespace yy {
 #endif // YYDEBUG
 
 
-} // yy
-#line 1598 "ramc_parser_gen.cpp"
+#line 8 "ramc_grammar.yy"
+} } // ramc::bison
+#line 1598 "ramc_bison_parser.cpp"
 
 #line 318 "ramc_grammar.yy"
 
-namespace yy
-{
-  // Report an error to the user.
-  auto parser::error (const std::string& _msg) -> void
-  {
-    throw std::runtime_error(_msg);
-  }
+namespace ramc {
+	namespace bison {
+		// Report an error to the user.
+		auto Parser::error(const std::string& _msg) -> void
+		{
+			throw std::runtime_error(_msg);
+		}
+	}
 }
 

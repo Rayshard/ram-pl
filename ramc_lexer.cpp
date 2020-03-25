@@ -374,4 +374,31 @@ namespace ramc {
 		else if (isalpha(firstChar) || firstChar == '_') { return LexIdentifier(this, firstChar, tokStartPos); }
 		else { return LexerResult::GenError(LexerResultType::UNKNOWN_SYMBOL, std::string(1, firstChar), position); }
 	}
+
+	std::string LexFile(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize)
+	{
+		Lexer lexer = Lexer(_stream, _tabSize);
+		std::stringstream ss;
+
+		while (true)
+		{
+			LexerResult res = lexer.GetNextToken(_ignoreWhitespace, _ignoreComments);
+
+			if (res.IsSuccess())
+			{
+				Token token = res.GetToken();
+				ss << token.ToString(true) << std::endl;
+
+				if (token.type == TokenType::END_OF_FILE)
+					break;
+			}
+			else
+			{
+				ss << res.ToString() << std::endl;
+				break;
+			}
+		}
+
+		return ss.str();
+	}
 }

@@ -16,13 +16,14 @@ namespace ramc {
 	class LexerResult {
 		LexerResultType type;
 		Token token;
-		
+
 		std::string errString;
 		Position errPosition;
 
 	public:
 		LexerResultType GetType() { return type; }
 		Position GetErrorPosition() { return errPosition; }
+		std::string GetErrorString() { return errString; }
 
 		Token GetToken();
 		bool IsSuccess();
@@ -31,6 +32,7 @@ namespace ramc {
 		static LexerResult GenSuccess(Token _token);
 		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos);
 	};
+
 
 	class Lexer
 	{
@@ -48,4 +50,6 @@ namespace ramc {
 
 		Position GetPosition() { return position; }
 	};
+
+	std::string LexFile(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize);
 }

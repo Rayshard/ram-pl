@@ -178,9 +178,9 @@ namespace ramvm {
 		return ResultType::SUCCESS;
 	}
 
-	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value == 1; }
+	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value.AsInt() == 1; }
 
-	Argument::Argument(ArgType _type, int _val)
+	Argument::Argument(ArgType _type, DataVariant _val)
 	{
 		type = _type;
 		value = _val;
@@ -190,12 +190,12 @@ namespace ramvm {
 	{
 		switch (type)
 		{
-			case ramvm::ArgType::VALUE: return std::to_string(value);
-			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value);
-			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value) + "}";
+			case ramvm::ArgType::VALUE: return value.ToString();
+			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value.AsInt());
+			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.AsInt()) + "}";
 			case ramvm::ArgType::STACK_PTR: return "SP";
-			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value) + "]";
-			case ramvm::ArgType::SP_OFFSET: return "[" + std::to_string(value) + "]";
+			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value.AsInt()) + "]";
+			case ramvm::ArgType::SP_OFFSET: return "[" + std::to_string(value.AsInt()) + "]";
 			case ramvm::ArgType::INVALID: return "INVAILD";
 			default: return "Argument::ToString() - ArgType not handled!";
 		}

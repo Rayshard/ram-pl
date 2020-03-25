@@ -1,58 +1,45 @@
 #include "pch.h"
 #include "ramvm_parser.h"
-#include "ramvm_vm.h"
+#include "ramvm_lexer.h"
 #include "ramvm_instruction.h"
+#include "ramvm_bison_parser.hpp"
 
 namespace ramvm {
-	bool IsDestArgument(ArgType _type) { return _type == ArgType::MEM_REG || _type == ArgType::REGISTER || _type == ArgType::STACK_REG || _type == ArgType::SP_OFFSET; }
-	bool IsMemoryArgument(ArgType _type) { return _type == ArgType::MEM_REG; }
-	bool IsStackArgument(ArgType _type) { return _type == ArgType::STACK_REG; }
-	bool IsLabelArg(std::string _token) { return std::regex_match(_token, std::regex("[A-Za-z_][A-Za-z0-9_]*")); }
-
-	std::vector<std::string> GetLineTokens(std::stringstream& _stream, char _delim)
-	{
-		std::vector<std::string> tokens;
-		std::string token;
-
-		while (std::getline(_stream, token, _delim)) {
-			token = TrimString(token);
-			if (token.length() != 0)
-				tokens.push_back(token);
-		}
-
-		return tokens;
-	}
-
-	ResultType ParseArgInt(std::string& _token, int& _i)
-	{
-		try
-		{
-			_i = std::stoi(_token);
-			return ResultType::SUCCESS;
-		}
-		catch (...) { return ResultType::PARSE_ERR_INVALID_ARG; }
-	}
-
 	ResultType ParseArgument(std::string& _token, Argument& _arg)
 	{
-		if (std::regex_match(_token, std::regex("-?(0|[1-9][0-9]*)")) ||
+		return ResultType::ERR_ARGUMENT;
+		/*if (std::regex_match(_token, std::regex("(byte|int|float|double|long)[(]-?(0|[1-9][0-9]*)(\\.[0-9]+)?[)]")) ||
+			std::regex_match(_token, std::regex("-?0|[1-9][0-9]*")) ||
 			std::regex_match(_token, std::regex("R(0|[1-9][0-9]*)")) ||
 			std::regex_match(_token, std::regex("\\{R(0|[1-9][0-9]*)\\}")) ||
 			std::regex_match(_token, std::regex("\\[R(0|[1-9][0-9]*)\\]")) ||
 			std::regex_match(_token, std::regex("\\[(0|1|-[1-9][0-9]*)\\]")) ||
 			_token == "SP")
 		{
-			int value = 0;
+			ResultType result;
+			DataVariant value;
 
-			if (isdigit(_token[0]) || _token[0] == '-') { IGNORE(ParseArgInt(_token, value)); }
-			else if (_token != "SP")
+			//Get Value Data Type
+			switch (_token[0])
 			{
-				std::string subStr = _token.substr(_token.find_first_of("-0123456789")).erase(_token.find_last_of("0123456789"));
-				ResultType result = ParseArgInt(subStr, value);
-
-				if (IsErrorResult(result))
-					return result;
+				case 'b': value = DataVariant(DataType::BYTE); break;
+				case 'i': value = DataVariant(DataType::INT); break;
+				case 'f': value = DataVariant(DataType::FLOAT); break;
+				case 'd': value = DataVariant(DataType::DOUBLE); break;
+				case 'l': value = DataVariant(DataType::LONG); break;
+				default: value = DataVariant(DataType::INT); break;
 			}
+
+			//Get Number in Token
+			if (_token != "SP")
+			{
+				std::string subStr = _token.substr(_token.find_first_of("-0123456789"));
+				subStr.erase(subStr.find_last_of("0123456789") + 1);
+				result = ParseNumericLiteral(subStr, value);
+			}
+
+			if (IsErrorResult(result))
+				return result;
 
 			switch (_token[0])
 			{
@@ -68,38 +55,14 @@ namespace ramvm {
 
 			return ResultType::SUCCESS;
 		}
-		else { return ResultType::PARSE_ERR_INVALID_ARG; }
+		else { return ResultType::PARSE_ERR_INVALID_ARG; }*/
 	}
 
-	ResultType ParseArguments(std::vector<std::string>& _tokens, int _tokOffset, std::vector<Argument>& _args)
-	{
-		ResultType result = ResultType::SUCCESS;
-		std::vector<Argument> args;
+	/*bool IsDestArgument(ArgType _type) { return _type == ArgType::MEM_REG || _type == ArgType::REGISTER || _type == ArgType::STACK_REG || _type == ArgType::SP_OFFSET; }
+	bool IsMemoryArgument(ArgType _type) { return _type == ArgType::MEM_REG; }
+	bool IsStackArgument(ArgType _type) { return _type == ArgType::STACK_REG; }
+	bool IsLabelArg(std::string _token) { return std::regex_match(_token, std::regex("[A-Za-z_][A-Za-z0-9_]*")); }
 
-		for (int i = _tokOffset; i < (int)_tokens.size(); i++)
-		{
-			Argument arg;
-			result = ParseArgument(_tokens[i], arg);
-
-			if (IsErrorResult(result))
-				return result;
-
-			args.push_back(arg);
-		}
-
-		_args = args;
-		return result;
-	}
-
-	ResultType ParseHalt(std::vector<std::string>& _tokens, Instruction*& _instr)
-	{
-		if (_tokens.size() != 1) { return ResultType::PARSE_ERR_WRONG_NUM_ARGS; }
-		else
-		{
-			_instr = new InstrHalt();
-			return ResultType::SUCCESS;
-		}
-	}
 
 	ResultType ParseReturn(std::vector<std::string>& _tokens, Instruction*& _instr)
 	{
@@ -220,11 +183,11 @@ namespace ramvm {
 			else if (argSrcCnt.type != ArgType::VALUE) { return ResultType::PARSE_ERR_INVALID_ARG; }
 			else if (retDestCnt.type != ArgType::VALUE) { return ResultType::PARSE_ERR_INVALID_ARG; }
 
-			std::vector<Argument> argSrcs(args.begin() + 3, args.begin() + 3 + argSrcCnt.value);
+			std::vector<Argument> argSrcs(args.begin() + 3, args.begin() + 3 + argSrcCnt.value.AsInt());
 			std::vector<Argument> retDests;
 
-			int retDestsArgOff = 3 + argSrcCnt.value;
-			for (int i = 0; i < retDestCnt.value; i++)
+			int retDestsArgOff = 3 + argSrcCnt.value.AsInt();
+			for (int i = 0; i < retDestCnt.value.AsInt(); i++)
 			{
 				Argument retDest = args[retDestsArgOff + i];
 
@@ -234,7 +197,7 @@ namespace ramvm {
 				retDests.push_back(retDest);
 			}
 
-			_instr = new InstrCall(-1, regCnt.value, argSrcs, retDests);
+			_instr = new InstrCall(-1, regCnt.value.AsInt(), argSrcs, retDests);
 			return ResultType::SUCCESS;
 		}
 	}
@@ -403,5 +366,45 @@ namespace ramvm {
 
 		_program = prog;
 		return ResultType::SUCCESS;
+	}*/
+
+	bool ParseResult::IsSuccess() { return success; }
+	std::vector<Instruction*>& ParseResult::GetInstructionSet() { return instrSet; }
+
+	std::string ParseResult::ToString()
+	{
+		if (success) { return "SUCCESS"; }
+		else { return errString; }
+	}
+	ParseResult ParseResult::GenSuccess(std::vector<Instruction*>& _instrSet)
+	{
+		ParseResult result;
+		result.success = true;
+		result.instrSet = _instrSet;
+		return result;
+	}
+	ParseResult ParseResult::GenError(std::string _msg, Position _pos, bool _includePos)
+	{
+		ParseResult result;
+		result.success = false;
+		result.errString = (_includePos ? "(" + _pos.ToString() + ")" : "") + _msg;
+		result.errPosition = _pos;
+		return result;
+	}
+
+	ParseResult ParseFile(std::istream* _stream, std::string _fileName, int _tabSize)
+	{
+		Lexer lexer = Lexer(_stream, _tabSize);
+		std::vector<Instruction*> program;
+		Position position;
+
+		try
+		{
+			bison::Parser parse(lexer, program, position);
+
+			if (parse() == 0) { return ParseResult::GenSuccess(program); }
+			else { return ParseResult::GenError("", position, true); }
+		}
+		catch (std::runtime_error err) { return ParseResult::GenError(err.what(), position, false); }
 	}
 }

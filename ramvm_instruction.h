@@ -15,17 +15,17 @@ namespace ramvm {
 
 	struct Argument {
 		ArgType type;
-		int value;
+		DataVariant value;
 
 		Argument() = default;
-		Argument(ArgType _type, int _val);
+		Argument(ArgType _type, DataVariant _val);
 		std::string ToString();
 
-		bool IsStackTop() { return type == ArgType::SP_OFFSET && value == 1; }
-		bool IsStackCur() { return type == ArgType::SP_OFFSET && value == 0; }
-		bool IsStackPrev() { return type == ArgType::SP_OFFSET && value == -1; }
+		bool IsStackTop() { return type == ArgType::SP_OFFSET && value.AsInt() == 1; }
+		bool IsStackCur() { return type == ArgType::SP_OFFSET && value.AsInt() == 0; }
+		bool IsStackPrev() { return type == ArgType::SP_OFFSET && value.AsInt() == -1; }
 
-		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, 1); }
+		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, DataVariant(1)); }
 	};
 
 	enum class Binop {

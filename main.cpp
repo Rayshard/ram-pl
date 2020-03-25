@@ -2,6 +2,7 @@
 #include "ramvm_vm.h"
 #include "ramvm_parser.h"
 #include "ramvm_instruction.h"
+#include "ramvm_lexer.h"
 #include "ramc_lexer.h"
 #include "ramc_token.h"
 #include "ramc_parser.h"
@@ -173,9 +174,6 @@ int main()
 	{
 		using namespace ramvm;
 
-		ResultType result;
-		ResultInfo resInfo;
-
 		//Open File
 		std::ifstream file("TestProgram.ramc");
 		if (!file)
@@ -184,27 +182,27 @@ int main()
 			return 0;
 		}
 
-		//Parse Program
-		std::vector<Instruction*> program;
+		std::cout << LexFile(&file, 2) << std::endl;
+		return 0;
 
-		resInfo.clear();
-		result = ParseProgram(file, program, resInfo);
+		//Parse Program
+		ParseResult result = ParseFile(&file, "filename", 2);
 		file.close();
 
-		if (IsErrorResult(result))
+		if (!result.IsSuccess())
 		{
-			PrintResult(result);
-			std::cout << "Line: " << resInfo["Line#"] << "     \"" << resInfo["Line"] << "\"" << std::endl;
+			std::cout << "Parse Error: " << result.ToString() << std::endl;
 			return 0;
 		}
 
 		//Run VM
 		try
 		{
+			auto program = result.GetInstructionSet();
 			VM vm = VM(4, 1024, program);
 
-			resInfo.clear();
-			result = vm.Run(resInfo);
+			ResultInfo resInfo;
+			ResultType result = vm.Run(resInfo);
 
 			if (IsErrorResult(result)) { PrintResult(result); }
 			else
