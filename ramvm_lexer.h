@@ -30,7 +30,7 @@ namespace ramvm {
 
 		Token GetToken();
 		bool IsSuccess();
-		std::string ToString();
+		std::string ToString(bool _includePos);
 
 		static LexerResult GenSuccess(Token _token);
 		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos);

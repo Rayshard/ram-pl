@@ -208,7 +208,7 @@ namespace ramvm {
 					{
 						if (!itBlock.second.free)
 						{
-							_value.AsBytes()[0] = itBlock.second.data[_addr - blockAddr];
+							_value.Bytes()[0] = itBlock.second.data[_addr - blockAddr];
 							return ResultType::SUCCESS;
 						}
 						else { return ResultType::ERR_MEMREAD; }
@@ -219,7 +219,7 @@ namespace ramvm {
 			}
 			else { return ResultType::ERR_MEMREAD; }
 		}
-		else { return ReadBuffer(_addr, _value.GetSize(), _value.AsBytes(), _info); }
+		else { return ReadBuffer(_addr, _value.GetSize(), _value.Bytes(), _info); }
 	}
 
 	ResultType Memory::Write(int _addr, DataVariant _value, ResultInfo& _info)
@@ -235,7 +235,7 @@ namespace ramvm {
 					{
 						if (!itBlock->second.free)
 						{
-							itBlock->second.data[_addr - blockAddr] = _value.AsByte();
+							itBlock->second.data[_addr - blockAddr] = _value.B();
 							return ResultType::SUCCESS;
 						}
 						else { return ResultType::ERR_MEMWRITE; }
@@ -246,7 +246,7 @@ namespace ramvm {
 			}
 			else { return ResultType::ERR_MEMWRITE; }
 		}
-		else { return WriteBuffer(_addr, _value.GetSize(), _value.AsBytes(), _info); }
+		else { return WriteBuffer(_addr, _value.GetSize(), _value.Bytes(), _info); }
 	}
 
 	Memory::Block::Block()

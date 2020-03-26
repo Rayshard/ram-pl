@@ -343,7 +343,7 @@ namespace ramc {
 
 		//TODO gotta change the pop scale to be based on the return type of this binop
 		//This will require you to store the type during typechecking
-		instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
+		instrs.push_back(new ramvm::InstrPop(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 1)));
 
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
@@ -351,7 +351,7 @@ namespace ramc {
 		if (!dest.IsStackTop())
 		{
 			instrs.push_back(new ramvm::InstrMove(TypedArgument(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0)), dest));
-			instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
+			instrs.push_back(new ramvm::InstrPop(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 1)));
 		}
 
 		return instrs;
@@ -459,7 +459,7 @@ namespace ramc {
 
 			//TODO gotta change the pop scale to be based on the return type of this unop
 			//This will require you to store the type during typechecking
-			instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
+			instrs.push_back(new ramvm::InstrPop(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 1)));
 		}
 
 		return instrs;

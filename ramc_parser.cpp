@@ -11,7 +11,7 @@ namespace ramc {
 	std::string ParseResult::ToString()
 	{
 		if (success) { return "SUCCESS"; }
-		else { return errString; }
+		else { return "(" + errPosition.ToString() + ") " + errString; }
 	}
 	ParseResult ParseResult::GenSuccess(ASTNode* _node)
 	{

@@ -52,7 +52,7 @@ namespace ramvm {
 
 					//Malloc and Get Address
 					int memAddr = -1;
-					resType = memory.Malloc(size.AsInt(), memAddr, _info);
+					resType = memory.Malloc(size.I(), memAddr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -72,7 +72,7 @@ namespace ramvm {
 						return resType;
 
 					//Free Address
-					resType = memory.Free(addr.AsInt(), _info);
+					resType = memory.Free(addr.I(), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -91,8 +91,8 @@ namespace ramvm {
 						return resType;
 
 					//Get Chars
-					std::vector<char> chars(length.AsInt());
-					resType = memory.ReadBuffer(memAddr.AsInt(), length.AsInt(), (byte*)chars.data(), _info);
+					std::vector<char> chars(length.I());
+					resType = memory.ReadBuffer(memAddr.I(), length.I(), (byte*)chars.data(), _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -108,7 +108,7 @@ namespace ramvm {
 					ResultType resType = ReadFromSrcArg(execFrame, instr->condSrc, condVal, _info);
 
 					if (IsErrorResult(resType)) { return resType; }
-					else if (condVal.AsByte() != 0)
+					else if (condVal.B() != 0)
 					{
 						ip = instr->labelIdx;
 						continue;
@@ -134,7 +134,7 @@ namespace ramvm {
 							//Read from current exec frame
 							resType = ReadFromSrcArg(execFrame, src.arg, retVal, _info);
 							if (IsErrorResult(resType)) { return resType; }
-							else { retBuffer.insert(retBuffer.begin(), retVal.AsBytes(), retVal.AsBytes() + retVal.GetSize()); }
+							else { retBuffer.insert(retBuffer.begin(), retVal.Bytes(), retVal.Bytes() + retVal.GetSize()); }
 						}
 
 						//Revert Stack back to position before this frame was created
@@ -169,7 +169,7 @@ namespace ramvm {
 
 						//Push Value to stack
 						int writeStart = GetSP() + 1;
-						stack.insert(stack.end(), argVal.AsBytes(), argVal.AsBytes() + argVal.GetSize());
+						stack.insert(stack.end(), argVal.Bytes(), argVal.Bytes() + argVal.GetSize());
 					}
 
 					execFrames.push_back(newExecFrame);
@@ -195,7 +195,7 @@ namespace ramvm {
 
 					resType = DoBinop(instr->op, val1, val2, resVal);
 					if (IsErrorResult(resType)) { return resType; }
-					else { resVal = DataVariant(instr->dest.type, resVal.GetValue()); } //Set the type for the result
+					else { resVal = resVal.To(instr->dest.type); } //Set the type for the result
 
 					resType = WriteToDestArg(execFrame, instr->dest.arg, resVal, _info);
 					if (IsErrorResult(resType))
@@ -216,8 +216,39 @@ namespace ramvm {
 
 					resType = DoUnop(instr->op, val, resVal);
 					if (IsErrorResult(resType)) { return resType; }
-					else { resVal = DataVariant(instr->dest.type, resVal.GetValue()); }
+					else { resVal = resVal.To(instr->dest.type); }
 
+					if (IsErrorResult(resType))
+						return resType;
+				} break;
+				case InstructionType::STORE: {
+					InstrStore* instr = (InstrStore*)curInstr;
+					ResultType resType = ResultType::SUCCESS;
+
+					//Create buffer
+					std::vector<byte> buffer;
+					for (int i = 0; i < (int)instr->srcs.size(); i++)
+					{
+						TypedArgument src = instr->srcs[i];
+						DataVariant storeVal(src.type);
+
+						//Read Value
+						resType = ReadFromSrcArg(execFrame, src.arg, storeVal, _info);
+						if (IsErrorResult(resType)) { return resType; }
+						else { buffer.insert(buffer.end(), storeVal.Bytes(), storeVal.Bytes() + storeVal.GetSize()); }
+					}
+
+					//Malloc and Get Address
+					int memAddr = -1;
+					resType = memory.Malloc(buffer.size(), memAddr, _info);
+					if (IsErrorResult(resType))
+						return resType;
+
+					//Write Buffer
+					memory.WriteBuffer(memAddr, buffer.size(), buffer.data(), _info);
+
+					//Write Addr to Destination
+					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(memAddr), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -255,12 +286,12 @@ namespace ramvm {
 						return resType;
 
 					//Pop Amount
-					int sp = GetSP(), byteCnt = amt.AsInt() * instr->scale;
+					int sp = GetSP(), byteCnt = amt.I() * instr->scale;
 
 					if (byteCnt < 0 || sp < byteCnt - 1) { return ResultType::ERR_POP_AMT; }
 					else if (byteCnt == 0) { return ResultType::SUCCESS; }
 					else if (sp == 0) { stack.clear(); }
-					else { stack.erase(stack.begin() + sp - byteCnt + 1, stack.end()); }
+					else { stack.erase(stack.begin() + (sp - byteCnt + 1), stack.end()); }
 				} break;
 				default: return ResultType::ERR_UNKNOWNINSTR;
 			}
@@ -285,14 +316,14 @@ namespace ramvm {
 				ResultType res = _execFrame.ReadRegister(_arg.value.i, addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return memory.Read(addr.AsInt(), _value, _info); }
+				else { return memory.Read(addr.I(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
 				DataVariant pos(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value.i, pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return ReadStack(pos.AsInt(), _value); }
+				else { return ReadStack(pos.I(), _value); }
 			}
 			case ArgType::STACK_PTR: {
 				_value = DataVariant(GetSP());
@@ -313,14 +344,14 @@ namespace ramvm {
 				ResultType res = _execFrame.ReadRegister(_arg.value.i, addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return memory.Write(addr.AsInt(), _value, _info); }
+				else { return memory.Write(addr.I(), _value, _info); }
 			}
 			case ArgType::STACK_REG: {
 				DataVariant pos(DataType::INT);
 				ResultType res = _execFrame.ReadRegister(_arg.value.i, pos, _info);
 
 				if (IsErrorResult(res)) { return res; }
-				else { return WriteStack(pos.AsInt(), _value); }
+				else { return WriteStack(pos.I(), _value); }
 			}
 			case ArgType::SP_OFFSET: return WriteStack(GetSP() + _arg.value.i, _value);
 			default: return ResultType::ERR_INVALID_DEST;

@@ -15,63 +15,81 @@
 
 %code requires {
   #include "ramvm_instruction.h"
+
+  using namespace ramvm;
+  
+	namespace ramvm {
+		namespace bison {
+			std::vector<TypedArgument> BindArgDataTypes(std::vector<DataType>& _dataTypes, std::vector<Argument>& _args);
+		}
+	}
 }
 
 %code {
     namespace ramvm {
 		namespace bison {
 			// Return the next token.
-			auto yylex(Lexer& _lexer, std::vector<Instruction*>& _result, Position& _pos) -> Parser::symbol_type
+			auto yylex(Lexer& _lexer,
+						std::vector<Instruction*>& _result,
+						Position& _pos,
+						std::map<std::string, int>& _labels,
+						std::map<Instruction*, std::pair<std::string, Position>>& _ctrlInstrs) -> Parser::symbol_type
 			{
 				LexerResult readRes = _lexer.GetNextToken();
 
 				if (!readRes.IsSuccess())
-					throw std::runtime_error(readRes.ToString());
+				{
+					_pos = readRes.GetErrorPosition();
+					throw std::runtime_error(readRes.ToString(false));
+				}
 
 				Token token = readRes.GetToken();
-				TokenType type = token.type;
+                std::string value = token.value;
 				_pos = token.position;
 
-				switch (type)
+				switch (token.type)
 				{
-					case TokenType::HEX_LIT: return Parser::make_TOK_HEX_LIT();
-					case TokenType::REG: return Parser::make_TOK_REG();
-					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG();
-					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG();
-					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET();
-					case TokenType::LABEL: return Parser::make_TOK_LABEL();
+					case TokenType::HEX_LIT: return Parser::make_TOK_HEX_LIT(DataValue((byte*)value.c_str(), value.length()));
+                    case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
+					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG(std::stoi(value));
+					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
+					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
+					case TokenType::LABEL: return Parser::make_TOK_LABEL(value);
 					case TokenType::KW_SP: return Parser::make_TOK_SP();
 					case TokenType::KW_HALT: return Parser::make_TOK_HALT();
-					case TokenType::KW_MOV: return Parser::make_TOK_MOV();
-					case TokenType::KW_RET: return Parser::make_TOK_RET();
+					case TokenType::KW_MOV: return Parser::make_TOK_MOV(CharToDataType(value[0]));
+					case TokenType::KW_RET: return Parser::make_TOK_RET(CharsToDataTypes(value));
 					case TokenType::KW_MALLOC: return Parser::make_TOK_MALLOC();
 					case TokenType::KW_FREE: return Parser::make_TOK_FREE();
-					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH();
-					case TokenType::KW_POP: return Parser::make_TOK_POP();
+					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH(CharsToDataTypes(value));
+					case TokenType::KW_POP: return Parser::make_TOK_POP(CharToDataType(value[0]));
 					case TokenType::KW_PRINT: return Parser::make_TOK_PRINT();
 					case TokenType::KW_JUMP: return Parser::make_TOK_JUMP();
 					case TokenType::KW_CJUMP: return Parser::make_TOK_CJUMP();
-					case TokenType::KW_CALL: return Parser::make_TOK_CALL();
-					case TokenType::KW_ADD: return Parser::make_TOK_ADD();
-					case TokenType::KW_SUB: return Parser::make_TOK_SUB();
-					case TokenType::KW_MUL: return Parser::make_TOK_MUL();
-					case TokenType::KW_DIV: return Parser::make_TOK_DIV();
-					case TokenType::KW_MOD: return Parser::make_TOK_MOD();
-					case TokenType::KW_LSHIFT: return Parser::make_TOK_LSHIFT();
-					case TokenType::KW_RSHIFT: return Parser::make_TOK_RSHIFT();
-					case TokenType::KW_BAND: return Parser::make_TOK_BAND();
-					case TokenType::KW_BOR: return Parser::make_TOK_BOR();
-					case TokenType::KW_BXOR: return Parser::make_TOK_BXOR();
-					case TokenType::KW_LAND: return Parser::make_TOK_LAND();
-					case TokenType::KW_LOR: return Parser::make_TOK_LOR();
-					case TokenType::KW_LT: return Parser::make_TOK_LT();
-					case TokenType::KW_GT: return Parser::make_TOK_GT();
-					case TokenType::KW_LTEQ: return Parser::make_TOK_LTEQ();
-					case TokenType::KW_GTEQ: return Parser::make_TOK_GTEQ();
-					case TokenType::KW_EQ: return Parser::make_TOK_EQ();
-					case TokenType::KW_NEQ: return Parser::make_TOK_NEQ();
-					case TokenType::KW_NEG: return Parser::make_TOK_NEG();
-					case TokenType::KW_LNOT: return Parser::make_TOK_LNOT();
+					case TokenType::KW_CALL: return Parser::make_TOK_CALL(CharsToDataTypes(value));
+					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharsToDataTypes(value));
+					case TokenType::KW_ADD: return Parser::make_TOK_ADD(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_SUB: return Parser::make_TOK_SUB(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_MUL: return Parser::make_TOK_MUL(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_DIV: return Parser::make_TOK_DIV(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_MOD: return Parser::make_TOK_MOD(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_POW: return Parser::make_TOK_POW(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_LSHIFT: return Parser::make_TOK_LSHIFT(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_RSHIFT: return Parser::make_TOK_RSHIFT(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_BAND: return Parser::make_TOK_BAND(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_BOR: return Parser::make_TOK_BOR(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_BXOR: return Parser::make_TOK_BXOR(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_LAND: return Parser::make_TOK_LAND(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_LOR: return Parser::make_TOK_LOR(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_LT: return Parser::make_TOK_LT(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_GT: return Parser::make_TOK_GT(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_LTEQ: return Parser::make_TOK_LTEQ(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_GTEQ: return Parser::make_TOK_GTEQ(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_EQ: return Parser::make_TOK_EQ(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_NEQ: return Parser::make_TOK_NEQ(CharsToDataTypes(value[0], value[1], value[2]));
+					case TokenType::KW_NEG: return Parser::make_TOK_NEG(CharsToDataTypes(value[0], value[1]));
+					case TokenType::KW_LNOT: return Parser::make_TOK_LNOT(CharsToDataTypes(value[0], value[1]));
+					case TokenType::KW_BNOT: return Parser::make_TOK_BNOT(CharsToDataTypes(value[0], value[1]));
 					case TokenType::END_OF_FILE: return Parser::make_TOK_END_OF_FILE();
 					default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
 				}
@@ -83,63 +101,133 @@
 %param { Lexer& lexer }
 %param { std::vector<Instruction*>& result }
 %param { Position& position }
+%param { std::map<std::string, int>& labels }
+%param { std::map<Instruction*, std::pair<std::string, Position>>& ctrlInstrs }
 
-%token TOK_HEX_LIT "hex"
-%token TOK_REG "reg"
-%token TOK_MEM_REG "mreg"
-%token TOK_STACK_REG "sreg"
-%token TOK_SP_OFFSET "spoff"
-%token TOK_LABEL "label"
+%token <DataValue> TOK_HEX_LIT "hex"
+%token <int> TOK_REG "reg"
+%token <int> TOK_MEM_REG "mreg"
+%token <int> TOK_STACK_REG "sreg"
+%token <int> TOK_SP_OFFSET "spoff"
+%token <std::string> TOK_LABEL "LABEL"
 %token TOK_SP "SP"
 %token TOK_HALT "HALT"
-%token TOK_MOV "MOV"
-%token TOK_RET "RET"
+%token <DataType> TOK_MOV "MOV"
+%token <std::vector<DataType>> TOK_RET "RET"
 %token TOK_MALLOC "MALLOC"
 %token TOK_FREE "FREE"
-%token TOK_PUSH "PUSH"
-%token TOK_POP "POP"
+%token <std::vector<DataType>> TOK_STORE "STORE"
+%token <std::vector<DataType>> TOK_PUSH "PUSH"
+%token <DataType> TOK_POP "POP"
 %token TOK_PRINT "PRINT"
 %token TOK_JUMP "JUMP"
 %token TOK_CJUMP "CJUMP"
-%token TOK_CALL "CALL"
-%token TOK_ADD "ADD"
-%token TOK_SUB "SUB"
-%token TOK_MUL "MUL"
-%token TOK_DIV "DIV"
-%token TOK_MOD "MOD"
-%token TOK_LSHIFT "LSHIFT"
-%token TOK_RSHIFT "RSHIFT"
-%token TOK_BAND "BAND"
-%token TOK_BOR "BOR"
-%token TOK_BXOR "BXOR"
-%token TOK_LAND "LAND"
-%token TOK_LOR "LOR"
-%token TOK_LT "LT"
-%token TOK_GT "GT"
-%token TOK_LTEQ "LTEQ"
-%token TOK_GTEQ "GTEQ"
-%token TOK_EQ "EQ"
-%token TOK_NEQ "NEQ"
-%token TOK_NEG "NEG"
-%token TOK_LNOT "LNOT"
+%token <std::vector<DataType>> TOK_CALL "CALL"
+%token <DataTypeTriple> TOK_ADD "ADD"
+%token <DataTypeTriple> TOK_SUB "SUB"
+%token <DataTypeTriple> TOK_MUL "MUL"
+%token <DataTypeTriple> TOK_DIV "DIV"
+%token <DataTypeTriple> TOK_MOD "MOD"
+%token <DataTypeTriple> TOK_POW "POW"
+%token <DataTypeTriple> TOK_LSHIFT "LSHIFT"
+%token <DataTypeTriple> TOK_RSHIFT "RSHIFT"
+%token <DataTypeTriple> TOK_BAND "BAND"
+%token <DataTypeTriple> TOK_BOR "BOR"
+%token <DataTypeTriple> TOK_BXOR "BXOR"
+%token <DataTypeTriple> TOK_LAND "LAND"
+%token <DataTypeTriple> TOK_LOR "LOR"
+%token <DataTypeTriple> TOK_LT "LT"
+%token <DataTypeTriple> TOK_GT "GT"
+%token <DataTypeTriple> TOK_LTEQ "LTEQ"
+%token <DataTypeTriple> TOK_GTEQ "GTEQ"
+%token <DataTypeTriple> TOK_EQ "EQ"
+%token <DataTypeTriple> TOK_NEQ "NEQ"
+%token <DataTypeDouble> TOK_NEG "NEG"
+%token <DataTypeDouble> TOK_LNOT "LNOT"
+%token <DataTypeDouble> TOK_BNOT "BNOT"
 %token TOK_END_OF_FILE 0
 
-%nterm <std::vector<Instruction*>> STMTS;
+%nterm STMTS;
+%nterm <std::vector<Argument>> ARGUMENTS;
 %nterm <Instruction*> STMT;
+%nterm <Argument> ARGUMENT;
+%nterm <Argument> DEST_ARG;
+%nterm <std::pair<Binop, DataTypeTriple>> BINOP;
+%nterm <std::pair<Unop, DataTypeDouble>> UNOP;
 
 %%
 %start PROGRAM;
-PROGRAM: 
-    STMTS   { result = $1; }
-;
+PROGRAM: STMTS;
 
 STMTS:
-    %empty      { $$ = { }; }
-  | STMTS STMT  { $1.push_back($2); $$ = $1; }
+		%empty      
+	|	STMTS STMT		{ result.push_back($2); }
+	|	STMTS "LABEL"	{ labels.find($2) == labels.end() ? labels.insert_or_assign($2, result.size()) : throw std::runtime_error("Duplicate Label: " + $2); }
 ;
 
 STMT:
-    "HALT" { $$ = new InstrHalt(); }
+		"HALT"								{ $$ = new InstrHalt(); }
+	|	"RET" ARGUMENTS						{ $$ = new InstrReturn(BindArgDataTypes($1, $2)); }
+	|	"MOV" ARGUMENT DEST_ARG				{ $$ = new InstrMove(TypedArgument($1, $2), $3); }
+	|	"MALLOC" ARGUMENT DEST_ARG			{ $$ = new InstrMalloc($2, $3); }
+	|	"FREE" ARGUMENT						{ $$ = new InstrFree($2); }
+	|	"PRINT" ARGUMENT ARGUMENT			{ $$ = new InstrPrint($2, $3); }
+	|	"JUMP" "LABEL"						{ $$ = new InstrJump(-1); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"CJUMP" "LABEL" ARGUMENT			{ $$ = new InstrCJump(-1, $3); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"CALL" "LABEL" "hex" ARGUMENTS		{ $$ = new InstrCall(-1, $3.i, BindArgDataTypes($1, $4)); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"PUSH" ARGUMENTS					{ $$ = new InstrPush(BindArgDataTypes($1, $2)); }
+	|	"POP" ARGUMENT						{ $$ = new InstrPop($1, $2); }
+	|	"STORE" ARGUMENTS DEST_ARG 			{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
+	|	BINOP ARGUMENT ARGUMENT DEST_ARG	{ $$ = new InstrBinop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3), TypedArgument(std::get<2>($1.second), $4)); }
+	|	UNOP ARGUMENT DEST_ARG				{ $$ = new InstrUnop($1.first, TypedArgument($1.second.first, $2), TypedArgument($1.second.second, $3)); }
+;
+
+ARGUMENTS:
+		%empty				{ $$ = { }; }
+	|	ARGUMENTS ARGUMENT  { $1.push_back($2); $$ = $1; }
+;
+
+ARGUMENT:
+		"hex"		{ $$ = Argument(ArgType::VALUE, $1); }
+	|	"reg"		{ $$ = Argument(ArgType::REGISTER, $1); }
+	|	"mreg"		{ $$ = Argument(ArgType::MEM_REG, $1); }
+	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
+	|	"SP"		{ $$ = Argument(ArgType::STACK_PTR, 0); }
+	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
+;
+
+DEST_ARG:
+		"reg"		{ $$ = Argument(ArgType::REGISTER, $1); }
+	|	"mreg"		{ $$ = Argument(ArgType::MEM_REG, $1); }
+	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
+	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
+;
+
+BINOP:
+		"ADD"		{ $$ = { Binop::ADD, $1 }; }
+	|	"SUB"		{ $$ = { Binop::SUB, $1 }; }
+	|	"MUL"		{ $$ = { Binop::MUL, $1 }; }
+	|	"DIV"		{ $$ = { Binop::DIV, $1 }; }
+	|	"MOD"		{ $$ = { Binop::MOD, $1 }; }
+	|	"POW"		{ $$ = { Binop::POW, $1 }; }
+	|	"LSHIFT"	{ $$ = { Binop::LSHIFT, $1 }; }
+	|	"RSHIFT"	{ $$ = { Binop::RSHIFT, $1 }; }
+	|	"BAND"		{ $$ = { Binop::BIT_AND, $1 }; }
+	|	"BOR"		{ $$ = { Binop::BIT_OR, $1 }; }
+	|	"BXOR"		{ $$ = { Binop::BIT_XOR, $1 }; }
+	|	"LAND"		{ $$ = { Binop::LOG_AND, $1 }; }
+	|	"LOR"		{ $$ = { Binop::LOG_OR, $1 }; }
+	|	"LT"		{ $$ = { Binop::LT, $1 }; }
+	|	"GT"		{ $$ = { Binop::GT, $1 }; }
+	|	"LTEQ"		{ $$ = { Binop::LTEQ, $1 }; }
+	|	"GTEQ"		{ $$ = { Binop::GTEQ, $1 }; }
+	|	"EQ"		{ $$ = { Binop::EQ, $1 }; }
+	|	"NEQ"		{ $$ = { Binop::NEQ, $1 }; }
+
+UNOP:
+		"NEG"	{ $$ = { Unop::NEG, $1 }; }
+	|	"LNOT"	{ $$ = { Unop::LOG_NOT, $1 }; }
+	|	"BNOT"	{ $$ = { Unop::BIN_NOT, $1 }; }
 ;
 
 %%
@@ -149,6 +237,21 @@ namespace ramvm {
 		auto Parser::error(const std::string& _msg) -> void
 		{
 			throw std::runtime_error(_msg);
+		}
+
+		std::vector<TypedArgument> BindArgDataTypes(std::vector<DataType>& _dataTypes, std::vector<Argument>& _args)
+		{
+			if(_dataTypes.size() != _args.size()) { throw std::runtime_error("Instruction expects " + std::to_string(_dataTypes.size()) + " sources!"); }
+			else
+			{
+				std::vector<TypedArgument> result;
+				result.reserve(_dataTypes.size());
+
+				for(int i = 0; i < (int)_dataTypes.size(); i++)
+					result.push_back(TypedArgument(_dataTypes[i], _args[i]));
+
+				return result;
+			}
 		}
 	}
 }

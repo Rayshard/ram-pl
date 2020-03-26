@@ -31,7 +31,22 @@ typedef unsigned char byte;
 #define LONG_SIZE 8
 #define DOUBLE_SIZE 8
 
-enum class DataType { UNKNOWN, BYTE, INT, FLOAT, DOUBLE, LONG };
+enum class DataType : byte { UNKNOWN, BYTE, INT, FLOAT, DOUBLE, LONG };
+typedef std::pair<DataType, DataType> DataTypeDouble;
+typedef std::tuple<DataType, DataType, DataType> DataTypeTriple;
+
+inline constexpr int GetDataTypeSize(DataType _type)
+{
+	switch (_type)
+	{
+		case DataType::BYTE: return BYTE_SIZE;
+		case DataType::INT: return INT_SIZE;
+		case DataType::FLOAT: return FLOAT_SIZE;
+		case DataType::DOUBLE: return DOUBLE_SIZE;
+		case DataType::LONG: return LONG_SIZE;
+		default: return 0;
+	}
+}
 
 union DataValue
 {
@@ -49,6 +64,7 @@ union DataValue
 	DataValue(float _val) { f = _val; }
 	DataValue(double _val) { d = _val; }
 	DataValue(long _val) { l = _val; }
+	DataValue(byte* _bytes, int _length) { memcpy(bytes, _bytes, (int)fmin(LONG_SIZE, _length)); }
 };
 
 class DataVariant {
@@ -66,18 +82,7 @@ public:
 	DataVariant(long _value) : type(DataType::LONG) { value.l = _value; }
 	DataVariant(const DataVariant& _org) : type(_org.type), value(_org.value) { }
 
-	int GetSize()
-	{
-		switch (type)
-		{
-			case DataType::BYTE: return BYTE_SIZE;
-			case DataType::INT: return INT_SIZE;
-			case DataType::FLOAT: return FLOAT_SIZE;
-			case DataType::DOUBLE: return DOUBLE_SIZE;
-			case DataType::LONG: return LONG_SIZE;
-			default: return 0;
-		}
-	}
+	int GetSize() { return GetDataTypeSize(type); }
 
 	std::string ToString()
 	{
@@ -94,12 +99,36 @@ public:
 
 	DataType GetType() { return type; }
 	DataValue GetValue() { return value; }
-	byte AsByte() { return value.b; }
-	int AsInt() { return value.i; }
-	float AsFloat() { return value.f; }
-	double AsDouble() { return value.d; }
-	long AsLong() { return value.l; }
-	byte* AsBytes() { return value.bytes; }
+	byte B() { return value.b; }
+	int I() { return value.i; }
+	float F() { return value.f; }
+	double D() { return value.d; }
+	long L() { return value.l; }
+	byte* Bytes() { return value.bytes; }
+	template<typename T> T To()
+	{
+		switch (type)
+		{
+			case DataType::BYTE: return (T)value.b;
+			case DataType::INT: return (T)value.i;
+			case DataType::FLOAT: return (T)value.f;
+			case DataType::DOUBLE: return (T)value.d;
+			case DataType::LONG: return (T)value.l;
+			default: return T();
+		}
+	}
+	DataVariant To(DataType _type)
+	{
+		switch (_type)
+		{
+			case DataType::BYTE: return DataVariant(To<byte>());
+			case DataType::INT: return DataVariant(To<int>());
+			case DataType::FLOAT: return DataVariant(To<float>());
+			case DataType::DOUBLE: return DataVariant(To<double>());
+			case DataType::LONG: return DataVariant(To<long>());
+			default: return DataVariant();
+		}
+	}
 };
 
 inline std::string DataTypeToString(DataType _type)

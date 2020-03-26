@@ -38,8 +38,8 @@ namespace ramvm {
 		{
 			switch (_value.GetType())
 			{
-				case DataType::BYTE: registers[_regIndex].b = _value.AsByte(); break;
-				case DataType::INT: registers[_regIndex].i = _value.AsInt(); break;
+				case DataType::BYTE: registers[_regIndex].b = _value.B(); break;
+				case DataType::INT: registers[_regIndex].i = _value.I(); break;
 				default: return ResultType::ERR_REG_WRTIE;
 			}
 			

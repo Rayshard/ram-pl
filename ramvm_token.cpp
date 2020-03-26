@@ -26,6 +26,7 @@ namespace ramvm {
             case ramvm::TokenType::KW_MOV: str += "MOV"; break;
             case ramvm::TokenType::KW_RET: str += "RET"; break;
             case ramvm::TokenType::KW_MALLOC: str += "MALLOC"; break;
+            case ramvm::TokenType::KW_STORE: str += "STORE"; break;
             case ramvm::TokenType::KW_FREE: str += "FREE"; break;
             case ramvm::TokenType::KW_PUSH: str += "PUSH"; break;
             case ramvm::TokenType::KW_POP: str += "POP" + value; break;
@@ -38,6 +39,7 @@ namespace ramvm {
             case ramvm::TokenType::KW_MUL: str += "MUL"; break;
             case ramvm::TokenType::KW_DIV: str += "DIV"; break;
             case ramvm::TokenType::KW_MOD: str += "MOD"; break;
+            case ramvm::TokenType::KW_POW: str += "POW"; break;
             case ramvm::TokenType::KW_LSHIFT: str += "LSHIFT"; break;
             case ramvm::TokenType::KW_RSHIFT: str += "RSHIFT"; break;
             case ramvm::TokenType::KW_BAND: str += "BAND"; break;
@@ -53,6 +55,7 @@ namespace ramvm {
             case ramvm::TokenType::KW_NEQ: str += "NEQ"; break;
             case ramvm::TokenType::KW_NEG: str += "NEG"; break;
             case ramvm::TokenType::KW_LNOT: str += "LNOT"; break;
+            case ramvm::TokenType::KW_BNOT: str += "BNOT"; break;
             case TokenType::COMMENT: str += "Comment: " + value; break;
             case TokenType::INVALID: str += "Invalid"; break;
             case TokenType::END_OF_FILE: str += "EOF"; break;

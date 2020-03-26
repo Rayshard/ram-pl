@@ -65,7 +65,7 @@ namespace ramvm {
 
 	inline void DataValueToBuffer(byte* _buffer, DataVariant _value)
 	{
-		byte* bytes = _value.AsBytes();
+		byte* bytes = _value.Bytes();
 
 		switch (_value.GetType())
 		{
@@ -88,6 +88,32 @@ namespace ramvm {
 			} break;
 		}
 	}
+
+	inline constexpr DataType CharToDataType(char _c)
+	{
+		switch (_c)
+		{
+			case 'B': return DataType::BYTE;
+			case 'I': return DataType::INT;
+			case 'F': return DataType::FLOAT;
+			case 'D': return DataType::DOUBLE;
+			case 'L': return DataType::LONG;
+			default: return DataType::UNKNOWN;
+		}
+	}
+	inline constexpr DataTypeDouble CharsToDataTypes(char _c1, char _c2) { return { CharToDataType(_c1), CharToDataType(_c2) }; }
+	inline constexpr DataTypeTriple CharsToDataTypes(char _c1, char _c2, char _c3) { return { CharToDataType(_c1), CharToDataType(_c2), CharToDataType(_c3) }; }
+	inline std::vector<DataType> CharsToDataTypes(const std::string& _chars)
+	{
+		std::vector<DataType> result;
+		result.reserve(_chars.length());
+
+		for (auto const& c : _chars)
+			result.push_back(CharToDataType(c));
+
+		return result;
+	}
+
 
 	void PrintResult(ResultType _type);
 }

@@ -4,7 +4,7 @@ namespace ramvm {
 	enum class InstructionType {
 		HALT, MOVE, BINOP, UNOP, JUMP,
 		CJUMP, CALL, RETURN, PRINT, MALLOC,
-		PUSH, POP, FREE
+		PUSH, POP, FREE, STORE
 	};
 
 	enum class ArgType {
@@ -38,15 +38,12 @@ namespace ramvm {
 	};
 
 	enum class Binop {
-		ADD, SUB, MUL, DIV, MOD,
+		ADD, SUB, MUL, DIV, MOD, POW,
 		LSHIFT, RSHIFT, BIT_AND, BIT_OR, BIT_XOR, LOG_AND, LOG_OR,
 		LT, GT, LTEQ, GTEQ, EQ, NEQ,
 	};
 
-	enum class Unop {
-		NEG,
-		LOG_NOT,
-	};
+	enum class Unop { NEG, LOG_NOT, BIN_NOT };
 
 	ResultType DoBinop(Binop _op, DataVariant& _val1, DataVariant& _val2, DataVariant& _result);
 	ResultType DoUnop(Unop _op, DataVariant& _val, DataVariant& _result);
@@ -107,9 +104,20 @@ namespace ramvm {
 		int labelIdx, regCnt;
 		std::vector<TypedArgument> argSrcs;
 
-		InstrCall(int _labelIdx, int _regCnt, std::vector<TypedArgument>& _argSrcs);
+		InstrCall(int _labelIdx, int _regCnt, const std::vector<TypedArgument>& _argSrcs);
 
-		std::string ToString() override { return "CALL (NEED TO HANDLE TOSTRING)"; }
+		std::string ToString() override;
+	};
+#pragma endregion
+
+#pragma region Store
+	struct InstrStore : Instruction {
+		std::vector<TypedArgument> srcs;
+		Argument dest;
+
+		InstrStore(const std::vector<TypedArgument>& _srcs, Argument _dest);
+
+		std::string ToString() override;
 	};
 #pragma endregion
 
@@ -117,9 +125,9 @@ namespace ramvm {
 	struct InstrReturn : Instruction {
 		std::vector<TypedArgument> srcs;
 
-		InstrReturn(std::vector<TypedArgument>& _srcs);
-		
-		std::string ToString() override { return "RET (NEED TO HANDLE TOSTRING)"; }
+		InstrReturn(const std::vector<TypedArgument>& _srcs);
+
+		std::string ToString() override;
 	};
 #pragma endregion
 
@@ -178,9 +186,8 @@ namespace ramvm {
 	struct InstrPush : Instruction {
 		std::vector<TypedArgument> srcs;
 
-		InstrPush(TypedArgument _src);
-		InstrPush(std::vector<TypedArgument>& _srcs);
-		
+		InstrPush(const std::vector<TypedArgument>& _srcs);
+
 		std::string ToString() override;
 	};
 #pragma endregion
@@ -190,7 +197,7 @@ namespace ramvm {
 		Argument amt;
 		int scale;
 
-		InstrPop(Argument _amt, int _scale);
+		InstrPop(DataType _type, Argument _amt);
 
 		std::string ToString() override { return "POP " + amt.ToString(); }
 	};

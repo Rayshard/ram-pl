@@ -111,7 +111,7 @@ int main()
 
 		std::ifstream stream("Tests/Compiler/test_lex.ram");
 
-		ParseResult result = ParseFile(&stream, "test_lex.ram", 2);
+		ParseResult result = ParseFile(&stream, "test_lex.ram", 4);
 
 		if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
 		else
@@ -182,11 +182,11 @@ int main()
 			return 0;
 		}
 
-		std::cout << LexFile(&file, 2) << std::endl;
-		return 0;
+		//std::cout << LexFile(&file, 4) << std::endl;
+		//return 0;
 
 		//Parse Program
-		ParseResult result = ParseFile(&file, "filename", 2);
+		ParseResult result = ParseFile(&file, "filename", 4);
 		file.close();
 
 		if (!result.IsSuccess())
