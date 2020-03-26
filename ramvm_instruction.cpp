@@ -178,9 +178,9 @@ namespace ramvm {
 		return ResultType::SUCCESS;
 	}
 
-	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value.AsInt() == 1; }
+	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value.i == 1; }
 
-	Argument::Argument(ArgType _type, DataVariant _val)
+	Argument::Argument(ArgType _type, DataValue _val)
 	{
 		type = _type;
 		value = _val;
@@ -190,26 +190,25 @@ namespace ramvm {
 	{
 		switch (type)
 		{
-			case ramvm::ArgType::VALUE: return value.ToString();
-			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value.AsInt());
-			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.AsInt()) + "}";
+			case ramvm::ArgType::VALUE: return ToHexString(value);
+			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value.i);
+			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.i) + "}";
 			case ramvm::ArgType::STACK_PTR: return "SP";
-			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value.AsInt()) + "]";
-			case ramvm::ArgType::SP_OFFSET: return "[" + std::to_string(value.AsInt()) + "]";
+			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value.i) + "]";
+			case ramvm::ArgType::SP_OFFSET: return "[" + std::to_string(value.i) + "]";
 			case ramvm::ArgType::INVALID: return "INVAILD";
 			default: return "Argument::ToString() - ArgType not handled!";
 		}
 	}
 
-	InstrMove::InstrMove(DataType _dataType, Argument _src, Argument _dest)
+	InstrMove::InstrMove(TypedArgument _src, Argument _dest)
 		: Instruction(InstructionType::MOVE)
 	{
-		dataType = _dataType;
 		src = _src;
 		dest = _dest;
 	}
 
-	InstrBinop::InstrBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest)
+	InstrBinop::InstrBinop(Binop _op, TypedArgument _src1, TypedArgument _src2, TypedArgument _dest)
 		: Instruction(InstructionType::BINOP)
 	{
 		op = _op;
@@ -228,7 +227,7 @@ namespace ramvm {
 		return ss.str();
 	}
 
-	InstrUnop::InstrUnop(Unop _op, Argument _src, Argument _dest)
+	InstrUnop::InstrUnop(Unop _op, TypedArgument _src, TypedArgument _dest)
 		: Instruction(InstructionType::UNOP)
 	{
 		op = _op;
@@ -245,16 +244,15 @@ namespace ramvm {
 		return ss.str();
 	}
 
-	InstrCall::InstrCall(int _labelIdx, int _regCnt, std::vector<Argument>& _argSrcs, std::vector<Argument>& _retDests)
+	InstrCall::InstrCall(int _labelIdx, int _regCnt, std::vector<TypedArgument>& _argSrcs)
 		: Instruction(InstructionType::CALL)
 	{
 		labelIdx = _labelIdx;
 		regCnt = _regCnt;
 		argSrcs = _argSrcs;
-		retDests = _retDests;
 	}
 
-	InstrReturn::InstrReturn(std::vector<Argument>& _srcs)
+	InstrReturn::InstrReturn(std::vector<TypedArgument>& _srcs)
 		: Instruction(InstructionType::RETURN)
 	{
 		srcs = _srcs;
@@ -293,13 +291,13 @@ namespace ramvm {
 		addr = _addr;
 	}
 
-	InstrPush::InstrPush(Argument _src)
+	InstrPush::InstrPush(TypedArgument _src)
 		: Instruction(InstructionType::PUSH)
 	{
 		srcs = { _src };
 	}
 
-	InstrPush::InstrPush(std::vector<Argument>& _srcs)
+	InstrPush::InstrPush(std::vector<TypedArgument>& _srcs)
 		: Instruction(InstructionType::PUSH)
 	{
 		srcs = _srcs;

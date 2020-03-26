@@ -15,7 +15,7 @@ namespace ramvm {
 
 		switch (type)
 		{
-            case ramvm::TokenType::HEX_LIT: str += "Hex Literal: " + value; break;
+            case ramvm::TokenType::HEX_LIT: str += "Hex Literal: " + ToHexString((byte*)value.c_str(), value.length()); break;
             case ramvm::TokenType::REG: str += "Register: " + value; break;
             case ramvm::TokenType::MEM_REG: str += "Memory Register: " + value; break;
             case ramvm::TokenType::STACK_REG: str += "Stack Register: " + value; break;

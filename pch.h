@@ -39,7 +39,16 @@ union DataValue
 	int i;
 	float f;
 	double d;
-	long l = 0;
+	long l;
+
+	byte bytes[LONG_SIZE];
+
+	DataValue() { l = 0; }
+	DataValue(byte _val) { b = _val; }
+	DataValue(int _val) { i = _val; }
+	DataValue(float _val) { f = _val; }
+	DataValue(double _val) { d = _val; }
+	DataValue(long _val) { l = _val; }
 };
 
 class DataVariant {
@@ -79,7 +88,6 @@ public:
 			case DataType::FLOAT: return std::to_string(value.f);
 			case DataType::DOUBLE: return std::to_string(value.d);
 			case DataType::LONG: return std::to_string(value.l);
-			case DataType::UNKNOWN:
 			default: return "UNKNOWN";
 		}
 	}
@@ -91,22 +99,53 @@ public:
 	float AsFloat() { return value.f; }
 	double AsDouble() { return value.d; }
 	long AsLong() { return value.l; }
+	byte* AsBytes() { return value.bytes; }
 };
 
-template <typename T> std::string ToHexString(T _value)
+inline std::string DataTypeToString(DataType _type)
+{
+	switch (_type)
+	{
+		case DataType::BYTE: return "BYTE";
+		case DataType::INT: return "INT";
+		case DataType::FLOAT: return "FLOAT";
+		case DataType::DOUBLE: return "DOUBLE";
+		case DataType::LONG: return "LONG";
+		default: return "UNKNOWN";
+	}
+}
+
+inline std::string ToHexString(byte* _buffer, int _length)
 {
 	static const char* digits = "0123456789ABCDEF";
-	byte* bytes = (byte*)&_value;
 	std::string str;
-	
-	for (int i = 0; i < sizeof(T); i++)
+
+	for (int i = _length - 1; i >= 0; i--)
 	{
-		byte b = bytes[i];
+		byte b = _buffer[i];
 		str.push_back(digits[(b & 0xF0) >> 4]);
 		str.push_back(digits[(b & 0x0F) >> 0]);
 	}
-	
+
 	return "0x" + str;
+}
+
+template <typename T> inline std::string ToHexString(T _value) { return ToHexString((byte*)&_value, sizeof(T)); }
+
+template <typename T> inline std::string ToByteString(T _value) { return std::string((char*)&_value, (char*)&_value + sizeof(T)); }
+
+inline std::string HexToByteStr(std::string& _str)
+{
+	std::string digits = (_str.length() % 2 == 1 ? "0" : "") + _str.substr(2);
+	std::string result;
+
+	for (int i = digits.length() - 1; i >= 0; i -= 2)
+	{
+		char bs[2] = { digits[i - 1], digits[i] };
+		result.push_back((byte)strtol(bs, NULL, 16));
+	}
+
+	return result;
 }
 
 inline std::string TrimString(std::string& _str)

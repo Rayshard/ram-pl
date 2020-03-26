@@ -15,17 +15,26 @@ namespace ramvm {
 
 	struct Argument {
 		ArgType type;
-		DataVariant value;
+		DataValue value;
 
 		Argument() = default;
-		Argument(ArgType _type, DataVariant _val);
+		Argument(ArgType _type, DataValue _val);
 		std::string ToString();
 
-		bool IsStackTop() { return type == ArgType::SP_OFFSET && value.AsInt() == 1; }
-		bool IsStackCur() { return type == ArgType::SP_OFFSET && value.AsInt() == 0; }
-		bool IsStackPrev() { return type == ArgType::SP_OFFSET && value.AsInt() == -1; }
+		bool IsStackTop() { return type == ArgType::SP_OFFSET && value.i == 1; }
+		bool IsStackCur() { return type == ArgType::SP_OFFSET && value.i == 0; }
+		bool IsStackPrev() { return type == ArgType::SP_OFFSET && value.i == -1; }
 
-		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, DataVariant(1)); }
+		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, 1); }
+	};
+
+	struct TypedArgument {
+		DataType type;
+		Argument arg;
+
+		TypedArgument() : type(DataType::UNKNOWN), arg(Argument()) { }
+		TypedArgument(DataType _type, Argument _arg) : type(_type), arg(_arg) { }
+		std::string ToString() { return DataTypeToString(type) + ": " + arg.ToString(); }
 	};
 
 	enum class Binop {
@@ -64,10 +73,10 @@ namespace ramvm {
 
 #pragma region Move
 	struct InstrMove : Instruction {
-		DataType dataType;
-		Argument src, dest;
+		TypedArgument src;
+		Argument dest;
 
-		InstrMove(DataType _dataType, Argument _src, Argument _dest);
+		InstrMove(TypedArgument _src, Argument _dest);
 
 		std::string ToString() override { return "MOV " + src.ToString() + " " + dest.ToString(); }
 	};
@@ -76,9 +85,9 @@ namespace ramvm {
 #pragma region Binop
 	struct InstrBinop : Instruction {
 		Binop op;
-		Argument src1, src2, dest;
+		TypedArgument src1, src2, dest;
 
-		InstrBinop(Binop _op, Argument _src1, Argument _src2, Argument _dest);
+		InstrBinop(Binop _op, TypedArgument _src1, TypedArgument _src2, TypedArgument _dest);
 		std::string ToString() override;
 	};
 #pragma endregion
@@ -86,9 +95,9 @@ namespace ramvm {
 #pragma region Unop
 	struct InstrUnop : Instruction {
 		Unop op;
-		Argument src, dest;
+		TypedArgument src, dest;
 
-		InstrUnop(Unop _op, Argument _src, Argument _dest);
+		InstrUnop(Unop _op, TypedArgument _src, TypedArgument _dest);
 		std::string ToString() override;
 	};
 #pragma endregion
@@ -96,9 +105,9 @@ namespace ramvm {
 #pragma region Call
 	struct InstrCall : Instruction {
 		int labelIdx, regCnt;
-		std::vector<Argument> argSrcs, retDests;
+		std::vector<TypedArgument> argSrcs;
 
-		InstrCall(int _labelIdx, int _regCnt, std::vector<Argument>& _argSrcs, std::vector<Argument>& _retDests);
+		InstrCall(int _labelIdx, int _regCnt, std::vector<TypedArgument>& _argSrcs);
 
 		std::string ToString() override { return "CALL (NEED TO HANDLE TOSTRING)"; }
 	};
@@ -106,9 +115,9 @@ namespace ramvm {
 
 #pragma region Return
 	struct InstrReturn : Instruction {
-		std::vector<Argument> srcs;
+		std::vector<TypedArgument> srcs;
 
-		InstrReturn(std::vector<Argument>& _srcs);
+		InstrReturn(std::vector<TypedArgument>& _srcs);
 		
 		std::string ToString() override { return "RET (NEED TO HANDLE TOSTRING)"; }
 	};
@@ -167,10 +176,10 @@ namespace ramvm {
 
 #pragma region Push
 	struct InstrPush : Instruction {
-		std::vector<Argument> srcs;
+		std::vector<TypedArgument> srcs;
 
-		InstrPush(Argument _src);
-		InstrPush(std::vector<Argument>& _srcs);
+		InstrPush(TypedArgument _src);
+		InstrPush(std::vector<TypedArgument>& _srcs);
 		
 		std::string ToString() override;
 	};

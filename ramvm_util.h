@@ -34,30 +34,57 @@ namespace ramvm {
 	typedef std::map<std::string, std::string> ResultInfo;
 
 	inline bool IsErrorResult(ResultType _type) { return _type != ResultType::SUCCESS; }
-	
+
 	inline DataVariant BufferToDataValue(DataType _type, byte* _buffer)
 	{
-		DataVariant value;
+		DataValue value;
 
 		switch (_type)
 		{
-			case DataType::BYTE: value = DataVariant(_buffer[0]); break;
-			case DataType::INT: value = DataVariant(int(_buffer[0] << 24 | _buffer[1] << 16 | _buffer[2] << 8 | _buffer[3])); break;
+			case DataType::BYTE: value.b = _buffer[0]; break;
+			case DataType::INT: case DataType::FLOAT: {
+				value.bytes[0] = _buffer[0];
+				value.bytes[1] = _buffer[1];
+				value.bytes[2] = _buffer[2];
+				value.bytes[3] = _buffer[3];
+			} break;
+			case DataType::DOUBLE: case DataType::LONG: {
+				value.bytes[0] = _buffer[0];
+				value.bytes[1] = _buffer[1];
+				value.bytes[2] = _buffer[2];
+				value.bytes[3] = _buffer[3];
+				value.bytes[4] = _buffer[4];
+				value.bytes[5] = _buffer[5];
+				value.bytes[6] = _buffer[6];
+				value.bytes[7] = _buffer[7];
+			} break;
 		}
 
-		return value;
+		return DataVariant(_type, value);
 	}
 
 	inline void DataValueToBuffer(byte* _buffer, DataVariant _value)
 	{
+		byte* bytes = _value.AsBytes();
+
 		switch (_value.GetType())
 		{
-			case DataType::BYTE: _buffer[0] = _value.AsByte(); break;
-			case DataType::INT: {
-				_buffer[0] = (byte)(_value.AsInt() >> 24);
-				_buffer[1] = (byte)(_value.AsInt() >> 16);
-				_buffer[2] = (byte)(_value.AsInt() >> 8);
-				_buffer[3] = (byte)_value.AsInt();
+			case DataType::BYTE: _buffer[0] = bytes[0]; break;
+			case DataType::INT: case DataType::FLOAT: {
+				_buffer[0] = bytes[0];
+				_buffer[1] = bytes[1];
+				_buffer[2] = bytes[2];
+				_buffer[3] = bytes[3];
+			} break;
+			case DataType::DOUBLE: case DataType::LONG: {
+				_buffer[0] = bytes[0];
+				_buffer[1] = bytes[1];
+				_buffer[2] = bytes[2];
+				_buffer[3] = bytes[3];
+				_buffer[4] = bytes[4];
+				_buffer[5] = bytes[5];
+				_buffer[6] = bytes[6];
+				_buffer[7] = bytes[7];
 			} break;
 		}
 	}

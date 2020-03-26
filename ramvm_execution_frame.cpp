@@ -6,10 +6,11 @@ namespace ramvm {
 	ExecutionFrame::ExecutionFrame()
 	{
 		retIP = -1;
+		retSP = 0;
 		registers = std::vector<DataValue>();
 	}
 
-	ExecutionFrame::ExecutionFrame(int _retIP, int _numRegs)
+	ExecutionFrame::ExecutionFrame(int _retIP, int _retSP, int _numRegs)
 	{
 		retIP = _retIP;
 		registers = std::vector<DataValue>(_numRegs);
@@ -46,20 +47,6 @@ namespace ramvm {
 		}
 		else { return ResultType::ERR_REG_IDX_OOB; }
 	}
-
-	ResultType ExecutionFrame::GetReturnDest(int _idx, Argument& _dest, ResultInfo& _info)
-	{
-		if (_idx < (int)retDests.size())
-		{
-			_dest = retDests[_idx];
-			return ResultType::SUCCESS;
-		}
-		else { return ResultType::ERR_RET_DEST_IDX_OOB; }
-	}
-
-	void ExecutionFrame::SetReturnDests(std::vector<Argument>& _dests) { retDests = _dests; }
-	int ExecutionFrame::GetRetIP() { return retIP; }
-
 
 	void ExecutionFrame::PrintRegisters()
 	{

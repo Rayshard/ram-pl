@@ -7,18 +7,16 @@ namespace ramvm {
 	{
 	private:
 		std::vector<DataValue> registers;
-		std::vector<Argument> retDests;
-		int retIP;
+		int retIP, retSP;
 
 	public:
 		ExecutionFrame();
-		ExecutionFrame(int _retIP, int _numRegs);
+		ExecutionFrame(int _retIP, int _retSP, int _numRegs);
 
 		ResultType ReadRegister(int _regIndex, DataVariant& _value, ResultInfo& _info);
 		ResultType WriteRegister(int _regIndex, DataVariant _value, ResultInfo& _info);
-		ResultType GetReturnDest(int _idx, Argument& _dest, ResultInfo& _info);
-		void SetReturnDests(std::vector<Argument>& _dests);
-		int GetRetIP();
+		int GetRetIP() { return retIP; }
+		int GetRetSP() { return retSP; }
 
 		void PrintRegisters();
 	};

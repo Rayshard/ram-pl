@@ -3,6 +3,10 @@
 #include "ramvm_parser.h"
 #include "ramvm_instruction.h"
 
+using ramvm::Argument;
+using ramvm::TypedArgument;
+using ramvm::InstrBinop;
+
 namespace ramc {
 	ASTNode::ASTNode(ASTNodeType _type, Position _pos)
 	{
@@ -288,7 +292,7 @@ namespace ramc {
 		}
 	}
 
-	ramvm::InstructionSet ASTBinopExpr::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTBinopExpr::GenerateCode(std::map<std::string, std::string> _params)
 	{
 		ramvm::InstructionSet instrs;
 
@@ -298,8 +302,8 @@ namespace ramc {
 		instrs.insert(instrs.end(), leftInstrs.begin(), leftInstrs.end());
 		instrs.insert(instrs.end(), rightInstrs.begin(), rightInstrs.end());
 
-		auto src1 = ramvm::Argument(ramvm::ArgType::SP_OFFSET, -1);
-		auto src2 = ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0);
+		auto src1 =  TypedArgument(DataType::INT, Argument(ramvm::ArgType::SP_OFFSET, -1));
+		auto src2 = TypedArgument(DataType::INT, Argument(ramvm::ArgType::SP_OFFSET, 0));
 
 		switch (op)
 		{
@@ -346,7 +350,7 @@ namespace ramc {
 
 		if (!dest.IsStackTop())
 		{
-			instrs.push_back(new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0), dest));
+			instrs.push_back(new ramvm::InstrMove(TypedArgument(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0)), dest));
 			instrs.push_back(new ramvm::InstrPop(ramvm::Argument(ramvm::ArgType::VALUE, 1), INT_SIZE));
 		}
 
@@ -432,7 +436,7 @@ namespace ramc {
 	ramvm::InstructionSet ASTUnopExpr::GenerateCode(std::map<std::string, std::string> _params)
 	{
 		ramvm::InstructionSet instrs = right->GenerateCode({ {"Dest", "[1]" } });
-		auto src = ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0);
+		auto src = TypedArgument(DataType::INT, Argument(ramvm::ArgType::SP_OFFSET, 0));
 		
 		switch (op)
 		{
@@ -451,7 +455,7 @@ namespace ramc {
 
 		if (!dest.IsStackTop())
 		{
-			instrs.push_back(new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0), dest));
+			instrs.push_back(new ramvm::InstrMove(TypedArgument(DataType::INT, ramvm::Argument(ramvm::ArgType::SP_OFFSET, 0)), dest));
 
 			//TODO gotta change the pop scale to be based on the return type of this unop
 			//This will require you to store the type during typechecking
@@ -493,7 +497,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue()), dest) };
+		return { new ramvm::InstrMove(TypedArgument(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue())), dest) };
 	}
 
 	ramvm::InstructionSet ASTFloatLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -501,7 +505,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
+		return { new ramvm::InstrMove(TypedArgument(DataType::FLOAT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue())), dest) };
 	}
 
 	ramvm::InstructionSet ASTStringLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -509,7 +513,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 0), dest) };
+		return { new ramvm::InstrMove(TypedArgument(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, 0)), dest) };
 	}
 
 	ramvm::InstructionSet ASTBoolLit::GenerateCode(std::map<std::string, std::string> _params)
@@ -517,7 +521,7 @@ namespace ramc {
 		auto dest = ramvm::Argument();
 		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, ramvm::Argument(ramvm::ArgType::VALUE, GetValue() ? 1 : 0), dest) };
+		return { new ramvm::InstrMove(TypedArgument(DataType::BYTE, ramvm::Argument(ramvm::ArgType::VALUE, (byte)(GetValue() ? 1 : 0))), dest) };
 	}
 #pragma endregion
 }

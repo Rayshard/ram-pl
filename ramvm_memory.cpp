@@ -197,75 +197,56 @@ namespace ramvm {
 
 	ResultType Memory::Read(int _addr, DataVariant& _value, ResultInfo& _info)
 	{
-		switch (_value.GetType())
+		if (_value.GetType() == DataType::BYTE)
 		{
-			case DataType::BYTE: {
-				if (IsAddress(_addr))
+			if (IsAddress(_addr))
+			{
+				for (auto const& itBlock : blocks)
 				{
-					for (auto const& itBlock : blocks)
+					int blockAddr = itBlock.first;
+					if (_addr >= blockAddr && _addr < blockAddr + itBlock.second.size)
 					{
-						int blockAddr = itBlock.first;
-						if (_addr >= blockAddr && _addr < blockAddr + itBlock.second.size)
+						if (!itBlock.second.free)
 						{
-							if (!itBlock.second.free)
-							{
-								_value = itBlock.second.data[_addr - blockAddr];
-								return ResultType::SUCCESS;
-							}
-							else { return ResultType::ERR_MEMREAD; }
+							_value.AsBytes()[0] = itBlock.second.data[_addr - blockAddr];
+							return ResultType::SUCCESS;
 						}
+						else { return ResultType::ERR_MEMREAD; }
 					}
-
-					return ResultType::ERR_MEMREAD;
 				}
-				else { return ResultType::ERR_MEMREAD; }
-			}
-			case DataType::INT: {
-				byte buffer[INT_SIZE];
-				ResultType result = ReadBuffer(_addr, INT_SIZE, buffer, _info);
 
-				if (IsErrorResult(result)) { return result; }
-				else
-				{
-					_value = BufferToDataValue(DataType::INT, buffer);
-					return ResultType::SUCCESS;
-				}
+				return ResultType::ERR_MEMREAD;
 			}
-			default: return ResultType::ERR_MEMREAD;
+			else { return ResultType::ERR_MEMREAD; }
 		}
+		else { return ReadBuffer(_addr, _value.GetSize(), _value.AsBytes(), _info); }
 	}
 
 	ResultType Memory::Write(int _addr, DataVariant _value, ResultInfo& _info)
 	{
-		switch (_value.GetType())
+		if (_value.GetType() == DataType::BYTE)
 		{
-			case DataType::BYTE: {
-				if (IsAddress(_addr))
+			if (IsAddress(_addr))
+			{
+				for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
 				{
-					for (auto itBlock = blocks.begin(); itBlock != blocks.end(); itBlock++)
+					int blockAddr = itBlock->first;
+					if (_addr >= blockAddr && _addr < blockAddr + itBlock->second.size)
 					{
-						int blockAddr = itBlock->first;
-						if (_addr >= blockAddr && _addr < blockAddr + itBlock->second.size)
+						if (!itBlock->second.free)
 						{
-							if (!itBlock->second.free)
-							{
-								itBlock->second.data[_addr - itBlock->first] = _value.AsByte();
-								return ResultType::SUCCESS;
-							}
-							else { return ResultType::ERR_MEMWRITE; }
+							itBlock->second.data[_addr - blockAddr] = _value.AsByte();
+							return ResultType::SUCCESS;
 						}
+						else { return ResultType::ERR_MEMWRITE; }
 					}
-
-					return ResultType::ERR_MEMWRITE;
 				}
-				else { return ResultType::ERR_MEMWRITE; }
+
+				return ResultType::ERR_MEMWRITE;
 			}
-			case DataType::INT: {
-				int val = _value.AsInt();
-				return WriteBuffer(_addr, INT_SIZE, (byte*)&val, _info);
-			}
-			default: return ResultType::ERR_MEMWRITE;
+			else { return ResultType::ERR_MEMWRITE; }
 		}
+		else { return WriteBuffer(_addr, _value.GetSize(), _value.AsBytes(), _info); }
 	}
 
 	Memory::Block::Block()

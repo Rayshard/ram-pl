@@ -4,6 +4,8 @@
 #include "ramvm_instruction.h"
 #include "ramvm_parser.h"
 
+using ramvm::InstructionSet;
+
 namespace ramc {
 	enum class ASTNodeType { PROGAM, LITERAL, BINOP_EXPR, UNOP_EXPR, IDENTIFIER };
 
@@ -30,7 +32,7 @@ namespace ramc {
 
 		virtual std::string ToString(int _indentLvl) = 0;
 		virtual TypeResult TypeCheck(Environment& _env) = 0;
-		virtual ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) = 0;
+		virtual InstructionSet GenerateCode(std::map<std::string, std::string> _params) = 0;
 
 		template<typename T> T* As() { return dynamic_cast<T*>(this); }
 	};
@@ -45,7 +47,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment& _env) override;
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
 
@@ -61,7 +63,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment& _env) override;
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
 
@@ -77,7 +79,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment& _env) override;
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
 
@@ -91,7 +93,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment& _env) override;
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
 
@@ -140,27 +142,27 @@ namespace ramc {
 			}
 		}
 
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override = 0;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override = 0;
 	};
 
 	struct ASTIntLit : public ASTLiteral<int> {
 		ASTIntLit(int _val, Position _pos) : ASTLiteral(LiteralType::INT, _val, _pos) { }
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 
 	struct ASTFloatLit : public ASTLiteral<float> {
 		ASTFloatLit(float _val, Position _pos) : ASTLiteral(LiteralType::FLOAT, _val, _pos) { }
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 
 	struct ASTStringLit : public ASTLiteral<std::string> {
 		ASTStringLit(std::string _val, Position _pos) : ASTLiteral(LiteralType::STRING, _val, _pos) {}
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 
 	struct ASTBoolLit : public ASTLiteral<bool> {
 		ASTBoolLit(bool _val, Position _pos) : ASTLiteral(LiteralType::BOOL, _val, _pos) {}
-		ramvm::InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
 }

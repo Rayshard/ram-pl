@@ -12,7 +12,7 @@ namespace ramvm {
 		switch (type)
 		{
 			case LexerResultType::SUCCESS: return "SUCCESS";
-			case LexerResultType::HEX_LIT_OOB: return prefix + "Hex value can have at most 16 digits: " + errString;
+			case LexerResultType::HEX_LIT_OOB: return prefix + "Literal Value Out Of Bounds: " + errString;
 			case LexerResultType::HEX_LIT_INVALID: return prefix + "Hex value must express a sequence of bytes: " + errString;
 			case LexerResultType::INVALID_REGISTER: return prefix + "Invalid Register: " + errString;
 			case LexerResultType::INVALID_REG_IDX: return prefix + "Invalid Register Index: " + errString;
@@ -72,36 +72,36 @@ namespace ramvm {
 	LexerResult LexKeyword(std::string _tokStr, Position _tokStartPos)
 	{
 		if (_tokStr == "HALT") { return LexerResult::GenSuccess(Token(TokenType::KW_HALT, _tokStartPos, "")); }
-		else if (_tokStr == "RET") { return LexerResult::GenSuccess(Token(TokenType::KW_RET, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("RET<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_RET, _tokStartPos, _tokStr.substr(3))); }
 		else if (_tokStr == "MALLOC") { return LexerResult::GenSuccess(Token(TokenType::KW_MALLOC, _tokStartPos, "")); }
 		else if (_tokStr == "FREE") { return LexerResult::GenSuccess(Token(TokenType::KW_FREE, _tokStartPos, "")); }
-		else if (_tokStr == "PUSH") { return LexerResult::GenSuccess(Token(TokenType::KW_PUSH, _tokStartPos, "")); }
-		else if (std::regex_match(_tokStr, std::regex("POP[IB]"))) { return LexerResult::GenSuccess(Token(TokenType::KW_POP, _tokStartPos, std::string(1, _tokStr.back()))); }
-		else if (_tokStr == "MOV") { return LexerResult::GenSuccess(Token(TokenType::KW_MOV, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("PUSH<[BIFDL]+>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_PUSH, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("POP<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_POP, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("MOV<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MOV, _tokStartPos, _tokStr.substr(3))); }
 		else if (_tokStr == "PRINT") { return LexerResult::GenSuccess(Token(TokenType::KW_PRINT, _tokStartPos, "")); }
 		else if (_tokStr == "JUMP") { return LexerResult::GenSuccess(Token(TokenType::KW_JUMP, _tokStartPos, "")); }
 		else if (_tokStr == "CJUMP") { return LexerResult::GenSuccess(Token(TokenType::KW_CJUMP, _tokStartPos, "")); }
-		else if (_tokStr == "CALL") { return LexerResult::GenSuccess(Token(TokenType::KW_CALL, _tokStartPos, "")); }
-		else if (_tokStr == "ADD") { return LexerResult::GenSuccess(Token(TokenType::KW_ADD, _tokStartPos, "")); }
-		else if (_tokStr == "SUB") { return LexerResult::GenSuccess(Token(TokenType::KW_SUB, _tokStartPos, "")); }
-		else if (_tokStr == "MUL") { return LexerResult::GenSuccess(Token(TokenType::KW_MUL, _tokStartPos, "")); }
-		else if (_tokStr == "DIV") { return LexerResult::GenSuccess(Token(TokenType::KW_DIV, _tokStartPos, "")); }
-		else if (_tokStr == "MOD") { return LexerResult::GenSuccess(Token(TokenType::KW_MOD, _tokStartPos, "")); }
-		else if (_tokStr == "LSHIFT") { return LexerResult::GenSuccess(Token(TokenType::KW_LSHIFT, _tokStartPos, "")); }
-		else if (_tokStr == "RSHIFT") { return LexerResult::GenSuccess(Token(TokenType::KW_RSHIFT, _tokStartPos, "")); }
-		else if (_tokStr == "LT") { return LexerResult::GenSuccess(Token(TokenType::KW_LT, _tokStartPos, "")); }
-		else if (_tokStr == "GT") { return LexerResult::GenSuccess(Token(TokenType::KW_GT, _tokStartPos, "")); }
-		else if (_tokStr == "LTEQ") { return LexerResult::GenSuccess(Token(TokenType::KW_LTEQ, _tokStartPos, "")); }
-		else if (_tokStr == "GTEQ") { return LexerResult::GenSuccess(Token(TokenType::KW_GTEQ, _tokStartPos, "")); }
-		else if (_tokStr == "EQ") { return LexerResult::GenSuccess(Token(TokenType::KW_EQ, _tokStartPos, "")); }
-		else if (_tokStr == "NEQ") { return LexerResult::GenSuccess(Token(TokenType::KW_NEQ, _tokStartPos, "")); }
-		else if (_tokStr == "BAND") { return LexerResult::GenSuccess(Token(TokenType::KW_BAND, _tokStartPos, "")); }
-		else if (_tokStr == "BOR") { return LexerResult::GenSuccess(Token(TokenType::KW_BOR, _tokStartPos, "")); }
-		else if (_tokStr == "BXOR") { return LexerResult::GenSuccess(Token(TokenType::KW_BXOR, _tokStartPos, "")); }
-		else if (_tokStr == "LAND") { return LexerResult::GenSuccess(Token(TokenType::KW_LAND, _tokStartPos, "")); }
-		else if (_tokStr == "LOR") { return LexerResult::GenSuccess(Token(TokenType::KW_LOR, _tokStartPos, "")); }
-		else if (_tokStr == "NEG") { return LexerResult::GenSuccess(Token(TokenType::KW_NEG, _tokStartPos, "")); }
-		else if (_tokStr == "LNOT") { return LexerResult::GenSuccess(Token(TokenType::KW_LNOT, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("CALL<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_CALL, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("ADD<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_ADD, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("SUB<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_SUB, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("MUL<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MUL, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("DIV<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_DIV, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("MOD<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MOD, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("LSHIFT<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LSHIFT, _tokStartPos, _tokStr.substr(6))); }
+		else if (std::regex_match(_tokStr, std::regex("RSHIFT<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_RSHIFT, _tokStartPos, _tokStr.substr(6))); }
+		else if (std::regex_match(_tokStr, std::regex("LT<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LT, _tokStartPos, _tokStr.substr(2))); }
+		else if (std::regex_match(_tokStr, std::regex("GT<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_GT, _tokStartPos, _tokStr.substr(2))); }
+		else if (std::regex_match(_tokStr, std::regex("LTEQ<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LTEQ, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("GTEQ<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_GTEQ, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("EQ<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_EQ, _tokStartPos, _tokStr.substr(2))); }
+		else if (std::regex_match(_tokStr, std::regex("NEQ<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_NEQ, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("BAND<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_BAND, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("BOR<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_BOR, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("BXOR<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_BXOR, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("LAND<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LAND, _tokStartPos, _tokStr.substr(4))); }
+		else if (std::regex_match(_tokStr, std::regex("LOR<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LOR, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("NEG<[BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_NEG, _tokStartPos, _tokStr.substr(3))); }
+		else if (std::regex_match(_tokStr, std::regex("LNOT<[BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_LNOT, _tokStartPos, _tokStr.substr(3))); }
 		else { return LexerResult::GenError(LexerResultType::INVALID, _tokStr, _tokStartPos); }
 	}
 
@@ -221,7 +221,7 @@ namespace ramvm {
 					else if (std::regex_match(tokenStr, REGEX_SP_OFFSET))
 					{
 						std::string idx = tokenStr.substr(1, tokenStr.length() - 2);
-						
+
 						if (IsInt(idx)) { return LexerResult::GenSuccess(Token(TokenType::SP_OFFSET, tokStartPos, idx)); }
 						else { return LexerResult::GenError(LexerResultType::INVALID_OFFSET, tokenStr, position); }
 					}
@@ -230,38 +230,41 @@ namespace ramvm {
 			}
 		}
 
+#pragma region Try Lex as Numeric Literal
 		if (std::regex_match(tokenStr, std::regex("-?0|[1-9][0-9]*")))
 		{
-			if (IsInt(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToHexString<int>(std::stoi(tokenStr)))); }
+			if (IsInt(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stoi(tokenStr)))); }
 			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, std::regex("(0|[1-9][0-9]*)b")))
 		{
-			if (IsByte(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToHexString<byte>((byte)std::stoul(tokenStr)))); }
+			if (IsByte(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, std::string(1, (byte)std::stoul(tokenStr)))); }
 			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)l")))
 		{
-			if (IsLong(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToHexString<long>(std::stol(tokenStr)))); }
+			if (IsLong(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stol(tokenStr)))); }
 			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?f")))
 		{
-			if (IsFloat(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToHexString<float>(std::stof(tokenStr)))); }
+			if (IsFloat(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stof(tokenStr)))); }
 			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?d")))
 		{
-			if (IsDouble(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToHexString<double>(std::stod(tokenStr)))); }
+			if (IsDouble(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stod(tokenStr)))); }
 			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, REGEX_HEX_LIT))
 		{
 			if (tokenStr.length() > 10) { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 			else if (tokenStr.length() % 2 == 1) { return LexerResult::GenError(LexerResultType::HEX_LIT_INVALID, tokenStr, tokStartPos); }
-			else { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, tokenStr)); }
+			else { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, HexToByteStr(tokenStr))); }
 		}
-		else if (std::regex_match(tokenStr, REGEX_SP)) { return LexerResult::GenSuccess(Token(TokenType::KW_SP, tokStartPos, "")); }
+#pragma endregion
+
+		if (std::regex_match(tokenStr, REGEX_SP)) { return LexerResult::GenSuccess(Token(TokenType::KW_SP, tokStartPos, "")); }
 		else { return LexKeyword(tokenStr, tokStartPos); }
 #pragma endregion
 	}
