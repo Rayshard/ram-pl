@@ -74,7 +74,7 @@
 				switch (token.type)
 				{
 					case TokenType::HEX_LIT: return Parser::make_TOK_HEX_LIT(DataValue((byte*)value.c_str(), value.length()));
-                    case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
+					case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
 					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG(std::stoi(value));
 					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
 					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
@@ -1027,7 +1027,7 @@ namespace ramvm { namespace bison {
 
   case 8:
 #line 173 "ramvm_grammar.yy"
-                                                                { yylhs.value.as < Instruction* > () = new InstrMove(TypedArgument(yystack_[2].value.as < DataType > (), yystack_[1].value.as < Argument > ()), yystack_[0].value.as < Argument > ()); }
+                                                                { yylhs.value.as < Instruction* > () = new InstrMove(yystack_[2].value.as < DataType > (), yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
 #line 1032 "ramvm_bison_parser.cpp"
     break;
 
@@ -1093,7 +1093,7 @@ namespace ramvm { namespace bison {
 
   case 19:
 #line 184 "ramvm_grammar.yy"
-                                                                { yylhs.value.as < Instruction* > () = new InstrUnop(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().first, TypedArgument(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second.first, yystack_[1].value.as < Argument > ()), TypedArgument(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second.second, yystack_[0].value.as < Argument > ())); }
+                                                                { yylhs.value.as < Instruction* > () = new InstrUnop(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().first, TypedArgument(std::get<0>(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second), yystack_[1].value.as < Argument > ()), TypedArgument(std::get<1>(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second), yystack_[0].value.as < Argument > ())); }
 #line 1098 "ramvm_bison_parser.cpp"
     break;
 
@@ -1285,19 +1285,19 @@ namespace ramvm { namespace bison {
 
   case 51:
 #line 230 "ramvm_grammar.yy"
-                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::NEG, yystack_[0].value.as < DataTypeDouble > () }; }
+                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::NEG, yystack_[0].value.as < DataTypeDouble > ()); }
 #line 1290 "ramvm_bison_parser.cpp"
     break;
 
   case 52:
 #line 231 "ramvm_grammar.yy"
-                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::LOG_NOT, yystack_[0].value.as < DataTypeDouble > () }; }
+                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::LOG_NOT, yystack_[0].value.as < DataTypeDouble > ()); }
 #line 1296 "ramvm_bison_parser.cpp"
     break;
 
   case 53:
 #line 232 "ramvm_grammar.yy"
-                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::BIN_NOT, yystack_[0].value.as < DataTypeDouble > () }; }
+                        { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::BIN_NOT, yystack_[0].value.as < DataTypeDouble > ()); }
 #line 1302 "ramvm_bison_parser.cpp"
     break;
 

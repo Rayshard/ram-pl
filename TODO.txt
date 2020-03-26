@@ -1,5 +1,1 @@
-Completed:
--Implement POW Binop, BNOT Unop
--Implement ToString for the rest of the vm instructions
--Fix position argument of parser
--Create single lexer, and token class
+-Get rid of TypedArgument and make the DataValue in Argument a DataVariant

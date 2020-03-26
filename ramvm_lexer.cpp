@@ -188,34 +188,19 @@ namespace ramvm {
 #pragma region Try Lex as Numeric Literal
 		if (std::regex_match(tokenStr, std::regex("-?0|[1-9][0-9]*")))
 		{
-			if (IsInt(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stoi(tokenStr)))); }
-			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
+			try { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stoll(tokenStr)))); }
+			catch (...) { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
-		else if (std::regex_match(tokenStr, std::regex("(0|[1-9][0-9]*)b")))
+		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)(d|(\\.[0-9]+))")))
 		{
-			if (IsByte(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, std::string(1, (byte)std::stoul(tokenStr)))); }
-			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
-		}
-		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)l")))
-		{
-			if (IsLong(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stol(tokenStr)))); }
-			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
-		}
-		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?f")))
-		{
-			if (IsFloat(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stof(tokenStr)))); }
-			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
-		}
-		else if (std::regex_match(tokenStr, std::regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?d")))
-		{
-			if (IsDouble(tokenStr)) { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stod(tokenStr)))); }
-			else { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
+			try { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, ToByteString(std::stod(tokenStr)))); }
+			catch (...) { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 		}
 		else if (std::regex_match(tokenStr, REGEX_HEX_LIT))
 		{
-			if (tokenStr.length() > 10) { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
+			if (tokenStr.length() > LONG_SIZE * 2 + 2) { return LexerResult::GenError(LexerResultType::HEX_LIT_OOB, tokenStr, tokStartPos); }
 			else if (tokenStr.length() % 2 == 1) { return LexerResult::GenError(LexerResultType::HEX_LIT_INVALID, tokenStr, tokStartPos); }
-			else { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, HexToByteStr(tokenStr))); }
+			else { return LexerResult::GenSuccess(Token(TokenType::HEX_LIT, tokStartPos, HexToByteStr(tokenStr) + std::string((LONG_SIZE - ((tokenStr.length() >> 1) - 1)), '\0'))); }
 		}
 #pragma endregion
 

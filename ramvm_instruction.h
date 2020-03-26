@@ -28,13 +28,14 @@ namespace ramvm {
 		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, 1); }
 	};
 
-	struct TypedArgument {
-		DataType type;
-		Argument arg;
+	struct TypedArgument : Argument {
+		DataType dataType;
 
-		TypedArgument() : type(DataType::UNKNOWN), arg(Argument()) { }
-		TypedArgument(DataType _type, Argument _arg) : type(_type), arg(_arg) { }
-		std::string ToString() { return DataTypeToString(type) + ": " + arg.ToString(); }
+		TypedArgument() = default;
+		TypedArgument(DataType _dataType, ArgType _type, DataValue _val)
+			: Argument(_type, _val), dataType(_dataType) { }
+		TypedArgument(DataType _dataType, Argument _arg)
+			: Argument(_arg.type, _arg.value), dataType(_dataType) { }
 	};
 
 	enum class Binop {
@@ -72,13 +73,14 @@ namespace ramvm {
 
 #pragma region Move
 	struct InstrMove : Instruction {
-		TypedArgument src;
+		DataType dataType;
+		Argument src;
 		Argument dest;
 
-		InstrMove(TypedArgument _src, Argument _dest);
+		InstrMove(DataType _dataType, Argument _src, Argument _dest);
 
 		std::string ToString() override { return "MOV " + src.ToString() + " " + dest.ToString(); }
-		std::string ToOutput() override { return "MOV<" + std::to_string(DataTypeToChar(src.type)) + "> " + src.arg.ToString() + " " + dest.ToString(); }
+		std::string ToOutput() override { return "MOV<" + std::string(1, DataTypeToChar(dataType)) + "> " + src.ToString() + " " + dest.ToString(); }
 	};
 #pragma endregion
 
@@ -86,6 +88,7 @@ namespace ramvm {
 	struct InstrBinop : Instruction {
 		Binop op;
 		TypedArgument src1, src2, dest;
+
 
 		InstrBinop(Binop _op, TypedArgument _src1, TypedArgument _src2, TypedArgument _dest);
 		std::string ToString() override;
@@ -212,20 +215,20 @@ namespace ramvm {
 		int scale;
 
 		InstrPop(DataType _type, Argument _amt);
-		
+
 		constexpr DataType GetDataType()
 		{
 			switch (scale)
 			{
 				case BYTE_SIZE: return DataType::BYTE;
 				case INT_SIZE: return DataType::INT;
-				case DOUBLE_SIZE: return DataType::LONG;
+				case LONG_SIZE: return DataType::LONG;
 				default: return DataType::UNKNOWN;
 			}
 		}
 
 		std::string ToString() override { return "POP " + amt.ToString(); }
-		std::string ToOutput() override { return "POP<" + std::to_string(DataTypeToChar(GetDataType())) + ">" + amt.ToString(); }
+		std::string ToOutput() override { return "POP<" + std::string(1, DataTypeToChar(GetDataType())) + ">" + amt.ToString(); }
 	};
 #pragma endregion
 }

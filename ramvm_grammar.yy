@@ -52,7 +52,7 @@
 				switch (token.type)
 				{
 					case TokenType::HEX_LIT: return Parser::make_TOK_HEX_LIT(DataValue((byte*)value.c_str(), value.length()));
-                    case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
+					case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
 					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG(std::stoi(value));
 					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
 					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
@@ -170,7 +170,7 @@ STMTS:
 STMT:
 		"HALT"								{ $$ = new InstrHalt(); }
 	|	"RET" ARGUMENTS						{ $$ = new InstrReturn(BindArgDataTypes($1, $2)); }
-	|	"MOV" ARGUMENT DEST_ARG				{ $$ = new InstrMove(TypedArgument($1, $2), $3); }
+	|	"MOV" ARGUMENT DEST_ARG				{ $$ = new InstrMove($1, $2, $3); }
 	|	"MALLOC" ARGUMENT DEST_ARG			{ $$ = new InstrMalloc($2, $3); }
 	|	"FREE" ARGUMENT						{ $$ = new InstrFree($2); }
 	|	"PRINT" ARGUMENT ARGUMENT			{ $$ = new InstrPrint($2, $3); }
@@ -181,7 +181,7 @@ STMT:
 	|	"POP" ARGUMENT						{ $$ = new InstrPop($1, $2); }
 	|	"STORE" ARGUMENTS DEST_ARG 			{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
 	|	BINOP ARGUMENT ARGUMENT DEST_ARG	{ $$ = new InstrBinop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3), TypedArgument(std::get<2>($1.second), $4)); }
-	|	UNOP ARGUMENT DEST_ARG				{ $$ = new InstrUnop($1.first, TypedArgument($1.second.first, $2), TypedArgument($1.second.second, $3)); }
+	|	UNOP ARGUMENT DEST_ARG				{ $$ = new InstrUnop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3)); }
 ;
 
 ARGUMENTS:
@@ -227,9 +227,9 @@ BINOP:
 	|	"NEQ"		{ $$ = { Binop::NEQ, $1 }; }
 
 UNOP:
-		"NEG"	{ $$ = { Unop::NEG, $1 }; }
-	|	"LNOT"	{ $$ = { Unop::LOG_NOT, $1 }; }
-	|	"BNOT"	{ $$ = { Unop::BIN_NOT, $1 }; }
+		"NEG"	{ $$ = std::make_pair(Unop::NEG, $1); }
+	|	"LNOT"	{ $$ = std::make_pair(Unop::LOG_NOT, $1); }
+	|	"BNOT"	{ $$ = std::make_pair(Unop::BIN_NOT, $1); }
 ;
 
 %%

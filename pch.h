@@ -24,6 +24,7 @@ struct Position
 };
 
 typedef unsigned char byte;
+typedef long long rLong;
 
 #define BYTE_SIZE 1
 #define INT_SIZE 4
@@ -54,7 +55,7 @@ union DataValue
 	int i;
 	float f;
 	double d;
-	long l;
+	rLong l;
 
 	byte bytes[LONG_SIZE];
 
@@ -63,7 +64,7 @@ union DataValue
 	DataValue(int _val) { i = _val; }
 	DataValue(float _val) { f = _val; }
 	DataValue(double _val) { d = _val; }
-	DataValue(long _val) { l = _val; }
+	DataValue(rLong _val) { l = _val; }
 	DataValue(byte* _bytes, int _length) { memcpy(bytes, _bytes, (int)fmin(LONG_SIZE, _length)); }
 };
 
@@ -79,7 +80,7 @@ public:
 	DataVariant(int _value) : type(DataType::INT) { value.i = _value; }
 	DataVariant(float _value) : type(DataType::FLOAT) { value.f = _value; }
 	DataVariant(double _value) : type(DataType::DOUBLE) { value.d = _value; }
-	DataVariant(long _value) : type(DataType::LONG) { value.l = _value; }
+	DataVariant(rLong _value) : type(DataType::LONG) { value.l = _value; }
 	DataVariant(const DataVariant& _org) : type(_org.type), value(_org.value) { }
 
 	int GetSize() { return GetDataTypeSize(type); }
@@ -103,7 +104,7 @@ public:
 	int I() { return value.i; }
 	float F() { return value.f; }
 	double D() { return value.d; }
-	long L() { return value.l; }
+	rLong L() { return value.l; }
 	byte* Bytes() { return value.bytes; }
 	template<typename T> T To()
 	{
@@ -125,7 +126,7 @@ public:
 			case DataType::INT: return DataVariant(To<int>());
 			case DataType::FLOAT: return DataVariant(To<float>());
 			case DataType::DOUBLE: return DataVariant(To<double>());
-			case DataType::LONG: return DataVariant(To<long>());
+			case DataType::LONG: return DataVariant(To<rLong>());
 			default: return DataVariant();
 		}
 	}
@@ -190,11 +191,7 @@ inline std::string CreateIndent(int _indentLvl) { return std::string(_indentLvl 
 inline constexpr int ConcatTriple(byte _fst, byte _snd, byte _thr) { return (int(_fst) << 16) | (int(_snd) << 8) | _thr; }
 inline constexpr int ConcatDouble(byte _fst, byte _snd) { return (int(_fst) << 8) | _snd; }
 
-inline bool IsByte(std::string _str) { try { return std::stoul(_str) <= 255; } catch (...) { return false; } }
 inline bool IsInt(std::string _str) { try { IGNORE(std::stoi(_str)); return true; } catch (...) { return false; } }
-inline bool IsLong(std::string _str) { try { IGNORE(std::stol(_str)); return true; } catch (...) { return false; } }
-inline bool IsFloat(std::string _str) { try { IGNORE(std::stof(_str)); return true; } catch (...) { return false; } }
-inline bool IsDouble(std::string _str) { try { IGNORE(std::stod(_str)); return true; } catch (...) { return false; } }
 
 #include "ramvm_util.h"
 

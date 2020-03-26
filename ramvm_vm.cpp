@@ -30,9 +30,9 @@ namespace ramvm {
 				case InstructionType::MOVE: {
 					InstrMove* instr = (InstrMove*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					DataVariant movVal(instr->src.type);
+					DataVariant movVal(instr->dataType);
 
-					resType = ReadFromSrcArg(execFrame, instr->src.arg, movVal, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src, movVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -129,10 +129,10 @@ namespace ramvm {
 						for (int i = 0; i < (int)instr->srcs.size(); i++)
 						{
 							TypedArgument src = instr->srcs[i];
-							DataVariant retVal(src.type);
+							DataVariant retVal(src.dataType);
 
 							//Read from current exec frame
-							resType = ReadFromSrcArg(execFrame, src.arg, retVal, _info);
+							resType = ReadFromSrcArg(execFrame, src, retVal, _info);
 							if (IsErrorResult(resType)) { return resType; }
 							else { retBuffer.insert(retBuffer.begin(), retVal.Bytes(), retVal.Bytes() + retVal.GetSize()); }
 						}
@@ -160,10 +160,10 @@ namespace ramvm {
 					for (int i = (int)instr->argSrcs.size() - 1; i >= 0; i--)
 					{
 						TypedArgument src = instr->argSrcs[i];
-						DataVariant argVal(src.type);
+						DataVariant argVal(src.dataType);
 
 						//Read from current exec frame
-						resType = ReadFromSrcArg(execFrame, src.arg, argVal, _info);
+						resType = ReadFromSrcArg(execFrame, src, argVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
@@ -179,14 +179,14 @@ namespace ramvm {
 				case InstructionType::BINOP: {
 					InstrBinop* instr = (InstrBinop*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					DataVariant val1(instr->src1.type), val2(instr->src2.type);
+					DataVariant val1(instr->src1.dataType), val2(instr->src2.dataType);
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr->src1.arg, val1, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src1, val1, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					resType = ReadFromSrcArg(execFrame, instr->src2.arg, val2, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src2, val2, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -195,19 +195,19 @@ namespace ramvm {
 
 					resType = DoBinop(instr->op, val1, val2, resVal);
 					if (IsErrorResult(resType)) { return resType; }
-					else { resVal = resVal.To(instr->dest.type); } //Set the type for the result
+					else { resVal = resVal.To(instr->dest.dataType); } //Set the type for the result
 
-					resType = WriteToDestArg(execFrame, instr->dest.arg, resVal, _info);
+					resType = WriteToDestArg(execFrame, instr->dest, resVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
 				case InstructionType::UNOP: {
 					InstrUnop* instr = (InstrUnop*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					DataVariant val(instr->src.type);
+					DataVariant val(instr->src.dataType);
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr->src.arg, val, _info);
+					resType = ReadFromSrcArg(execFrame, instr->src, val, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -216,7 +216,7 @@ namespace ramvm {
 
 					resType = DoUnop(instr->op, val, resVal);
 					if (IsErrorResult(resType)) { return resType; }
-					else { resVal = resVal.To(instr->dest.type); }
+					else { resVal = resVal.To(instr->dest.dataType); }
 
 					if (IsErrorResult(resType))
 						return resType;
@@ -230,10 +230,10 @@ namespace ramvm {
 					for (int i = 0; i < (int)instr->srcs.size(); i++)
 					{
 						TypedArgument src = instr->srcs[i];
-						DataVariant storeVal(src.type);
+						DataVariant storeVal(src.dataType);
 
 						//Read Value
-						resType = ReadFromSrcArg(execFrame, src.arg, storeVal, _info);
+						resType = ReadFromSrcArg(execFrame, src, storeVal, _info);
 						if (IsErrorResult(resType)) { return resType; }
 						else { buffer.insert(buffer.end(), storeVal.Bytes(), storeVal.Bytes() + storeVal.GetSize()); }
 					}
@@ -259,10 +259,10 @@ namespace ramvm {
 					for (int i = 0; i < (int)instr->srcs.size(); i++)
 					{
 						TypedArgument src = instr->srcs[i];
-						DataVariant pushVal(src.type);
+						DataVariant pushVal(src.dataType);
 
 						//Read Value
-						resType = ReadFromSrcArg(execFrame, src.arg, pushVal, _info);
+						resType = ReadFromSrcArg(execFrame, src, pushVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
