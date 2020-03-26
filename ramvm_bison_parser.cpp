@@ -34,10 +34,10 @@
 // are private implementation details.  Do not rely on them.
 
 // "%code top" blocks.
-#line 11 "ramvm_grammar.yy"
+#line 13 "ramvm_grammar.yy"
 
-  #include "pch.h"
-  #include "ramvm_lexer.h"
+	#include "pch.h"
+	#include "ramvm_lexer.h"
 
 #line 43 "ramvm_bison_parser.cpp"
 
@@ -48,7 +48,7 @@
 
 
 // Unqualified %code blocks.
-#line 28 "ramvm_grammar.yy"
+#line 30 "ramvm_grammar.yy"
 
     namespace ramvm {
 		namespace bison {
@@ -67,7 +67,7 @@
 					throw std::runtime_error(readRes.ToString(false));
 				}
 
-				Token token = readRes.GetToken();
+				Token token = readRes.GetValue();
                 std::string value = token.value;
 				_pos = token.position;
 
@@ -197,6 +197,47 @@ namespace ramvm { namespace bison {
 #line 198 "ramvm_bison_parser.cpp"
 
 
+  /* Return YYSTR after stripping away unnecessary quotes and
+     backslashes, so that it's suitable for yyerror.  The heuristic is
+     that double-quoting is unnecessary unless the string contains an
+     apostrophe, a comma, or backslash (other than backslash-backslash).
+     YYSTR is taken from yytname.  */
+  std::string
+  Parser::yytnamerr_ (const char *yystr)
+  {
+    if (*yystr == '"')
+      {
+        std::string yyr;
+        char const *yyp = yystr;
+
+        for (;;)
+          switch (*++yyp)
+            {
+            case '\'':
+            case ',':
+              goto do_not_strip_quotes;
+
+            case '\\':
+              if (*++yyp != '\\')
+                goto do_not_strip_quotes;
+              else
+                goto append;
+
+            append:
+            default:
+              yyr += *yyp;
+              break;
+
+            case '"':
+              return yyr;
+            }
+      do_not_strip_quotes: ;
+      }
+
+    return yystr;
+  }
+
+
   /// Build a parser object.
   Parser::Parser (Lexer& lexer_yyarg, std::vector<Instruction*>& result_yyarg, Position& position_yyarg, std::map<std::string, int>& labels_yyarg, std::map<Instruction*, std::pair<std::string, Position>>& ctrlInstrs_yyarg)
 #if YYDEBUG
@@ -205,6 +246,7 @@ namespace ramvm { namespace bison {
 #else
     :
 #endif
+      yy_lac_established_ (false),
       lexer (lexer_yyarg),
       result (result_yyarg),
       position (position_yyarg),
@@ -751,6 +793,10 @@ namespace ramvm { namespace bison {
     /// The return value of parse ().
     int yyresult;
 
+    /// Discard the LAC context in case there still is one left from a
+    /// previous invocation.
+    yy_lac_discard_ ("init");
+
 #if YY_EXCEPTIONS
     try
 #endif // YY_EXCEPTIONS
@@ -814,6 +860,8 @@ namespace ramvm { namespace bison {
     yyn += yyla.type_get ();
     if (yyn < 0 || yylast_ < yyn || yycheck_[yyn] != yyla.type_get ())
       {
+        if (!yy_lac_establish_ (yyla.type_get ()))
+           goto yyerrlab;
         goto yydefault;
       }
 
@@ -823,6 +871,9 @@ namespace ramvm { namespace bison {
       {
         if (yy_table_value_is_error_ (yyn))
           goto yyerrlab;
+        if (!yy_lac_establish_ (yyla.type_get ()))
+           goto yyerrlab;
+
         yyn = -yyn;
         goto yyreduce;
       }
@@ -833,6 +884,7 @@ namespace ramvm { namespace bison {
 
     // Shift the lookahead token.
     yypush_ ("Shifting", static_cast<state_type> (yyn), YY_MOVE (yyla));
+    yy_lac_discard_ ("shift");
     goto yynewstate;
 
 
@@ -950,307 +1002,307 @@ namespace ramvm { namespace bison {
           switch (yyn)
             {
   case 4:
-#line 164 "ramvm_grammar.yy"
+#line 166 "ramvm_grammar.yy"
                                         { result.push_back(yystack_[0].value.as < Instruction* > ()); }
-#line 956 "ramvm_bison_parser.cpp"
+#line 1008 "ramvm_bison_parser.cpp"
     break;
 
   case 5:
-#line 165 "ramvm_grammar.yy"
+#line 167 "ramvm_grammar.yy"
                                 { labels.find(yystack_[0].value.as < std::string > ()) == labels.end() ? labels.insert_or_assign(yystack_[0].value.as < std::string > (), result.size()) : throw std::runtime_error("Duplicate Label: " + yystack_[0].value.as < std::string > ()); }
-#line 962 "ramvm_bison_parser.cpp"
+#line 1014 "ramvm_bison_parser.cpp"
     break;
 
   case 6:
-#line 169 "ramvm_grammar.yy"
+#line 171 "ramvm_grammar.yy"
                                                                                 { yylhs.value.as < Instruction* > () = new InstrHalt(); }
-#line 968 "ramvm_bison_parser.cpp"
+#line 1020 "ramvm_bison_parser.cpp"
     break;
 
   case 7:
-#line 170 "ramvm_grammar.yy"
+#line 172 "ramvm_grammar.yy"
                                                                         { yylhs.value.as < Instruction* > () = new InstrReturn(BindArgDataTypes(yystack_[1].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); }
-#line 974 "ramvm_bison_parser.cpp"
+#line 1026 "ramvm_bison_parser.cpp"
     break;
 
   case 8:
-#line 171 "ramvm_grammar.yy"
+#line 173 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrMove(TypedArgument(yystack_[2].value.as < DataType > (), yystack_[1].value.as < Argument > ()), yystack_[0].value.as < Argument > ()); }
-#line 980 "ramvm_bison_parser.cpp"
+#line 1032 "ramvm_bison_parser.cpp"
     break;
 
   case 9:
-#line 172 "ramvm_grammar.yy"
+#line 174 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrMalloc(yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 986 "ramvm_bison_parser.cpp"
+#line 1038 "ramvm_bison_parser.cpp"
     break;
 
   case 10:
-#line 173 "ramvm_grammar.yy"
+#line 175 "ramvm_grammar.yy"
                                                                         { yylhs.value.as < Instruction* > () = new InstrFree(yystack_[0].value.as < Argument > ()); }
-#line 992 "ramvm_bison_parser.cpp"
+#line 1044 "ramvm_bison_parser.cpp"
     break;
 
   case 11:
-#line 174 "ramvm_grammar.yy"
+#line 176 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrPrint(yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 998 "ramvm_bison_parser.cpp"
+#line 1050 "ramvm_bison_parser.cpp"
     break;
 
   case 12:
-#line 175 "ramvm_grammar.yy"
+#line 177 "ramvm_grammar.yy"
                                                                         { yylhs.value.as < Instruction* > () = new InstrJump(-1); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[0].value.as < std::string > (), position)); }
-#line 1004 "ramvm_bison_parser.cpp"
+#line 1056 "ramvm_bison_parser.cpp"
     break;
 
   case 13:
-#line 176 "ramvm_grammar.yy"
+#line 178 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrCJump(-1, yystack_[0].value.as < Argument > ()); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[1].value.as < std::string > (), position)); }
-#line 1010 "ramvm_bison_parser.cpp"
+#line 1062 "ramvm_bison_parser.cpp"
     break;
 
   case 14:
-#line 177 "ramvm_grammar.yy"
+#line 179 "ramvm_grammar.yy"
                                                         { yylhs.value.as < Instruction* > () = new InstrCall(-1, yystack_[1].value.as < DataValue > ().i, BindArgDataTypes(yystack_[3].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[2].value.as < std::string > (), position)); }
-#line 1016 "ramvm_bison_parser.cpp"
+#line 1068 "ramvm_bison_parser.cpp"
     break;
 
   case 15:
-#line 178 "ramvm_grammar.yy"
+#line 180 "ramvm_grammar.yy"
                                                                         { yylhs.value.as < Instruction* > () = new InstrPush(BindArgDataTypes(yystack_[1].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); }
-#line 1022 "ramvm_bison_parser.cpp"
+#line 1074 "ramvm_bison_parser.cpp"
     break;
 
   case 16:
-#line 179 "ramvm_grammar.yy"
+#line 181 "ramvm_grammar.yy"
                                                                         { yylhs.value.as < Instruction* > () = new InstrPop(yystack_[1].value.as < DataType > (), yystack_[0].value.as < Argument > ()); }
-#line 1028 "ramvm_bison_parser.cpp"
+#line 1080 "ramvm_bison_parser.cpp"
     break;
 
   case 17:
-#line 180 "ramvm_grammar.yy"
+#line 182 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = yystack_[2].value.as < std::vector<DataType> > ().size() != 0 ? new InstrStore(BindArgDataTypes(yystack_[2].value.as < std::vector<DataType> > (), yystack_[1].value.as < std::vector<Argument> > ()), yystack_[0].value.as < Argument > ()) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
-#line 1034 "ramvm_bison_parser.cpp"
+#line 1086 "ramvm_bison_parser.cpp"
     break;
 
   case 18:
-#line 181 "ramvm_grammar.yy"
+#line 183 "ramvm_grammar.yy"
                                                         { yylhs.value.as < Instruction* > () = new InstrBinop(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().first, TypedArgument(std::get<0>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[2].value.as < Argument > ()), TypedArgument(std::get<1>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[1].value.as < Argument > ()), TypedArgument(std::get<2>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[0].value.as < Argument > ())); }
-#line 1040 "ramvm_bison_parser.cpp"
+#line 1092 "ramvm_bison_parser.cpp"
     break;
 
   case 19:
-#line 182 "ramvm_grammar.yy"
+#line 184 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrUnop(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().first, TypedArgument(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second.first, yystack_[1].value.as < Argument > ()), TypedArgument(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second.second, yystack_[0].value.as < Argument > ())); }
-#line 1046 "ramvm_bison_parser.cpp"
+#line 1098 "ramvm_bison_parser.cpp"
     break;
 
   case 20:
-#line 186 "ramvm_grammar.yy"
+#line 188 "ramvm_grammar.yy"
                                                 { yylhs.value.as < std::vector<Argument> > () = { }; }
-#line 1052 "ramvm_bison_parser.cpp"
+#line 1104 "ramvm_bison_parser.cpp"
     break;
 
   case 21:
-#line 187 "ramvm_grammar.yy"
+#line 189 "ramvm_grammar.yy"
                                     { yystack_[1].value.as < std::vector<Argument> > ().push_back(yystack_[0].value.as < Argument > ()); yylhs.value.as < std::vector<Argument> > () = yystack_[1].value.as < std::vector<Argument> > (); }
-#line 1058 "ramvm_bison_parser.cpp"
+#line 1110 "ramvm_bison_parser.cpp"
     break;
 
   case 22:
-#line 191 "ramvm_grammar.yy"
+#line 193 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::VALUE, yystack_[0].value.as < DataValue > ()); }
-#line 1064 "ramvm_bison_parser.cpp"
+#line 1116 "ramvm_bison_parser.cpp"
     break;
 
   case 23:
-#line 192 "ramvm_grammar.yy"
+#line 194 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::REGISTER, yystack_[0].value.as < int > ()); }
-#line 1070 "ramvm_bison_parser.cpp"
+#line 1122 "ramvm_bison_parser.cpp"
     break;
 
   case 24:
-#line 193 "ramvm_grammar.yy"
+#line 195 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::MEM_REG, yystack_[0].value.as < int > ()); }
-#line 1076 "ramvm_bison_parser.cpp"
+#line 1128 "ramvm_bison_parser.cpp"
     break;
 
   case 25:
-#line 194 "ramvm_grammar.yy"
+#line 196 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_REG, yystack_[0].value.as < int > ()); }
-#line 1082 "ramvm_bison_parser.cpp"
+#line 1134 "ramvm_bison_parser.cpp"
     break;
 
   case 26:
-#line 195 "ramvm_grammar.yy"
+#line 197 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_PTR, 0); }
-#line 1088 "ramvm_bison_parser.cpp"
+#line 1140 "ramvm_bison_parser.cpp"
     break;
 
   case 27:
-#line 196 "ramvm_grammar.yy"
+#line 198 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::SP_OFFSET, yystack_[0].value.as < int > ()); }
-#line 1094 "ramvm_bison_parser.cpp"
+#line 1146 "ramvm_bison_parser.cpp"
     break;
 
   case 28:
-#line 200 "ramvm_grammar.yy"
+#line 202 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::REGISTER, yystack_[0].value.as < int > ()); }
-#line 1100 "ramvm_bison_parser.cpp"
+#line 1152 "ramvm_bison_parser.cpp"
     break;
 
   case 29:
-#line 201 "ramvm_grammar.yy"
+#line 203 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::MEM_REG, yystack_[0].value.as < int > ()); }
-#line 1106 "ramvm_bison_parser.cpp"
+#line 1158 "ramvm_bison_parser.cpp"
     break;
 
   case 30:
-#line 202 "ramvm_grammar.yy"
+#line 204 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_REG, yystack_[0].value.as < int > ()); }
-#line 1112 "ramvm_bison_parser.cpp"
+#line 1164 "ramvm_bison_parser.cpp"
     break;
 
   case 31:
-#line 203 "ramvm_grammar.yy"
+#line 205 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::SP_OFFSET, yystack_[0].value.as < int > ()); }
-#line 1118 "ramvm_bison_parser.cpp"
+#line 1170 "ramvm_bison_parser.cpp"
     break;
 
   case 32:
-#line 207 "ramvm_grammar.yy"
+#line 209 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::ADD, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1124 "ramvm_bison_parser.cpp"
+#line 1176 "ramvm_bison_parser.cpp"
     break;
 
   case 33:
-#line 208 "ramvm_grammar.yy"
+#line 210 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::SUB, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1130 "ramvm_bison_parser.cpp"
+#line 1182 "ramvm_bison_parser.cpp"
     break;
 
   case 34:
-#line 209 "ramvm_grammar.yy"
+#line 211 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::MUL, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1136 "ramvm_bison_parser.cpp"
+#line 1188 "ramvm_bison_parser.cpp"
     break;
 
   case 35:
-#line 210 "ramvm_grammar.yy"
+#line 212 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::DIV, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1142 "ramvm_bison_parser.cpp"
+#line 1194 "ramvm_bison_parser.cpp"
     break;
 
   case 36:
-#line 211 "ramvm_grammar.yy"
+#line 213 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::MOD, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1148 "ramvm_bison_parser.cpp"
+#line 1200 "ramvm_bison_parser.cpp"
     break;
 
   case 37:
-#line 212 "ramvm_grammar.yy"
+#line 214 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::POW, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1154 "ramvm_bison_parser.cpp"
+#line 1206 "ramvm_bison_parser.cpp"
     break;
 
   case 38:
-#line 213 "ramvm_grammar.yy"
+#line 215 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LSHIFT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1160 "ramvm_bison_parser.cpp"
+#line 1212 "ramvm_bison_parser.cpp"
     break;
 
   case 39:
-#line 214 "ramvm_grammar.yy"
+#line 216 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::RSHIFT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1166 "ramvm_bison_parser.cpp"
+#line 1218 "ramvm_bison_parser.cpp"
     break;
 
   case 40:
-#line 215 "ramvm_grammar.yy"
+#line 217 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_AND, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1172 "ramvm_bison_parser.cpp"
+#line 1224 "ramvm_bison_parser.cpp"
     break;
 
   case 41:
-#line 216 "ramvm_grammar.yy"
+#line 218 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_OR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1178 "ramvm_bison_parser.cpp"
+#line 1230 "ramvm_bison_parser.cpp"
     break;
 
   case 42:
-#line 217 "ramvm_grammar.yy"
+#line 219 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_XOR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1184 "ramvm_bison_parser.cpp"
+#line 1236 "ramvm_bison_parser.cpp"
     break;
 
   case 43:
-#line 218 "ramvm_grammar.yy"
+#line 220 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LOG_AND, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1190 "ramvm_bison_parser.cpp"
+#line 1242 "ramvm_bison_parser.cpp"
     break;
 
   case 44:
-#line 219 "ramvm_grammar.yy"
+#line 221 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LOG_OR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1196 "ramvm_bison_parser.cpp"
+#line 1248 "ramvm_bison_parser.cpp"
     break;
 
   case 45:
-#line 220 "ramvm_grammar.yy"
+#line 222 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1202 "ramvm_bison_parser.cpp"
+#line 1254 "ramvm_bison_parser.cpp"
     break;
 
   case 46:
-#line 221 "ramvm_grammar.yy"
+#line 223 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::GT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1208 "ramvm_bison_parser.cpp"
+#line 1260 "ramvm_bison_parser.cpp"
     break;
 
   case 47:
-#line 222 "ramvm_grammar.yy"
+#line 224 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LTEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1214 "ramvm_bison_parser.cpp"
+#line 1266 "ramvm_bison_parser.cpp"
     break;
 
   case 48:
-#line 223 "ramvm_grammar.yy"
+#line 225 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::GTEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1220 "ramvm_bison_parser.cpp"
+#line 1272 "ramvm_bison_parser.cpp"
     break;
 
   case 49:
-#line 224 "ramvm_grammar.yy"
+#line 226 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::EQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1226 "ramvm_bison_parser.cpp"
+#line 1278 "ramvm_bison_parser.cpp"
     break;
 
   case 50:
-#line 225 "ramvm_grammar.yy"
+#line 227 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::NEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1232 "ramvm_bison_parser.cpp"
+#line 1284 "ramvm_bison_parser.cpp"
     break;
 
   case 51:
-#line 228 "ramvm_grammar.yy"
+#line 230 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::NEG, yystack_[0].value.as < DataTypeDouble > () }; }
-#line 1238 "ramvm_bison_parser.cpp"
+#line 1290 "ramvm_bison_parser.cpp"
     break;
 
   case 52:
-#line 229 "ramvm_grammar.yy"
+#line 231 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::LOG_NOT, yystack_[0].value.as < DataTypeDouble > () }; }
-#line 1244 "ramvm_bison_parser.cpp"
+#line 1296 "ramvm_bison_parser.cpp"
     break;
 
   case 53:
-#line 230 "ramvm_grammar.yy"
+#line 232 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = { Unop::BIN_NOT, yystack_[0].value.as < DataTypeDouble > () }; }
-#line 1250 "ramvm_bison_parser.cpp"
+#line 1302 "ramvm_bison_parser.cpp"
     break;
 
 
-#line 1254 "ramvm_bison_parser.cpp"
+#line 1306 "ramvm_bison_parser.cpp"
 
             default:
               break;
@@ -1354,6 +1406,7 @@ namespace ramvm { namespace bison {
 
 
       // Shift the error token.
+      yy_lac_discard_ ("error recovery");
       error_token.state = static_cast<state_type> (yyn);
       yypush_ ("Shifting", YY_MOVE (error_token));
     }
@@ -1419,11 +1472,238 @@ namespace ramvm { namespace bison {
     error (yyexc.what ());
   }
 
+  bool
+  Parser::yy_lac_check_ (int yytoken) const
+  {
+    // Logically, the yylac_stack's lifetime is confined to this function.
+    // Clear it, to get rid of potential left-overs from previous call.
+    yylac_stack_.clear ();
+    // Reduce until we encounter a shift and thereby accept the token.
+#if YYDEBUG
+    YYCDEBUG << "LAC: checking lookahead " << yytname_[yytoken] << ':';
+#endif
+    std::ptrdiff_t lac_top = 0;
+    while (true)
+      {
+        state_type top_state = (yylac_stack_.empty ()
+                                ? yystack_[lac_top].state
+                                : yylac_stack_.back ());
+        int yyrule = yypact_[top_state];
+        if (yy_pact_value_is_default_ (yyrule)
+            || (yyrule += yytoken) < 0 || yylast_ < yyrule
+            || yycheck_[yyrule] != yytoken)
+          {
+            // Use the default action.
+            yyrule = yydefact_[top_state];
+            if (yyrule == 0)
+              {
+                YYCDEBUG << " Err\n";
+                return false;
+              }
+          }
+        else
+          {
+            // Use the action from yytable.
+            yyrule = yytable_[yyrule];
+            if (yy_table_value_is_error_ (yyrule))
+              {
+                YYCDEBUG << " Err\n";
+                return false;
+              }
+            if (0 < yyrule)
+              {
+                YYCDEBUG << " S" << yyrule << '\n';
+                return true;
+              }
+            yyrule = -yyrule;
+          }
+        // By now we know we have to simulate a reduce.
+        YYCDEBUG << " R" << yyrule - 1;
+        // Pop the corresponding number of values from the stack.
+        {
+          std::ptrdiff_t yylen = yyr2_[yyrule];
+          // First pop from the LAC stack as many tokens as possible.
+          std::ptrdiff_t lac_size = std::ptrdiff_t (yylac_stack_.size ());
+          if (yylen < lac_size)
+            {
+              yylac_stack_.resize (std::size_t (lac_size - yylen));
+              yylen = 0;
+            }
+          else if (lac_size)
+            {
+              yylac_stack_.clear ();
+              yylen -= lac_size;
+            }
+          // Only afterwards look at the main stack.
+          // We simulate popping elements by incrementing lac_top.
+          lac_top += yylen;
+        }
+        // Keep top_state in sync with the updated stack.
+        top_state = (yylac_stack_.empty ()
+                     ? yystack_[lac_top].state
+                     : yylac_stack_.back ());
+        // Push the resulting state of the reduction.
+        state_type state = yy_lr_goto_state_ (top_state, yyr1_[yyrule]);
+        YYCDEBUG << " G" << state;
+        yylac_stack_.push_back (state);
+      }
+  }
+
+  // Establish the initial context if no initial context currently exists.
+  bool
+  Parser::yy_lac_establish_ (int yytoken)
+  {
+    /* Establish the initial context for the current lookahead if no initial
+       context is currently established.
+
+       We define a context as a snapshot of the parser stacks.  We define
+       the initial context for a lookahead as the context in which the
+       parser initially examines that lookahead in order to select a
+       syntactic action.  Thus, if the lookahead eventually proves
+       syntactically unacceptable (possibly in a later context reached via a
+       series of reductions), the initial context can be used to determine
+       the exact set of tokens that would be syntactically acceptable in the
+       lookahead's place.  Moreover, it is the context after which any
+       further semantic actions would be erroneous because they would be
+       determined by a syntactically unacceptable token.
+
+       yy_lac_establish_ should be invoked when a reduction is about to be
+       performed in an inconsistent state (which, for the purposes of LAC,
+       includes consistent states that don't know they're consistent because
+       their default reductions have been disabled).
+
+       For parse.lac=full, the implementation of yy_lac_establish_ is as
+       follows.  If no initial context is currently established for the
+       current lookahead, then check if that lookahead can eventually be
+       shifted if syntactic actions continue from the current context.  */
+    if (!yy_lac_established_)
+      {
+#if YYDEBUG
+        YYCDEBUG << "LAC: initial context established for "
+                 << yytname_[yytoken] << '\n';
+#endif
+        yy_lac_established_ = true;
+        return yy_lac_check_ (yytoken);
+      }
+    return true;
+  }
+
+  // Discard any previous initial lookahead context.
+  void
+  Parser::yy_lac_discard_ (const char* evt)
+  {
+   /* Discard any previous initial lookahead context because of Event,
+      which may be a lookahead change or an invalidation of the currently
+      established initial context for the current lookahead.
+
+      The most common example of a lookahead change is a shift.  An example
+      of both cases is syntax error recovery.  That is, a syntax error
+      occurs when the lookahead is syntactically erroneous for the
+      currently established initial context, so error recovery manipulates
+      the parser stacks to try to find a new initial context in which the
+      current lookahead is syntactically acceptable.  If it fails to find
+      such a context, it discards the lookahead.  */
+    if (yy_lac_established_)
+      {
+        YYCDEBUG << "LAC: initial context discarded due to "
+                 << evt << '\n';
+        yy_lac_established_ = false;
+      }
+  }
+
   // Generate an error message.
   std::string
-  Parser::yysyntax_error_ (state_type, const symbol_type&) const
+  Parser::yysyntax_error_ (state_type yystate, const symbol_type& yyla) const
   {
-    return YY_("syntax error");
+    // Number of reported tokens (one for the "unexpected", one per
+    // "expected").
+    std::ptrdiff_t yycount = 0;
+    // Its maximum.
+    enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
+    // Arguments of yyformat.
+    char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
+
+    /* There are many possibilities here to consider:
+       - If this state is a consistent state with a default action, then
+         the only way this function was invoked is if the default action
+         is an error action.  In that case, don't check for expected
+         tokens because there are none.
+       - The only way there can be no lookahead present (in yyla) is
+         if this state is a consistent state with a default action.
+         Thus, detecting the absence of a lookahead is sufficient to
+         determine that there is no unexpected or expected token to
+         report.  In that case, just report a simple "syntax error".
+       - Don't assume there isn't a lookahead just because this state is
+         a consistent state with a default action.  There might have
+         been a previous inconsistent state, consistent state with a
+         non-default action, or user semantic action that manipulated
+         yyla.  (However, yyla is currently not documented for users.)
+         In the first two cases, it might appear that the current syntax
+         error should have been detected in the previous state when
+         yy_lac_check was invoked.  However, at that time, there might
+         have been a different syntax error that discarded a different
+         initial context during error recovery, leaving behind the
+         current lookahead.
+    */
+    if (!yyla.empty ())
+      {
+        symbol_number_type yytoken = yyla.type_get ();
+        yyarg[yycount++] = yytname_[yytoken];
+
+#if YYDEBUG
+        // Execute LAC once. We don't care if it is succesful, we
+        // only do it for the sake of debugging output.
+        if (!yy_lac_established_)
+          yy_lac_check_ (yytoken);
+#endif
+
+        int yyn = yypact_[yystate];
+        if (!yy_pact_value_is_default_ (yyn))
+          {
+            for (int yyx = 0; yyx < yyntokens_; ++yyx)
+              if (yyx != yy_error_token_ && yyx != yy_undef_token_
+                  && yy_lac_check_ (yyx))
+                {
+                  if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
+                    {
+                      yycount = 1;
+                      break;
+                    }
+                  else
+                    yyarg[yycount++] = yytname_[yyx];
+                }
+          }
+      }
+
+    char const* yyformat = YY_NULLPTR;
+    switch (yycount)
+      {
+#define YYCASE_(N, S)                         \
+        case N:                               \
+          yyformat = S;                       \
+        break
+      default: // Avoid compiler warnings.
+        YYCASE_ (0, YY_("syntax error"));
+        YYCASE_ (1, YY_("syntax error, unexpected %s"));
+        YYCASE_ (2, YY_("syntax error, unexpected %s, expecting %s"));
+        YYCASE_ (3, YY_("syntax error, unexpected %s, expecting %s or %s"));
+        YYCASE_ (4, YY_("syntax error, unexpected %s, expecting %s or %s or %s"));
+        YYCASE_ (5, YY_("syntax error, unexpected %s, expecting %s or %s or %s or %s"));
+#undef YYCASE_
+      }
+
+    std::string yyres;
+    // Argument number.
+    std::ptrdiff_t yyi = 0;
+    for (char const* yyp = yyformat; *yyp; ++yyp)
+      if (yyp[0] == '%' && yyp[1] == 's' && yyi < yycount)
+        {
+          yyres += yytnamerr_ (yyarg[yyi++]);
+          ++yyp;
+        }
+      else
+        yyres += *yyp;
+    return yyres;
   }
 
 
@@ -1537,7 +1817,7 @@ namespace ramvm { namespace bison {
   };
 
 
-#if YYDEBUG
+
   // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
   // First, the terminals, then, starting at \a yyntokens_, nonterminals.
   const char*
@@ -1554,16 +1834,16 @@ namespace ramvm { namespace bison {
   "STMT", "ARGUMENT", "DEST_ARG", "BINOP", "UNOP", "PROGRAM", YY_NULLPTR
   };
 
-
+#if YYDEBUG
   const unsigned char
   Parser::yyrline_[] =
   {
-       0,   160,   160,   163,   164,   165,   169,   170,   171,   172,
-     173,   174,   175,   176,   177,   178,   179,   180,   181,   182,
-     186,   187,   191,   192,   193,   194,   195,   196,   200,   201,
-     202,   203,   207,   208,   209,   210,   211,   212,   213,   214,
-     215,   216,   217,   218,   219,   220,   221,   222,   223,   224,
-     225,   228,   229,   230
+       0,   162,   162,   165,   166,   167,   171,   172,   173,   174,
+     175,   176,   177,   178,   179,   180,   181,   182,   183,   184,
+     188,   189,   193,   194,   195,   196,   197,   198,   202,   203,
+     204,   205,   209,   210,   211,   212,   213,   214,   215,   216,
+     217,   218,   219,   220,   221,   222,   223,   224,   225,   226,
+     227,   230,   231,   232
   };
 
   // Print the state stack on the debug stream.
@@ -1598,9 +1878,9 @@ namespace ramvm { namespace bison {
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 1602 "ramvm_bison_parser.cpp"
+#line 1882 "ramvm_bison_parser.cpp"
 
-#line 233 "ramvm_grammar.yy"
+#line 235 "ramvm_grammar.yy"
 
 namespace ramvm {
 	namespace bison {

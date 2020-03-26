@@ -44,7 +44,7 @@
 #ifndef YY_YY_RAMC_BISON_PARSER_HPP_INCLUDED
 # define YY_YY_RAMC_BISON_PARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 16 "ramc_grammar.yy"
+#line 18 "ramc_grammar.yy"
 
   #include "ramc_ast.h"
 
@@ -1677,6 +1677,17 @@ switch (yytype)
     Parser (const Parser&);
     Parser& operator= (const Parser&);
 
+    /// Check the lookahead yytoken.
+    /// \returns  true iff the token will be eventually shifted.
+    bool yy_lac_check_ (int yytoken) const;
+    /// Establish the initial context if no initial context currently exists.
+    /// \returns  true iff the token will be eventually shifted.
+    bool yy_lac_establish_ (int yytoken);
+    /// Discard any previous initial lookahead context because of event.
+    /// \param event  the event which caused the lookahead to be discarded.
+    ///               Only used for debbuging output.
+    void yy_lac_discard_ (const char* event);
+
     /// Stored state numbers (used for stacks).
     typedef signed char state_type;
 
@@ -1741,10 +1752,13 @@ switch (yytype)
     static const signed char yyr2_[];
 
 
-#if YYDEBUG
+    /// Convert the symbol name \a n to a form suitable for a diagnostic.
+    static std::string yytnamerr_ (const char *n);
+
+
     /// For a symbol, its name in clear.
     static const char* const yytname_[];
-
+#if YYDEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
     static const short yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
@@ -1946,6 +1960,15 @@ switch (yytype)
 
     /// The stack.
     stack_type yystack_;
+    /// The stack for LAC.
+    /// Logically, the yy_lac_stack's lifetime is confined to the function
+    /// yy_lac_check_. We just store it as a member of this class to hold
+    /// on to the memory and to avoid frequent reallocations.
+    /// Since yy_lac_check_ is const, this member must be mutable.
+    mutable std::vector<state_type> yylac_stack_;
+    /// Whether an initial LAC context was established.
+    bool yy_lac_established_;
+
 
     /// Push a new state on the stack.
     /// \param m    a debug message to display
@@ -2288,7 +2311,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 2292 "ramc_bison_parser.hpp"
+#line 2315 "ramc_bison_parser.hpp"
 
 
 

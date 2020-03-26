@@ -31,7 +31,7 @@ namespace ramc {
 
 	ParseResult ParseFile(std::istream* _stream, std::string _fileName, int _tabSize)
 	{
-		Lexer lexer = Lexer(_stream, _tabSize);
+		Lexer lexer = Lexer(_stream, true, true, _tabSize);
 		ASTNode* program = nullptr;
 		Position position;
 

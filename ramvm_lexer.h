@@ -1,5 +1,6 @@
 #pragma once
 #include "ramvm_token.h"
+#include "lexer.h"
 
 namespace ramvm {
 	enum class LexerResultType {
@@ -16,35 +17,24 @@ namespace ramvm {
 		UNKNOWN_TOKEN
 	};
 
-	class LexerResult {
-		LexerResultType type;
-		Token token;
-
-		std::string errString;
-		Position errPosition;
-
+	class LexerResult : public Result<LexerResultType, Token> {
+		LexerResult(LexerResultType _type, Token _val, std::string _errStr, Position _errPos)
+			: Result(_type, _val, _errStr, _errPos) { }
 	public:
-		LexerResultType GetType() { return type; }
-		Position GetErrorPosition() { return errPosition; }
-		std::string GetErrorString() { return errString; }
+		Token GetValue() override { return IsSuccess() ? value : Token::INVALID(errPosition); }
+		std::string ToString(bool _includePos) override;
 
-		Token GetToken();
-		bool IsSuccess();
-		std::string ToString(bool _includePos);
-
-		static LexerResult GenSuccess(Token _token);
-		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos);
-		static LexerResult GenExpectationError(std::string _expected, std::string _found, Position _pos);
+		static LexerResult GenSuccess(Token _token) { return LexerResult(LexerResultType::SUCCESS, _token, "", Position()); }
+		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos) { return LexerResult(_type, Token(), _str, _pos); }
+		static LexerResult GenExpectationError(std::string _expected, std::string _found, Position _pos) { return LexerResult(LexerResultType::INVALID, Token(), "Expected " + _expected + "but found " + _found, _pos); }
 	};
 
-	class Lexer
+	class Lexer : public RTLexer<LexerResult, Token>
 	{
-		std::istream* stream;
-		Position position;
-		int tabSize;
-
-		Lexer() = default;
 	public:
+		Lexer(std::istream* _stream, int _tabSize)
+			: RTLexer(_stream, _tabSize) { }
+
 		const std::regex REGEX_LABEL = std::regex("%[A-Za-z_][A-Za-z0-9_]*");
 		const std::regex REGEX_REG = std::regex("R(0|[1-9][0-9]*)");
 		const std::regex REGEX_MEM_REG = std::regex("\\{R(0|[1-9][0-9]*)\\}");
@@ -53,13 +43,7 @@ namespace ramvm {
 		const std::regex REGEX_HEX_LIT = std::regex("0x[A-Fa-f0-9]+");
 		const std::regex REGEX_SP = std::regex("SP");
 
-		Lexer(std::istream* _stream, int _tabSize);
-
-		int ReadNextChar();
-		int PeekNextChar();
-		LexerResult GetNextToken();
-
-		Position GetPosition() { return position; }
+		LexerResult GetNextToken() override;
 	};
 
 	std::string LexFile(std::istream* _stream, int _tabSize);

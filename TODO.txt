@@ -1,2 +1,5 @@
--Implement ToInstrString for of the vm instructions
+Completed:
+-Implement POW Binop, BNOT Unop
+-Implement ToString for the rest of the vm instructions
 -Fix position argument of parser
+-Create single lexer, and token class

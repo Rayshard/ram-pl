@@ -104,102 +104,53 @@ bool OptimizeInstructionSet(ramvm::InstructionSet& _set)
 	return changed;
 }
 
-int main()
+int CompilerMain()
 {
-	/*{
-		using namespace ramc;
+	using namespace ramc;
 
-		std::ifstream stream("Tests/Compiler/test_lex.ram");
+	std::ifstream stream("Tests/Compiler/test_lex.ram");
 
-		ParseResult result = ParseFile(&stream, "test_lex.ram", 4);
+	ParseResult result = ParseFile(&stream, "test_lex.ram", 4);
 
-		if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
-		else
-		{
-			ASTProgram* prog = result.GetNode()->As<ASTProgram>();
-
-			std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
-
-			Environment env(0);
-			env.AddVariable("a", PrimitiveType::INT);
-			TypeResult typeRes = prog->TypeCheck(env);
-
-			if (!typeRes.IsSuccess())
-			{
-				std::cout << "Type Error: " << typeRes.ToString() << std::endl;
-				return 0;
-			}
-			return 0;
-			auto instrs = prog->GenerateCode({});
-			instrs.push_back(ramvm::Instruction::CreateHalt());
-
-			std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions"<< std::endl;
-
-			for (auto instr : instrs)
-				std::cout << "     " << instr.ToString() << std::endl;
-
-			while (OptimizeInstructionSet(instrs)) //Loop till no change
-			{
-				std::cout << "Program Instructions (Optimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
-
-				//for (auto instr : instrs)
-					//std::cout << "     " << instr.ToString() << std::endl;
-			}
-
-			//Run VM
-			using namespace ramvm;
-			try
-			{
-				VM vm = VM(4, 1024, instrs);
-
-				ResultInfo resInfo;
-				ResultType result = vm.Run(resInfo);
-
-				if (IsErrorResult(result)) { PrintResult(result); }
-				else
-				{
-					vm.PrintCurRegisters();
-					vm.PrintMemory(0, 6);
-					vm.PrintStack();
-				}
-			}
-			catch (std::length_error) { PrintResult(ResultType::ERR_MEMORY_LIMIT); }
-
-			delete prog;
-		}
-
-		return 0;
-	}*/
-
+	if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
+	else
 	{
+		ASTProgram* prog = result.GetNode()->As<ASTProgram>();
+
+		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
+
+		Environment env(0);
+		env.AddVariable("a", PrimitiveType::INT);
+		TypeResult typeRes = prog->TypeCheck(env);
+
+		if (!typeRes.IsSuccess())
+		{
+			std::cout << "Type Error: " << typeRes.ToString() << std::endl;
+			return 0;
+		}
+		
+		auto instrs = prog->GenerateCode({});
+		instrs.push_back(new ramvm::InstrHalt());
+
+		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
+
+		for (auto instr : instrs)
+			std::cout << "     " << instr->ToOutput() << std::endl;
+
+		while (OptimizeInstructionSet(instrs)) //Loop till no change
+		{
+			std::cout << "Program Instructions (Optimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
+
+			//for (auto instr : instrs)
+				//std::cout << "     " << instr.ToString() << std::endl;
+		}
+		return 0;
+		//Run VM
 		using namespace ramvm;
 
-		//Open File
-		std::ifstream file("TestProgram.ramc");
-		if (!file)
-		{
-			std::cout << "Unable to read file" << std::endl;
-			return 0;
-		}
-
-		//std::cout << LexFile(&file, 4) << std::endl;
-		//return 0;
-
-		//Parse Program
-		ParseResult result = ParseFile(&file, "filename", 4);
-		file.close();
-
-		if (!result.IsSuccess())
-		{
-			std::cout << "Parse Error: " << result.ToString() << std::endl;
-			return 0;
-		}
-
-		//Run VM
 		try
 		{
-			auto program = result.GetInstructionSet();
-			VM vm = VM(4, 1024, program);
+			VM vm = VM(4, 1024, instrs);
 
 			ResultInfo resInfo;
 			ResultType result = vm.Run(resInfo);
@@ -208,10 +159,65 @@ int main()
 			else
 			{
 				vm.PrintCurRegisters();
-				vm.PrintMemory(0, 10);
+				vm.PrintMemory(0, 6);
 				vm.PrintStack();
 			}
 		}
 		catch (std::length_error) { PrintResult(ResultType::ERR_MEMORY_LIMIT); }
+
+		delete prog;
 	}
+
+	return 0;
+}
+
+int VMMain()
+{
+	using namespace ramvm;
+
+	//Open File
+	std::ifstream file("TestProgram.ramc");
+	if (!file)
+	{
+		std::cout << "Unable to read file" << std::endl;
+		return 0;
+	}
+
+	//std::cout << LexFile(&file, 4) << std::endl;
+	//return 0;
+
+	//Parse Program
+	ParseResult result = ParseFile(&file, "filename", 4);
+	file.close();
+
+	if (!result.IsSuccess())
+	{
+		std::cout << "Parse Error: " << result.ToString() << std::endl;
+		return 0;
+	}
+
+	//Run VM
+	try
+	{
+		auto program = result.GetInstructionSet();
+		VM vm = VM(4, 1024, program);
+
+		ResultInfo resInfo;
+		ResultType result = vm.Run(resInfo);
+
+		if (IsErrorResult(result)) { PrintResult(result); }
+		else
+		{
+			vm.PrintCurRegisters();
+			vm.PrintMemory(0, 10);
+			vm.PrintStack();
+		}
+	}
+	catch (std::length_error) { PrintResult(ResultType::ERR_MEMORY_LIMIT); }
+}
+
+int main()
+{
+	//return VMMain();
+	return CompilerMain();
 }

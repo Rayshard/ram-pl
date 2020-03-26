@@ -7,6 +7,8 @@
 %define api.token.constructor
 %define api.namespace {ramc::bison}
 %define api.parser.class {Parser}
+%define parse.lac
+%define parse.error verbose
 
 %code top {
   #include "pch.h"
@@ -23,12 +25,12 @@
       // Return the next token.
       auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
       {
-        LexerResult readRes = _lexer.GetNextToken(true, true);
+        LexerResult readRes = _lexer.GetNextToken();
 
         if (!readRes.IsSuccess())
-          throw std::runtime_error(readRes.ToString());
+          throw std::runtime_error(readRes.ToString(false));
 
-        Token token = readRes.GetToken();
+        Token token = readRes.GetValue();
         _pos = token.position;
 
         switch (token.type)

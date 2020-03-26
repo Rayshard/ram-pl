@@ -56,6 +56,7 @@ namespace ramvm {
 
 		bool IsSinglePop();
 		virtual std::string ToString() = 0;
+		virtual std::string ToOutput() = 0;
 	};
 
 	typedef std::vector<Instruction*> InstructionSet;
@@ -65,6 +66,7 @@ namespace ramvm {
 		InstrHalt() : Instruction(InstructionType::HALT) { }
 
 		std::string ToString() override { return "HALT"; }
+		std::string ToOutput() override { return "HALT"; }
 	};
 #pragma endregion
 
@@ -76,6 +78,7 @@ namespace ramvm {
 		InstrMove(TypedArgument _src, Argument _dest);
 
 		std::string ToString() override { return "MOV " + src.ToString() + " " + dest.ToString(); }
+		std::string ToOutput() override { return "MOV<" + std::to_string(DataTypeToChar(src.type)) + "> " + src.arg.ToString() + " " + dest.ToString(); }
 	};
 #pragma endregion
 
@@ -86,6 +89,7 @@ namespace ramvm {
 
 		InstrBinop(Binop _op, TypedArgument _src1, TypedArgument _src2, TypedArgument _dest);
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -96,6 +100,7 @@ namespace ramvm {
 
 		InstrUnop(Unop _op, TypedArgument _src, TypedArgument _dest);
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -107,6 +112,7 @@ namespace ramvm {
 		InstrCall(int _labelIdx, int _regCnt, const std::vector<TypedArgument>& _argSrcs);
 
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -118,6 +124,7 @@ namespace ramvm {
 		InstrStore(const std::vector<TypedArgument>& _srcs, Argument _dest);
 
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -128,6 +135,7 @@ namespace ramvm {
 		InstrReturn(const std::vector<TypedArgument>& _srcs);
 
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -138,6 +146,7 @@ namespace ramvm {
 		InstrJump(int _labelIdx);
 
 		std::string ToString() override { return "JUMP " + std::to_string(labelIdx); }
+		std::string ToOutput() override { return "JUMP " + std::to_string(labelIdx); }
 	};
 #pragma endregion
 
@@ -149,6 +158,7 @@ namespace ramvm {
 		InstrCJump(int _labelIdx, Argument _condSrc);
 
 		std::string ToString() override { return "CJUMP " + std::to_string(labelIdx) + " " + condSrc.ToString(); }
+		std::string ToOutput() override { return "CJUMP " + std::to_string(labelIdx) + " " + condSrc.ToString(); }
 	};
 #pragma endregion
 
@@ -159,6 +169,7 @@ namespace ramvm {
 		InstrPrint(Argument _start, Argument _len);
 
 		std::string ToString() override { return "PRINT " + start.ToString() + " " + length.ToString(); }
+		std::string ToOutput() override { return "PRINT " + start.ToString() + " " + length.ToString(); }
 	};
 #pragma endregion
 
@@ -169,6 +180,7 @@ namespace ramvm {
 		InstrMalloc(Argument _size, Argument _dest);
 
 		std::string ToString() override { return "MALLOC " + size.ToString() + " " + dest.ToString(); }
+		std::string ToOutput() override { return "MALLOC " + size.ToString() + " " + dest.ToString(); }
 	};
 #pragma endregion
 
@@ -179,6 +191,7 @@ namespace ramvm {
 		InstrFree(Argument _addr);
 
 		std::string ToString() override { return "FREE " + addr.ToString(); }
+		std::string ToOutput() override { return "FREE " + addr.ToString(); }
 	};
 #pragma endregion
 
@@ -189,6 +202,7 @@ namespace ramvm {
 		InstrPush(const std::vector<TypedArgument>& _srcs);
 
 		std::string ToString() override;
+		std::string ToOutput() override;
 	};
 #pragma endregion
 
@@ -198,8 +212,20 @@ namespace ramvm {
 		int scale;
 
 		InstrPop(DataType _type, Argument _amt);
+		
+		constexpr DataType GetDataType()
+		{
+			switch (scale)
+			{
+				case BYTE_SIZE: return DataType::BYTE;
+				case INT_SIZE: return DataType::INT;
+				case DOUBLE_SIZE: return DataType::LONG;
+				default: return DataType::UNKNOWN;
+			}
+		}
 
 		std::string ToString() override { return "POP " + amt.ToString(); }
+		std::string ToOutput() override { return "POP<" + std::to_string(DataTypeToChar(GetDataType())) + ">" + amt.ToString(); }
 	};
 #pragma endregion
 }

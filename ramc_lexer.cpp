@@ -2,41 +2,22 @@
 #include "ramc_lexer.h"
 
 namespace ramc {
-	bool LexerResult::IsSuccess() { return type == LexerResultType::SUCCESS; }
-	Token LexerResult::GetToken() { return IsSuccess() ? token : Token::INVALID(errPosition); }
-
-	std::string LexerResult::ToString()
+	std::string LexerResult::ToString(bool _includePos)
 	{
-		std::string prefix = "(" + errPosition.ToString() + ") ";
+		std::string prefix = _includePos ? "(" + GetErrorPosition().ToString() + ") " : "";
 
-		switch (type)
+		switch (GetType())
 		{
 			case LexerResultType::SUCCESS: return "SUCCESS";
-			case LexerResultType::INT_LIT_OOB: return prefix + "Integer Literal Out of -(2^32) to (2^32 - 1) bound: " + errString;
-			case LexerResultType::FLOAT_LIT_OOB: return prefix + "Float Literal Out of -(2^32) to (2^32 - 1) bound: " + errString;
-			case LexerResultType::STR_LIT_CLOSE: return prefix + "Missing closing '\"' for string literal: " + errString;
-			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + errString;
-			case LexerResultType::TOO_MANY_DECIMALS: return prefix + "Float Literal has more than one decimal: " + errString;
-			case LexerResultType::STR_LIT_INVALID_ESC: return prefix + "String literal has an invalid escaped char: " + errString;
-			case LexerResultType::UNKNOWN_SYMBOL: return prefix + "Unknown Symbol: " + errString;
+			case LexerResultType::INT_LIT_OOB: return prefix + "Integer Literal Out of -(2^32) to (2^32 - 1) bound: " + GetErrorString();
+			case LexerResultType::FLOAT_LIT_OOB: return prefix + "Float Literal Out of -(2^32) to (2^32 - 1) bound: " + GetErrorString();
+			case LexerResultType::STR_LIT_CLOSE: return prefix + "Missing closing '\"' for string literal: " + GetErrorString();
+			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + GetErrorString();
+			case LexerResultType::TOO_MANY_DECIMALS: return prefix + "Float Literal has more than one decimal: " + GetErrorString();
+			case LexerResultType::STR_LIT_INVALID_ESC: return prefix + "String literal has an invalid escaped char: " + GetErrorString();
+			case LexerResultType::UNKNOWN_SYMBOL: return prefix + "Unknown Symbol: " + GetErrorString();
 			default: return prefix + "LexerResult::ToString - LexerResultType not handled!";
 		}
-	}
-
-	LexerResult LexerResult::GenSuccess(Token _token)
-	{
-		LexerResult result;
-		result.type = LexerResultType::SUCCESS;
-		result.token = _token;
-		return result;
-	}
-	LexerResult LexerResult::GenError(LexerResultType _type, std::string _str, Position _pos)
-	{
-		LexerResult result;
-		result.type = _type;
-		result.errString = _str;
-		result.errPosition = _pos;
-		return result;
 	}
 
 	LexerResult LexNumericLiteral(Lexer* _lexer, char _firstChar, Position _tokStartPos)
@@ -162,39 +143,15 @@ namespace ramc {
 
 	bool IsWhitespace(char _char) { return _char == ' ' || _char == '\n' || _char == '\r' || _char == '\t'; }
 
-	Lexer::Lexer(std::istream* _stream, int _tabSize)
-	{
-		stream = _stream;
-		position = Position(1, 0);
-		tabSize = _tabSize;
-	}
-
-	int Lexer::ReadNextChar()
-	{
-		int result = stream->get();
-
-		if (result == '\n')
-		{
-			position.line++;
-			position.colomn = 0;
-		}
-		else if (result == '\t') { position.colomn += tabSize; }
-		else { position.colomn++; }
-
-		return result;
-	}
-
-	int Lexer::PeekNextChar() { return stream->peek(); }
-
-	LexerResult Lexer::GetNextToken(bool _ignoreWhitespace, bool _ignoreComments)
+	LexerResult Lexer::GetNextToken()
 	{
 		char firstChar = (char)ReadNextChar();
 
 #pragma region Ignores
 		while (true)
 		{
-			if (_ignoreWhitespace && IsWhitespace(firstChar)) { firstChar = (char)ReadNextChar(); }
-			else if (_ignoreComments && firstChar == '`')
+			if (ignoreWhitespace && IsWhitespace(firstChar)) { firstChar = (char)ReadNextChar(); }
+			else if (ignoreComments && firstChar == '`')
 			{
 				LexerResult commentRes = LexComment(this, position);
 
@@ -377,16 +334,16 @@ namespace ramc {
 
 	std::string LexFile(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize)
 	{
-		Lexer lexer = Lexer(_stream, _tabSize);
+		Lexer lexer = Lexer(_stream, _ignoreWhitespace, _ignoreComments, _tabSize);
 		std::stringstream ss;
 
 		while (true)
 		{
-			LexerResult res = lexer.GetNextToken(_ignoreWhitespace, _ignoreComments);
+			LexerResult res = lexer.GetNextToken();
 
 			if (res.IsSuccess())
 			{
-				Token token = res.GetToken();
+				Token token = res.GetValue();
 				ss << token.ToString(true) << std::endl;
 
 				if (token.type == TokenType::END_OF_FILE)
@@ -394,7 +351,7 @@ namespace ramc {
 			}
 			else
 			{
-				ss << res.ToString() << std::endl;
+				ss << res.ToString(true) << std::endl;
 				break;
 			}
 		}

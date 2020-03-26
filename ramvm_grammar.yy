@@ -7,10 +7,12 @@
 %define api.token.constructor
 %define api.namespace {ramvm::bison}
 %define api.parser.class {Parser}
+%define parse.lac
+%define parse.error verbose
 
 %code top {
-  #include "pch.h"
-  #include "ramvm_lexer.h"
+	#include "pch.h"
+	#include "ramvm_lexer.h"
 }
 
 %code requires {
@@ -43,7 +45,7 @@
 					throw std::runtime_error(readRes.ToString(false));
 				}
 
-				Token token = readRes.GetToken();
+				Token token = readRes.GetValue();
                 std::string value = token.value;
 				_pos = token.position;
 

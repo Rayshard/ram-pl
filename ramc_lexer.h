@@ -1,5 +1,6 @@
 #pragma once
 #include "ramc_token.h"
+#include "lexer.h"
 
 namespace ramc {
 	enum class LexerResultType {
@@ -13,42 +14,25 @@ namespace ramc {
 		UNKNOWN_SYMBOL
 	};
 
-	class LexerResult {
-		LexerResultType type;
-		Token token;
-
-		std::string errString;
-		Position errPosition;
-
+	class LexerResult : public Result<LexerResultType, Token> {
+		LexerResult(LexerResultType _type, Token _val, std::string _errStr, Position _errPos)
+			: Result(_type, _val, _errStr, _errPos) { }
 	public:
-		LexerResultType GetType() { return type; }
-		Position GetErrorPosition() { return errPosition; }
-		std::string GetErrorString() { return errString; }
+		Token GetValue() override { return IsSuccess() ? value : Token::INVALID(errPosition); }
+		std::string ToString(bool _includePos) override;
 
-		Token GetToken();
-		bool IsSuccess();
-		std::string ToString();
-
-		static LexerResult GenSuccess(Token _token);
-		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos);
+		static LexerResult GenSuccess(Token _token) { return LexerResult(LexerResultType::SUCCESS, _token, "", Position()); }
+		static LexerResult GenError(LexerResultType _type, std::string _str, Position _pos) { return LexerResult(_type, Token(), _str, _pos); }
 	};
 
-
-	class Lexer
+	class Lexer : public RTLexer<LexerResult, Token>
 	{
-		std::istream* stream;
-		Position position;
-		int tabSize;
-
-		Lexer() = default;
+		bool ignoreWhitespace, ignoreComments;
 	public:
-		Lexer(std::istream* _stream, int _tabSize);
+		Lexer(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize)
+			: RTLexer(_stream, _tabSize), ignoreWhitespace(_ignoreWhitespace), ignoreComments(_ignoreComments) { }
 
-		int ReadNextChar();
-		int PeekNextChar();
-		LexerResult GetNextToken(bool _ignoreWhitespace, bool _ignoreComments);
-
-		Position GetPosition() { return position; }
+		LexerResult GetNextToken() override;
 	};
 
 	std::string LexFile(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize);

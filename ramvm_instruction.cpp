@@ -273,7 +273,7 @@ namespace ramvm {
 				if (_val2.I() != 0) { _result = DataVariant(long(_val1.I() % _val2.L())); }
 				else { return ResultType::ERR_DIVBYZERO; }
 			} break;
-				
+
 			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::MOD): {
 				if (_val2.B() != 0) { _result = DataVariant(long(_val1.L() % _val2.B())); }
 				else { return ResultType::ERR_DIVBYZERO; }
@@ -666,7 +666,7 @@ namespace ramvm {
 			case ConcatDouble((byte)DataType::INT, (byte)Unop::NEG): _result = DataVariant(int(-_val.I())); break;
 			case ConcatDouble((byte)DataType::INT, (byte)Unop::LOG_NOT): _result = DataVariant(int(!_val.I())); break;
 			case ConcatDouble((byte)DataType::INT, (byte)Unop::BIN_NOT): _result = DataVariant(int(~_val.B())); break;
-			
+
 			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::NEG): _result = DataVariant(float(-_val.F())); break;
 			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::LOG_NOT): _result = DataVariant(float(!_val.F())); break;
 			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::BIN_NOT): _result = DataVariant(float(~_val.B())); break;
@@ -734,6 +734,16 @@ namespace ramvm {
 		return ss.str();
 	}
 
+	std::string InstrBinop::ToOutput()
+	{
+		std::stringstream ss;
+		ss << BinopToString(op) << '<' << DataTypeToChar(src1.type) << DataTypeToChar(src2.type) << DataTypeToChar(dest.type) << "> ";
+		ss << src1.arg.ToString() << " ";
+		ss << src2.arg.ToString() << " ";
+		ss << dest.arg.ToString();
+		return ss.str();
+	}
+
 	InstrUnop::InstrUnop(Unop _op, TypedArgument _src, TypedArgument _dest)
 		: Instruction(InstructionType::UNOP)
 	{
@@ -748,6 +758,15 @@ namespace ramvm {
 		ss << UnopToString(op) << " ";
 		ss << src.ToString() << " ";
 		ss << dest.ToString();
+		return ss.str();
+	}
+
+	std::string InstrUnop::ToOutput()
+	{
+		std::stringstream ss;
+		ss << UnopToString(op) << '<' << DataTypeToChar(src.type) << DataTypeToChar(dest.type) << "> ";
+		ss << src.arg.ToString() << " ";
+		ss << dest.arg.ToString();
 		return ss.str();
 	}
 
@@ -770,6 +789,22 @@ namespace ramvm {
 		return ss.str();
 	}
 
+	std::string InstrCall::ToOutput()
+	{
+		std::stringstream ss;
+		ss << "CALL<";
+
+		std::string argsStr;
+		for (auto src : argSrcs)
+		{
+			ss << DataTypeToChar(src.type);
+			argsStr += " " + src.arg.ToString();
+		}
+
+		ss << "> " << labelIdx << " " << regCnt << argsStr;
+		return ss.str();
+	}
+
 	InstrReturn::InstrReturn(const std::vector<TypedArgument>& _srcs)
 		: Instruction(InstructionType::RETURN)
 	{
@@ -784,6 +819,22 @@ namespace ramvm {
 		for (auto src : srcs)
 			ss << " " << src.ToString();
 
+		return ss.str();
+	}
+
+	std::string InstrReturn::ToOutput()
+	{
+		std::stringstream ss;
+		ss << "RET<";
+
+		std::string srcsStr;
+		for (auto src : srcs)
+		{
+			ss << DataTypeToChar(src.type);
+			srcsStr += " " + src.arg.ToString();
+		}
+
+		ss << ">" << srcsStr;
 		return ss.str();
 	}
 
@@ -837,6 +888,22 @@ namespace ramvm {
 		return ss.str();
 	}
 
+	std::string InstrPush::ToOutput()
+	{
+		std::stringstream ss;
+		ss << "PUSH<";
+
+		std::string srcsStr;
+		for (auto src : srcs)
+		{
+			ss << DataTypeToChar(src.type);
+			srcsStr += " " + src.arg.ToString();
+		}
+
+		ss << ">" << srcsStr;
+		return ss.str();
+	}
+
 	InstrPop::InstrPop(DataType _type, Argument _amt)
 		: Instruction(InstructionType::POP)
 	{
@@ -850,7 +917,7 @@ namespace ramvm {
 		srcs = _srcs;
 		dest = _dest;
 	}
-	
+
 	std::string InstrStore::ToString()
 	{
 		std::stringstream ss;
@@ -860,6 +927,22 @@ namespace ramvm {
 			ss << " " << src.ToString();
 
 		ss << "" << dest.ToString();
+		return ss.str();
+	}
+
+	std::string InstrStore::ToOutput()
+	{
+		std::stringstream ss;
+		ss << "STORE<";
+
+		std::string srcsStr;
+		for (auto src : srcs)
+		{
+			ss << DataTypeToChar(src.type);
+			srcsStr += " " + src.arg.ToString();
+		}
+
+		ss << ">" << srcsStr << " " << dest.ToString();
 		return ss.str();
 	}
 }

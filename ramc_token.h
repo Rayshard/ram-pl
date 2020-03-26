@@ -1,5 +1,7 @@
 #pragma once
 
+#include "token.h"
+
 namespace ramc {
 	enum class TokenType {
 		INT_LIT, FLOAT_LIT, STRING_LIT, 
@@ -28,16 +30,13 @@ namespace ramc {
 		INVALID, END_OF_FILE
 	};
 
-	struct Token {
-		TokenType type;
-		Position position;
-		std::string value;
-
+	struct Token : TToken<TokenType> {
 		Token() = default;
 		Token(TokenType _type, Position _pos, std::string _val);
-		std::string ToString(bool _includePos);
 
-		static Token INVALID(Position _pos);
-		static Token END_OF_FILE(Position _pos);
+		std::string ToString(bool _includePos) override;
+
+		static Token INVALID(Position _pos) { return { TokenType::INVALID, _pos, "" }; }
+		static Token END_OF_FILE(Position _pos) { return { TokenType::END_OF_FILE, _pos, "" }; }
 	};
 }

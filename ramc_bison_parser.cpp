@@ -34,7 +34,7 @@
 // are private implementation details.  Do not rely on them.
 
 // "%code top" blocks.
-#line 11 "ramc_grammar.yy"
+#line 13 "ramc_grammar.yy"
 
   #include "pch.h"
   #include "ramc_lexer.h"
@@ -48,19 +48,19 @@
 
 
 // Unqualified %code blocks.
-#line 20 "ramc_grammar.yy"
+#line 22 "ramc_grammar.yy"
 
     namespace ramc {
       namespace bison {
       // Return the next token.
       auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
       {
-        LexerResult readRes = _lexer.GetNextToken(true, true);
+        LexerResult readRes = _lexer.GetNextToken();
 
         if (!readRes.IsSuccess())
-          throw std::runtime_error(readRes.ToString());
+          throw std::runtime_error(readRes.ToString(false));
 
-        Token token = readRes.GetToken();
+        Token token = readRes.GetValue();
         _pos = token.position;
 
         switch (token.type)
@@ -217,6 +217,47 @@ namespace ramc { namespace bison {
 #line 218 "ramc_bison_parser.cpp"
 
 
+  /* Return YYSTR after stripping away unnecessary quotes and
+     backslashes, so that it's suitable for yyerror.  The heuristic is
+     that double-quoting is unnecessary unless the string contains an
+     apostrophe, a comma, or backslash (other than backslash-backslash).
+     YYSTR is taken from yytname.  */
+  std::string
+  Parser::yytnamerr_ (const char *yystr)
+  {
+    if (*yystr == '"')
+      {
+        std::string yyr;
+        char const *yyp = yystr;
+
+        for (;;)
+          switch (*++yyp)
+            {
+            case '\'':
+            case ',':
+              goto do_not_strip_quotes;
+
+            case '\\':
+              if (*++yyp != '\\')
+                goto do_not_strip_quotes;
+              else
+                goto append;
+
+            append:
+            default:
+              yyr += *yyp;
+              break;
+
+            case '"':
+              return yyr;
+            }
+      do_not_strip_quotes: ;
+      }
+
+    return yystr;
+  }
+
+
   /// Build a parser object.
   Parser::Parser (Lexer& lexer_yyarg, ASTNode*& result_yyarg, Position& position_yyarg)
 #if YYDEBUG
@@ -225,6 +266,7 @@ namespace ramc { namespace bison {
 #else
     :
 #endif
+      yy_lac_established_ (false),
       lexer (lexer_yyarg),
       result (result_yyarg),
       position (position_yyarg)
@@ -665,6 +707,10 @@ namespace ramc { namespace bison {
     /// The return value of parse ().
     int yyresult;
 
+    /// Discard the LAC context in case there still is one left from a
+    /// previous invocation.
+    yy_lac_discard_ ("init");
+
 #if YY_EXCEPTIONS
     try
 #endif // YY_EXCEPTIONS
@@ -728,6 +774,8 @@ namespace ramc { namespace bison {
     yyn += yyla.type_get ();
     if (yyn < 0 || yylast_ < yyn || yycheck_[yyn] != yyla.type_get ())
       {
+        if (!yy_lac_establish_ (yyla.type_get ()))
+           goto yyerrlab;
         goto yydefault;
       }
 
@@ -737,6 +785,9 @@ namespace ramc { namespace bison {
       {
         if (yy_table_value_is_error_ (yyn))
           goto yyerrlab;
+        if (!yy_lac_establish_ (yyla.type_get ()))
+           goto yyerrlab;
+
         yyn = -yyn;
         goto yyreduce;
       }
@@ -747,6 +798,7 @@ namespace ramc { namespace bison {
 
     // Shift the lookahead token.
     yypush_ ("Shifting", static_cast<state_type> (yyn), YY_MOVE (yyla));
+    yy_lac_discard_ ("shift");
     goto yynewstate;
 
 
@@ -838,397 +890,397 @@ namespace ramc { namespace bison {
           switch (yyn)
             {
   case 2:
-#line 195 "ramc_grammar.yy"
+#line 197 "ramc_grammar.yy"
             { result = new ASTProgram("Test File", yystack_[0].value.as < std::vector<ASTNode*> > ()); }
-#line 844 "ramc_bison_parser.cpp"
+#line 896 "ramc_bison_parser.cpp"
     break;
 
   case 3:
-#line 199 "ramc_grammar.yy"
+#line 201 "ramc_grammar.yy"
                 { yylhs.value.as < std::vector<ASTNode*> > () = { }; }
-#line 850 "ramc_bison_parser.cpp"
+#line 902 "ramc_bison_parser.cpp"
     break;
 
   case 4:
-#line 200 "ramc_grammar.yy"
+#line 202 "ramc_grammar.yy"
                 { yystack_[1].value.as < std::vector<ASTNode*> > ().push_back(yystack_[0].value.as < ASTNode* > ()); yylhs.value.as < std::vector<ASTNode*> > () = yystack_[1].value.as < std::vector<ASTNode*> > (); }
-#line 856 "ramc_bison_parser.cpp"
+#line 908 "ramc_bison_parser.cpp"
     break;
 
   case 5:
-#line 204 "ramc_grammar.yy"
+#line 206 "ramc_grammar.yy"
                    { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
-#line 862 "ramc_bison_parser.cpp"
+#line 914 "ramc_bison_parser.cpp"
     break;
 
   case 6:
-#line 205 "ramc_grammar.yy"
+#line 207 "ramc_grammar.yy"
                    { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
-#line 868 "ramc_bison_parser.cpp"
+#line 920 "ramc_bison_parser.cpp"
     break;
 
   case 7:
-#line 209 "ramc_grammar.yy"
+#line 211 "ramc_grammar.yy"
                             { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTIdentifier* > (), yystack_[0].value.as < ASTNode* > (), yystack_[1].value.as < BinopType > ()); }
-#line 874 "ramc_bison_parser.cpp"
+#line 926 "ramc_bison_parser.cpp"
     break;
 
   case 8:
-#line 210 "ramc_grammar.yy"
+#line 212 "ramc_grammar.yy"
                             { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 880 "ramc_bison_parser.cpp"
+#line 932 "ramc_bison_parser.cpp"
     break;
 
   case 9:
-#line 214 "ramc_grammar.yy"
+#line 216 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::EQ; }
-#line 886 "ramc_bison_parser.cpp"
+#line 938 "ramc_bison_parser.cpp"
     break;
 
   case 10:
-#line 215 "ramc_grammar.yy"
+#line 217 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::ADD_EQ; }
-#line 892 "ramc_bison_parser.cpp"
+#line 944 "ramc_bison_parser.cpp"
     break;
 
   case 11:
-#line 216 "ramc_grammar.yy"
+#line 218 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::SUB_EQ; }
-#line 898 "ramc_bison_parser.cpp"
+#line 950 "ramc_bison_parser.cpp"
     break;
 
   case 12:
-#line 217 "ramc_grammar.yy"
+#line 219 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::MUL_EQ; }
-#line 904 "ramc_bison_parser.cpp"
+#line 956 "ramc_bison_parser.cpp"
     break;
 
   case 13:
-#line 218 "ramc_grammar.yy"
+#line 220 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::DIV_EQ; }
-#line 910 "ramc_bison_parser.cpp"
+#line 962 "ramc_bison_parser.cpp"
     break;
 
   case 14:
-#line 219 "ramc_grammar.yy"
+#line 221 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::MOD_EQ; }
-#line 916 "ramc_bison_parser.cpp"
+#line 968 "ramc_bison_parser.cpp"
     break;
 
   case 15:
-#line 220 "ramc_grammar.yy"
+#line 222 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::POW_EQ; }
-#line 922 "ramc_bison_parser.cpp"
+#line 974 "ramc_bison_parser.cpp"
     break;
 
   case 16:
-#line 221 "ramc_grammar.yy"
+#line 223 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::BIN_AND_EQ; }
-#line 928 "ramc_bison_parser.cpp"
+#line 980 "ramc_bison_parser.cpp"
     break;
 
   case 17:
-#line 222 "ramc_grammar.yy"
+#line 224 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::BIN_OR_EQ; }
-#line 934 "ramc_bison_parser.cpp"
+#line 986 "ramc_bison_parser.cpp"
     break;
 
   case 18:
-#line 223 "ramc_grammar.yy"
+#line 225 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::BIN_XOR_EQ; }
-#line 940 "ramc_bison_parser.cpp"
+#line 992 "ramc_bison_parser.cpp"
     break;
 
   case 19:
-#line 224 "ramc_grammar.yy"
+#line 226 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::LSHIFT_EQ; }
-#line 946 "ramc_bison_parser.cpp"
+#line 998 "ramc_bison_parser.cpp"
     break;
 
   case 20:
-#line 225 "ramc_grammar.yy"
+#line 227 "ramc_grammar.yy"
             { yylhs.value.as < BinopType > () = BinopType::RSHIFT_EQ; }
-#line 952 "ramc_bison_parser.cpp"
+#line 1004 "ramc_bison_parser.cpp"
     break;
 
   case 21:
-#line 228 "ramc_grammar.yy"
+#line 230 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LOG_OR); }
-#line 958 "ramc_bison_parser.cpp"
+#line 1010 "ramc_bison_parser.cpp"
     break;
 
   case 22:
-#line 229 "ramc_grammar.yy"
+#line 231 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 964 "ramc_bison_parser.cpp"
+#line 1016 "ramc_bison_parser.cpp"
     break;
 
   case 23:
-#line 233 "ramc_grammar.yy"
+#line 235 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LOG_AND); }
-#line 970 "ramc_bison_parser.cpp"
+#line 1022 "ramc_bison_parser.cpp"
     break;
 
   case 24:
-#line 234 "ramc_grammar.yy"
+#line 236 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 976 "ramc_bison_parser.cpp"
+#line 1028 "ramc_bison_parser.cpp"
     break;
 
   case 25:
-#line 238 "ramc_grammar.yy"
+#line 240 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_OR); }
-#line 982 "ramc_bison_parser.cpp"
+#line 1034 "ramc_bison_parser.cpp"
     break;
 
   case 26:
-#line 239 "ramc_grammar.yy"
+#line 241 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 988 "ramc_bison_parser.cpp"
+#line 1040 "ramc_bison_parser.cpp"
     break;
 
   case 27:
-#line 243 "ramc_grammar.yy"
+#line 245 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_XOR); }
-#line 994 "ramc_bison_parser.cpp"
+#line 1046 "ramc_bison_parser.cpp"
     break;
 
   case 28:
-#line 244 "ramc_grammar.yy"
+#line 246 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1000 "ramc_bison_parser.cpp"
+#line 1052 "ramc_bison_parser.cpp"
     break;
 
   case 29:
-#line 248 "ramc_grammar.yy"
+#line 250 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::BIN_AND); }
-#line 1006 "ramc_bison_parser.cpp"
+#line 1058 "ramc_bison_parser.cpp"
     break;
 
   case 30:
-#line 249 "ramc_grammar.yy"
+#line 251 "ramc_grammar.yy"
                       { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1012 "ramc_bison_parser.cpp"
+#line 1064 "ramc_bison_parser.cpp"
     break;
 
   case 31:
-#line 253 "ramc_grammar.yy"
+#line 255 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::EQ_EQ); }
-#line 1018 "ramc_bison_parser.cpp"
+#line 1070 "ramc_bison_parser.cpp"
     break;
 
   case 32:
-#line 254 "ramc_grammar.yy"
+#line 256 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::NEQ); }
-#line 1024 "ramc_bison_parser.cpp"
+#line 1076 "ramc_bison_parser.cpp"
     break;
 
   case 33:
-#line 255 "ramc_grammar.yy"
+#line 257 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1030 "ramc_bison_parser.cpp"
+#line 1082 "ramc_bison_parser.cpp"
     break;
 
   case 34:
-#line 259 "ramc_grammar.yy"
+#line 261 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LT); }
-#line 1036 "ramc_bison_parser.cpp"
+#line 1088 "ramc_bison_parser.cpp"
     break;
 
   case 35:
-#line 260 "ramc_grammar.yy"
+#line 262 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::GT); }
-#line 1042 "ramc_bison_parser.cpp"
+#line 1094 "ramc_bison_parser.cpp"
     break;
 
   case 36:
-#line 261 "ramc_grammar.yy"
+#line 263 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LT_EQ); }
-#line 1048 "ramc_bison_parser.cpp"
+#line 1100 "ramc_bison_parser.cpp"
     break;
 
   case 37:
-#line 262 "ramc_grammar.yy"
+#line 264 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::GT_EQ); }
-#line 1054 "ramc_bison_parser.cpp"
+#line 1106 "ramc_bison_parser.cpp"
     break;
 
   case 38:
-#line 263 "ramc_grammar.yy"
+#line 265 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1060 "ramc_bison_parser.cpp"
+#line 1112 "ramc_bison_parser.cpp"
     break;
 
   case 39:
-#line 267 "ramc_grammar.yy"
+#line 269 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::LSHIFT); }
-#line 1066 "ramc_bison_parser.cpp"
+#line 1118 "ramc_bison_parser.cpp"
     break;
 
   case 40:
-#line 268 "ramc_grammar.yy"
+#line 270 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::RSHIFT); }
-#line 1072 "ramc_bison_parser.cpp"
+#line 1124 "ramc_bison_parser.cpp"
     break;
 
   case 41:
-#line 269 "ramc_grammar.yy"
+#line 271 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1078 "ramc_bison_parser.cpp"
+#line 1130 "ramc_bison_parser.cpp"
     break;
 
   case 42:
-#line 273 "ramc_grammar.yy"
+#line 275 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::ADD); }
-#line 1084 "ramc_bison_parser.cpp"
+#line 1136 "ramc_bison_parser.cpp"
     break;
 
   case 43:
-#line 274 "ramc_grammar.yy"
+#line 276 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::SUB); }
-#line 1090 "ramc_bison_parser.cpp"
+#line 1142 "ramc_bison_parser.cpp"
     break;
 
   case 44:
-#line 275 "ramc_grammar.yy"
+#line 277 "ramc_grammar.yy"
                        { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1096 "ramc_bison_parser.cpp"
+#line 1148 "ramc_bison_parser.cpp"
     break;
 
   case 45:
-#line 279 "ramc_grammar.yy"
+#line 281 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::MUL); }
-#line 1102 "ramc_bison_parser.cpp"
+#line 1154 "ramc_bison_parser.cpp"
     break;
 
   case 46:
-#line 280 "ramc_grammar.yy"
+#line 282 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::DIV); }
-#line 1108 "ramc_bison_parser.cpp"
+#line 1160 "ramc_bison_parser.cpp"
     break;
 
   case 47:
-#line 281 "ramc_grammar.yy"
+#line 283 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::MOD); }
-#line 1114 "ramc_bison_parser.cpp"
+#line 1166 "ramc_bison_parser.cpp"
     break;
 
   case 48:
-#line 282 "ramc_grammar.yy"
+#line 284 "ramc_grammar.yy"
                         { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1120 "ramc_bison_parser.cpp"
+#line 1172 "ramc_bison_parser.cpp"
     break;
 
   case 49:
-#line 286 "ramc_grammar.yy"
+#line 288 "ramc_grammar.yy"
                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::NEG); }
-#line 1126 "ramc_bison_parser.cpp"
+#line 1178 "ramc_bison_parser.cpp"
     break;
 
   case 50:
-#line 287 "ramc_grammar.yy"
+#line 289 "ramc_grammar.yy"
                  { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::LOG_NOT); }
-#line 1132 "ramc_bison_parser.cpp"
+#line 1184 "ramc_bison_parser.cpp"
     break;
 
   case 51:
-#line 288 "ramc_grammar.yy"
+#line 290 "ramc_grammar.yy"
                  { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1138 "ramc_bison_parser.cpp"
+#line 1190 "ramc_bison_parser.cpp"
     break;
 
   case 52:
-#line 292 "ramc_grammar.yy"
+#line 294 "ramc_grammar.yy"
                          { yylhs.value.as < ASTNode* > () = new ASTBinopExpr(yystack_[2].value.as < ASTNode* > (), yystack_[0].value.as < ASTNode* > (), BinopType::POW); }
-#line 1144 "ramc_bison_parser.cpp"
+#line 1196 "ramc_bison_parser.cpp"
     break;
 
   case 53:
-#line 293 "ramc_grammar.yy"
+#line 295 "ramc_grammar.yy"
                          { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1150 "ramc_bison_parser.cpp"
+#line 1202 "ramc_bison_parser.cpp"
     break;
 
   case 54:
-#line 297 "ramc_grammar.yy"
+#line 299 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::PRE_INC); }
-#line 1156 "ramc_bison_parser.cpp"
+#line 1208 "ramc_bison_parser.cpp"
     break;
 
   case 55:
-#line 298 "ramc_grammar.yy"
+#line 300 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[0].value.as < ASTNode* > (), UnopType::PRE_DEC); }
-#line 1162 "ramc_bison_parser.cpp"
+#line 1214 "ramc_bison_parser.cpp"
     break;
 
   case 56:
-#line 299 "ramc_grammar.yy"
+#line 301 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1168 "ramc_bison_parser.cpp"
+#line 1220 "ramc_bison_parser.cpp"
     break;
 
   case 57:
-#line 303 "ramc_grammar.yy"
+#line 305 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[1].value.as < ASTNode* > (), UnopType::POST_INC); }
-#line 1174 "ramc_bison_parser.cpp"
+#line 1226 "ramc_bison_parser.cpp"
     break;
 
   case 58:
-#line 304 "ramc_grammar.yy"
+#line 306 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = new ASTUnopExpr(yystack_[1].value.as < ASTNode* > (), UnopType::POST_DEC); }
-#line 1180 "ramc_bison_parser.cpp"
+#line 1232 "ramc_bison_parser.cpp"
     break;
 
   case 59:
-#line 305 "ramc_grammar.yy"
+#line 307 "ramc_grammar.yy"
                   { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTNode* > (); }
-#line 1186 "ramc_bison_parser.cpp"
+#line 1238 "ramc_bison_parser.cpp"
     break;
 
   case 60:
-#line 309 "ramc_grammar.yy"
+#line 311 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTIntLit* > (); }
-#line 1192 "ramc_bison_parser.cpp"
+#line 1244 "ramc_bison_parser.cpp"
     break;
 
   case 61:
-#line 310 "ramc_grammar.yy"
+#line 312 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTFloatLit* > (); }
-#line 1198 "ramc_bison_parser.cpp"
+#line 1250 "ramc_bison_parser.cpp"
     break;
 
   case 62:
-#line 311 "ramc_grammar.yy"
+#line 313 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTStringLit* > (); }
-#line 1204 "ramc_bison_parser.cpp"
+#line 1256 "ramc_bison_parser.cpp"
     break;
 
   case 63:
-#line 312 "ramc_grammar.yy"
+#line 314 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTBoolLit* > (); }
-#line 1210 "ramc_bison_parser.cpp"
+#line 1262 "ramc_bison_parser.cpp"
     break;
 
   case 64:
-#line 313 "ramc_grammar.yy"
+#line 315 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTBoolLit* > (); }
-#line 1216 "ramc_bison_parser.cpp"
+#line 1268 "ramc_bison_parser.cpp"
     break;
 
   case 65:
-#line 314 "ramc_grammar.yy"
+#line 316 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[0].value.as < ASTIdentifier* > (); }
-#line 1222 "ramc_bison_parser.cpp"
+#line 1274 "ramc_bison_parser.cpp"
     break;
 
   case 66:
-#line 315 "ramc_grammar.yy"
+#line 317 "ramc_grammar.yy"
                     { yylhs.value.as < ASTNode* > () = yystack_[1].value.as < ASTNode* > (); }
-#line 1228 "ramc_bison_parser.cpp"
+#line 1280 "ramc_bison_parser.cpp"
     break;
 
 
-#line 1232 "ramc_bison_parser.cpp"
+#line 1284 "ramc_bison_parser.cpp"
 
             default:
               break;
@@ -1332,6 +1384,7 @@ namespace ramc { namespace bison {
 
 
       // Shift the error token.
+      yy_lac_discard_ ("error recovery");
       error_token.state = static_cast<state_type> (yyn);
       yypush_ ("Shifting", YY_MOVE (error_token));
     }
@@ -1397,11 +1450,238 @@ namespace ramc { namespace bison {
     error (yyexc.what ());
   }
 
+  bool
+  Parser::yy_lac_check_ (int yytoken) const
+  {
+    // Logically, the yylac_stack's lifetime is confined to this function.
+    // Clear it, to get rid of potential left-overs from previous call.
+    yylac_stack_.clear ();
+    // Reduce until we encounter a shift and thereby accept the token.
+#if YYDEBUG
+    YYCDEBUG << "LAC: checking lookahead " << yytname_[yytoken] << ':';
+#endif
+    std::ptrdiff_t lac_top = 0;
+    while (true)
+      {
+        state_type top_state = (yylac_stack_.empty ()
+                                ? yystack_[lac_top].state
+                                : yylac_stack_.back ());
+        int yyrule = yypact_[top_state];
+        if (yy_pact_value_is_default_ (yyrule)
+            || (yyrule += yytoken) < 0 || yylast_ < yyrule
+            || yycheck_[yyrule] != yytoken)
+          {
+            // Use the default action.
+            yyrule = yydefact_[top_state];
+            if (yyrule == 0)
+              {
+                YYCDEBUG << " Err\n";
+                return false;
+              }
+          }
+        else
+          {
+            // Use the action from yytable.
+            yyrule = yytable_[yyrule];
+            if (yy_table_value_is_error_ (yyrule))
+              {
+                YYCDEBUG << " Err\n";
+                return false;
+              }
+            if (0 < yyrule)
+              {
+                YYCDEBUG << " S" << yyrule << '\n';
+                return true;
+              }
+            yyrule = -yyrule;
+          }
+        // By now we know we have to simulate a reduce.
+        YYCDEBUG << " R" << yyrule - 1;
+        // Pop the corresponding number of values from the stack.
+        {
+          std::ptrdiff_t yylen = yyr2_[yyrule];
+          // First pop from the LAC stack as many tokens as possible.
+          std::ptrdiff_t lac_size = std::ptrdiff_t (yylac_stack_.size ());
+          if (yylen < lac_size)
+            {
+              yylac_stack_.resize (std::size_t (lac_size - yylen));
+              yylen = 0;
+            }
+          else if (lac_size)
+            {
+              yylac_stack_.clear ();
+              yylen -= lac_size;
+            }
+          // Only afterwards look at the main stack.
+          // We simulate popping elements by incrementing lac_top.
+          lac_top += yylen;
+        }
+        // Keep top_state in sync with the updated stack.
+        top_state = (yylac_stack_.empty ()
+                     ? yystack_[lac_top].state
+                     : yylac_stack_.back ());
+        // Push the resulting state of the reduction.
+        state_type state = yy_lr_goto_state_ (top_state, yyr1_[yyrule]);
+        YYCDEBUG << " G" << state;
+        yylac_stack_.push_back (state);
+      }
+  }
+
+  // Establish the initial context if no initial context currently exists.
+  bool
+  Parser::yy_lac_establish_ (int yytoken)
+  {
+    /* Establish the initial context for the current lookahead if no initial
+       context is currently established.
+
+       We define a context as a snapshot of the parser stacks.  We define
+       the initial context for a lookahead as the context in which the
+       parser initially examines that lookahead in order to select a
+       syntactic action.  Thus, if the lookahead eventually proves
+       syntactically unacceptable (possibly in a later context reached via a
+       series of reductions), the initial context can be used to determine
+       the exact set of tokens that would be syntactically acceptable in the
+       lookahead's place.  Moreover, it is the context after which any
+       further semantic actions would be erroneous because they would be
+       determined by a syntactically unacceptable token.
+
+       yy_lac_establish_ should be invoked when a reduction is about to be
+       performed in an inconsistent state (which, for the purposes of LAC,
+       includes consistent states that don't know they're consistent because
+       their default reductions have been disabled).
+
+       For parse.lac=full, the implementation of yy_lac_establish_ is as
+       follows.  If no initial context is currently established for the
+       current lookahead, then check if that lookahead can eventually be
+       shifted if syntactic actions continue from the current context.  */
+    if (!yy_lac_established_)
+      {
+#if YYDEBUG
+        YYCDEBUG << "LAC: initial context established for "
+                 << yytname_[yytoken] << '\n';
+#endif
+        yy_lac_established_ = true;
+        return yy_lac_check_ (yytoken);
+      }
+    return true;
+  }
+
+  // Discard any previous initial lookahead context.
+  void
+  Parser::yy_lac_discard_ (const char* evt)
+  {
+   /* Discard any previous initial lookahead context because of Event,
+      which may be a lookahead change or an invalidation of the currently
+      established initial context for the current lookahead.
+
+      The most common example of a lookahead change is a shift.  An example
+      of both cases is syntax error recovery.  That is, a syntax error
+      occurs when the lookahead is syntactically erroneous for the
+      currently established initial context, so error recovery manipulates
+      the parser stacks to try to find a new initial context in which the
+      current lookahead is syntactically acceptable.  If it fails to find
+      such a context, it discards the lookahead.  */
+    if (yy_lac_established_)
+      {
+        YYCDEBUG << "LAC: initial context discarded due to "
+                 << evt << '\n';
+        yy_lac_established_ = false;
+      }
+  }
+
   // Generate an error message.
   std::string
-  Parser::yysyntax_error_ (state_type, const symbol_type&) const
+  Parser::yysyntax_error_ (state_type yystate, const symbol_type& yyla) const
   {
-    return YY_("syntax error");
+    // Number of reported tokens (one for the "unexpected", one per
+    // "expected").
+    std::ptrdiff_t yycount = 0;
+    // Its maximum.
+    enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
+    // Arguments of yyformat.
+    char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
+
+    /* There are many possibilities here to consider:
+       - If this state is a consistent state with a default action, then
+         the only way this function was invoked is if the default action
+         is an error action.  In that case, don't check for expected
+         tokens because there are none.
+       - The only way there can be no lookahead present (in yyla) is
+         if this state is a consistent state with a default action.
+         Thus, detecting the absence of a lookahead is sufficient to
+         determine that there is no unexpected or expected token to
+         report.  In that case, just report a simple "syntax error".
+       - Don't assume there isn't a lookahead just because this state is
+         a consistent state with a default action.  There might have
+         been a previous inconsistent state, consistent state with a
+         non-default action, or user semantic action that manipulated
+         yyla.  (However, yyla is currently not documented for users.)
+         In the first two cases, it might appear that the current syntax
+         error should have been detected in the previous state when
+         yy_lac_check was invoked.  However, at that time, there might
+         have been a different syntax error that discarded a different
+         initial context during error recovery, leaving behind the
+         current lookahead.
+    */
+    if (!yyla.empty ())
+      {
+        symbol_number_type yytoken = yyla.type_get ();
+        yyarg[yycount++] = yytname_[yytoken];
+
+#if YYDEBUG
+        // Execute LAC once. We don't care if it is succesful, we
+        // only do it for the sake of debugging output.
+        if (!yy_lac_established_)
+          yy_lac_check_ (yytoken);
+#endif
+
+        int yyn = yypact_[yystate];
+        if (!yy_pact_value_is_default_ (yyn))
+          {
+            for (int yyx = 0; yyx < yyntokens_; ++yyx)
+              if (yyx != yy_error_token_ && yyx != yy_undef_token_
+                  && yy_lac_check_ (yyx))
+                {
+                  if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
+                    {
+                      yycount = 1;
+                      break;
+                    }
+                  else
+                    yyarg[yycount++] = yytname_[yyx];
+                }
+          }
+      }
+
+    char const* yyformat = YY_NULLPTR;
+    switch (yycount)
+      {
+#define YYCASE_(N, S)                         \
+        case N:                               \
+          yyformat = S;                       \
+        break
+      default: // Avoid compiler warnings.
+        YYCASE_ (0, YY_("syntax error"));
+        YYCASE_ (1, YY_("syntax error, unexpected %s"));
+        YYCASE_ (2, YY_("syntax error, unexpected %s, expecting %s"));
+        YYCASE_ (3, YY_("syntax error, unexpected %s, expecting %s or %s"));
+        YYCASE_ (4, YY_("syntax error, unexpected %s, expecting %s or %s or %s"));
+        YYCASE_ (5, YY_("syntax error, unexpected %s, expecting %s or %s or %s or %s"));
+#undef YYCASE_
+      }
+
+    std::string yyres;
+    // Argument number.
+    std::ptrdiff_t yyi = 0;
+    for (char const* yyp = yyformat; *yyp; ++yyp)
+      if (yyp[0] == '%' && yyp[1] == 's' && yyi < yycount)
+        {
+          yyres += yytnamerr_ (yyarg[yyi++]);
+          ++yyp;
+        }
+      else
+        yyres += *yyp;
+    return yyres;
   }
 
 
@@ -1529,7 +1809,7 @@ namespace ramc { namespace bison {
   };
 
 
-#if YYDEBUG
+
   // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
   // First, the terminals, then, starting at \a yyntokens_, nonterminals.
   const char*
@@ -1549,17 +1829,17 @@ namespace ramc { namespace bison {
   "OP_ASSIGN", YY_NULLPTR
   };
 
-
+#if YYDEBUG
   const short
   Parser::yyrline_[] =
   {
-       0,   195,   195,   199,   200,   204,   205,   209,   210,   214,
-     215,   216,   217,   218,   219,   220,   221,   222,   223,   224,
-     225,   228,   229,   233,   234,   238,   239,   243,   244,   248,
-     249,   253,   254,   255,   259,   260,   261,   262,   263,   267,
-     268,   269,   273,   274,   275,   279,   280,   281,   282,   286,
-     287,   288,   292,   293,   297,   298,   299,   303,   304,   305,
-     309,   310,   311,   312,   313,   314,   315
+       0,   197,   197,   201,   202,   206,   207,   211,   212,   216,
+     217,   218,   219,   220,   221,   222,   223,   224,   225,   226,
+     227,   230,   231,   235,   236,   240,   241,   245,   246,   250,
+     251,   255,   256,   257,   261,   262,   263,   264,   265,   269,
+     270,   271,   275,   276,   277,   281,   282,   283,   284,   288,
+     289,   290,   294,   295,   299,   300,   301,   305,   306,   307,
+     311,   312,   313,   314,   315,   316,   317
   };
 
   // Print the state stack on the debug stream.
@@ -1594,9 +1874,9 @@ namespace ramc { namespace bison {
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 1598 "ramc_bison_parser.cpp"
+#line 1878 "ramc_bison_parser.cpp"
 
-#line 318 "ramc_grammar.yy"
+#line 320 "ramc_grammar.yy"
 
 namespace ramc {
 	namespace bison {

@@ -2,52 +2,25 @@
 #include "ramvm_lexer.h"
 
 namespace ramvm {
-	bool LexerResult::IsSuccess() { return type == LexerResultType::SUCCESS; }
-	Token LexerResult::GetToken() { return IsSuccess() ? token : Token::INVALID(errPosition); }
-
 	std::string LexerResult::ToString(bool _includePos)
 	{
-		std::string prefix = _includePos ? "(" + errPosition.ToString() + ") " : "";
+		std::string prefix = _includePos ? "(" + GetErrorPosition().ToString() + ") " : "";
 
-		switch (type)
+		switch (GetType())
 		{
 			case LexerResultType::SUCCESS: return "SUCCESS";
-			case LexerResultType::HEX_LIT_OOB: return prefix + "Literal Value Out Of Bounds: " + errString;
-			case LexerResultType::HEX_LIT_INVALID: return prefix + "Hex value must express a sequence of bytes: " + errString;
-			case LexerResultType::INVALID_REGISTER: return prefix + "Invalid Register: " + errString;
-			case LexerResultType::INVALID_REG_IDX: return prefix + "Invalid Register Index: " + errString;
-			case LexerResultType::INVAILD_LABEL_ID: return prefix + "Invalid Label Identifier: " + errString;
-			case LexerResultType::INVALID_OFFSET: return prefix + "Invalid Offset: " + errString;
-			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + errString;
-			case LexerResultType::MISSING_CLOSE_BRACKET: return prefix + "Missing closing bracket: " + errString;
-			case LexerResultType::INVALID: return prefix + "Invalid: " + errString;
-			case LexerResultType::UNKNOWN_TOKEN: return prefix + "Unknown Token: " + errString;
+			case LexerResultType::HEX_LIT_OOB: return prefix + "Literal Value Out Of Bounds: " + GetErrorString();
+			case LexerResultType::HEX_LIT_INVALID: return prefix + "Hex value must express a sequence of bytes: " + GetErrorString();
+			case LexerResultType::INVALID_REGISTER: return prefix + "Invalid Register: " + GetErrorString();
+			case LexerResultType::INVALID_REG_IDX: return prefix + "Invalid Register Index: " + GetErrorString();
+			case LexerResultType::INVAILD_LABEL_ID: return prefix + "Invalid Label Identifier: " + GetErrorString();
+			case LexerResultType::INVALID_OFFSET: return prefix + "Invalid Offset: " + GetErrorString();
+			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + GetErrorString();
+			case LexerResultType::MISSING_CLOSE_BRACKET: return prefix + "Missing closing bracket: " + GetErrorString();
+			case LexerResultType::INVALID: return prefix + "Invalid: " + GetErrorString();
+			case LexerResultType::UNKNOWN_TOKEN: return prefix + "Unknown Token: " + GetErrorString();
 			default: return prefix + "LexerResult::ToString - LexerResultType not handled!";
 		}
-	}
-
-	LexerResult LexerResult::GenSuccess(Token _token)
-	{
-		LexerResult result;
-		result.type = LexerResultType::SUCCESS;
-		result.token = _token;
-		return result;
-	}
-	LexerResult LexerResult::GenError(LexerResultType _type, std::string _str, Position _pos)
-	{
-		LexerResult result;
-		result.type = _type;
-		result.errString = _str;
-		result.errPosition = _pos;
-		return result;
-	}
-	LexerResult LexerResult::GenExpectationError(std::string _expected, std::string _found, Position _pos)
-	{
-		LexerResult result;
-		result.type = LexerResultType::INVALID;
-		result.errString = "Expected " + _expected + "but found " + _found;
-		result.errPosition = _pos;
-		return result;
 	}
 
 	LexerResult LexComment(Lexer* _lexer, Position _tokStartPos)
@@ -110,30 +83,6 @@ namespace ramvm {
 
 	bool IsWhitespace(char _char) { return _char == ' ' || _char == '\n' || _char == '\r' || _char == '\t'; }
 
-	Lexer::Lexer(std::istream* _stream, int _tabSize)
-	{
-		stream = _stream;
-		position = Position(1, 0);
-		tabSize = _tabSize;
-	}
-
-	int Lexer::ReadNextChar()
-	{
-		int result = stream->get();
-
-		if (result == '\n')
-		{
-			position.line++;
-			position.colomn = 0;
-		}
-		else if (result == '\t') { position.colomn += tabSize; }
-		else { position.colomn++; }
-
-		return result;
-	}
-
-	int Lexer::PeekNextChar() { return stream->peek(); }
-
 	LexerResult Lexer::GetNextToken()
 	{
 		std::string tokenStr;
@@ -170,7 +119,7 @@ namespace ramvm {
 			else
 			{
 				tokenStr.push_back((char)ReadNextChar());
-				
+
 				if (!readingToken)
 					tokStartPos = position;
 
@@ -286,7 +235,7 @@ namespace ramvm {
 
 			if (res.IsSuccess())
 			{
-				Token token = res.GetToken();
+				Token token = res.GetValue();
 				ss << token.ToString(true) << std::endl;
 
 				if (token.type == TokenType::END_OF_FILE)

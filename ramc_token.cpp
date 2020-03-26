@@ -3,6 +3,7 @@
 
 namespace ramc {
 	Token::Token(TokenType _type, Position _pos, std::string _val)
+		: TToken(_type, _pos, _val)
 	{
 		type = _type;
 		position = _pos;
@@ -84,7 +85,4 @@ namespace ramc {
 
 		return str;
 	}
-
-	Token Token::INVALID(Position _pos) { return { TokenType::INVALID, _pos, "" }; }
-	Token Token::END_OF_FILE(Position _pos) { return { TokenType::END_OF_FILE, _pos, "" }; }
 }

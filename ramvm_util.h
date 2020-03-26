@@ -113,6 +113,27 @@ namespace ramvm {
 
 		return result;
 	}
+	inline constexpr char DataTypeToChar(DataType _type)
+	{
+		switch (_type)
+		{
+			case DataType::BYTE: return 'B';
+			case DataType::INT: return 'I';
+			case DataType::FLOAT: return 'F';
+			case DataType::DOUBLE: return 'D';
+			case DataType::LONG: return 'L';
+			default: return 0;
+		}
+	}
+	inline std::string DataTypesToChars(const std::vector<DataType>& _types, bool _includeBrackets)
+	{
+		std::string result;
+
+		for (auto const& t : _types)
+			result.push_back(DataTypeToChar(t));
+
+		return _includeBrackets ? "<" + result + ">" : result;
+	}
 
 
 	void PrintResult(ResultType _type);
