@@ -22,7 +22,18 @@ namespace ramc {
 			
 			case TokenType::KW_TRUE: str += "Keyword: true"; break;
 			case TokenType::KW_FALSE: str += "Keyword: false"; break;
+
+			case TokenType::KW_LET: str += "Keyword: true"; break;
 			
+			case TokenType::KW_BYTE: str += "Keyword: false"; break;
+			case TokenType::KW_BOOL: str += "Keyword: bool"; break;
+			case TokenType::KW_INT: str += "Keyword: int"; break;
+			case TokenType::KW_FLOAT: str += "Keyword: float"; break;
+			case TokenType::KW_DOUBLE: str += "Keyword: double"; break;
+			case TokenType::KW_LONG: str += "Keyword: long"; break;
+			case TokenType::KW_STRING: str += "Keyword: string"; break;
+			case TokenType::KW_VOID: str += "Keyword: void"; break;
+
 			case TokenType::IDENTIFIER: str += "Identifier: " + value; break;
 			case TokenType::UNDERSCORE: str += "Underscore"; break;
 			case TokenType::WHITESPACE: str += "Whitespace"; break;
@@ -66,6 +77,7 @@ namespace ramc {
 			case TokenType::LOG_AND: str += "LogicalAnd"; break;
 			case TokenType::LOG_OR: str += "LogicalOr"; break;
 			case TokenType::LOG_NOT: str += "LogicalNot"; break;
+			case TokenType::BIN_NOT: str += "BinaryNot"; break;
 
 			case TokenType::INC: str += "Increment"; break;
 			case TokenType::DEC: str += "Decrement"; break;

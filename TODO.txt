@@ -1,3 +1,2 @@
--Copy GenerateCode from binop to unop
--Finshes Binops Typecheck
+-Implement TRASH for vm so underscore can write to nothing
 -COMpiler implement ability to have hex literals

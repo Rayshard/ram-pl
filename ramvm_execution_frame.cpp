@@ -59,7 +59,14 @@ namespace ramvm {
 		std::cout << "---------------------REGISTERS---------------------" << std::endl;
 
 		for (int i = 0; i < (int)registers.size(); i++)
-			std::cout << "R" << i << ": " << ToHexString(registers[i].i) << ", " << registers[i].i << ", " << registers[i].f << std::endl;
+		{
+			std::cout << "R" << i << ": " << ToHexString(registers[i].l) << ", ";
+			std::cout << (int)registers[i].b << "b, ";
+			std::cout << registers[i].i << "i, ";
+			std::cout << registers[i].f << "f, ";
+			std::cout << registers[i].d << "d, ";
+			std::cout << registers[i].l << "l" << std::endl;
+		}
 
 		std::cout << "---------------------------------------------------" << std::endl;
 	}

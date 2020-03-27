@@ -7,17 +7,20 @@
 using ramvm::InstructionSet;
 
 namespace ramc {
-	enum class ASTNodeType { PROGAM, LITERAL, BINOP_EXPR, UNOP_EXPR, IDENTIFIER };
+	enum class ASTNodeType { PROGAM, ASSIGNMENT, LITERAL, BINOP_EXPR, UNOP_EXPR, IDENTIFIER };
 
 	enum class BinopType {
 		ADD, SUB, MUL, DIV, MOD, POW,
 		BIN_AND, BIN_OR, BIN_XOR, LSHIFT, RSHIFT,
-		LT, GT, LT_EQ, GT_EQ, EQ_EQ, NEQ, LOG_AND, LOG_OR,
+		LT, GT, LT_EQ, GT_EQ, EQ_EQ, NEQ, LOG_AND, LOG_OR
+	};
+
+	enum class AssignmentType {
 		EQ, ADD_EQ, SUB_EQ, MUL_EQ, DIV_EQ, MOD_EQ, POW_EQ,
 		BIN_AND_EQ, BIN_OR_EQ, BIN_XOR_EQ, LSHIFT_EQ, RSHIFT_EQ,
 	};
 
-	enum class UnopType { NEG, LOG_NOT, PRE_INC, POST_INC, PRE_DEC, POST_DEC };
+	enum class UnopType { NEG, LOG_NOT, BIN_NOT };
 	enum class LiteralType { INT, FLOAT, STRING, BOOL, BYTE, DOUBLE, LONG };
 
 	class ASTNode {
@@ -31,7 +34,16 @@ namespace ramc {
 		virtual TypeResult TypeCheck(Environment* _env) = 0;
 	public:
 		ASTNodeType GetType() { return type; }
-		TypeResult GetTypeSysType(Environment* _env) { return typeSysType ? TypeResult::GenSuccess(typeSysType) : TypeCheck(_env); }
+		TypeResult GetTypeSysType(Environment* _env)
+		{
+			if (typeSysType) { return TypeResult::GenSuccess(typeSysType); }
+			else
+			{
+				TypeResult typeRes = TypeCheck(_env);
+				typeSysType = typeRes.GetValue();
+				return typeRes;
+			}
+		}
 		Position GetPosition() { return position; }
 
 		virtual std::string ToString(int _indentLvl) = 0;
@@ -40,6 +52,9 @@ namespace ramc {
 		template<typename T> T* As() { return dynamic_cast<T*>(this); }
 	};
 
+	class ASTIdentifier;
+	class ASTBinopEpxr;
+
 #pragma region Program
 	class ASTProgram : public ASTNode {
 		std::string fileName;
@@ -47,6 +62,39 @@ namespace ramc {
 	public:
 		ASTProgram(std::string _fileName, std::vector<ASTNode*> _stmts);
 		~ASTProgram();
+
+		std::string ToString(int _indentLvl) override;
+		TypeResult TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+	};
+#pragma endregion
+
+#pragma region VarDeclaration
+	class ASTVarDecl : public ASTNode {
+		ASTIdentifier* id;
+		ASTNode* expr;
+		bool isUnderscore;
+	public:
+		ASTVarDecl(ASTIdentifier*  _id, ASTNode* _expr, Position _pos);
+		ASTVarDecl(ASTNode* _expr, Position _pos);
+		~ASTVarDecl();
+
+		std::string ToString(int _indentLvl) override;
+		TypeResult TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+	};
+#pragma endregion
+
+#pragma region Assignment
+	class ASTAssignment : public ASTNode {
+		ASTIdentifier* id;
+		ASTNode* expr;
+		AssignmentType assignType;
+	public:
+		ASTAssignment(ASTIdentifier* _id, ASTNode* _expr, AssignmentType _assignType);
+		~ASTAssignment();
+
+		AssignmentType GetAssignType() { return assignType; }
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment* _env) override;
@@ -72,10 +120,10 @@ namespace ramc {
 
 #pragma region UnopExpr
 	class ASTUnopExpr : public ASTNode {
-		ASTNode* right;
+		ASTNode* expr;
 		UnopType op;
 	public:
-		ASTUnopExpr(ASTNode* _right, UnopType _op);
+		ASTUnopExpr(ASTNode* _expr, UnopType _op);
 		~ASTUnopExpr();
 
 		UnopType GetOp() { return op; }
@@ -89,10 +137,12 @@ namespace ramc {
 #pragma region Identifier
 	class ASTIdentifier : public ASTNode {
 		std::string id;
+		Argument source;
 	public:
 		ASTIdentifier(std::string _id, Position _pos);
 
 		std::string GetID() { return id; }
+		Argument GetSource() { return source; }
 
 		std::string ToString(int _indentLvl) override;
 		TypeResult TypeCheck(Environment* _env) override;

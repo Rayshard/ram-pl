@@ -1,5 +1,9 @@
 #pragma once
 #include "result.h"
+#include "ramvm_instruction.h"
+
+using ramvm::Argument;
+using ramvm::ArgType;
 
 namespace ramc {
 	enum class TypeSystemType {
@@ -24,7 +28,8 @@ namespace ramc {
 	enum class TypeResultType {
 		SUCCESS,
 		ID_NOT_FOUND,
-		MISMATCH
+		MISMATCH,
+		REDECLARATION
 	};
 
 	class TypeResult : public Result<TypeResultType, Type*> {
@@ -37,12 +42,19 @@ namespace ramc {
 		static TypeResult GenSuccess(Type* _type) { return TypeResult(TypeResultType::SUCCESS, _type, "", Position()); }
 		static TypeResult GenIDNotFound(std::string _id, Position _pos) { return TypeResult(TypeResultType::ID_NOT_FOUND, nullptr, _id, _pos); }
 		static TypeResult GenMismatch(std::string _mismatch, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mismatch, _pos); }
+		static TypeResult GenRedecalartion(std::string _id, Position _pos) { return TypeResult(TypeResultType::REDECLARATION, nullptr, _id, _pos); }
 	};
 
 	class Environment {
-		Environment* parent;
-		std::unordered_map<std::string, Type*> variables;
+		struct VarInfo
+		{
+			Type* type;
+			int regIdx;
+		};
 
+		Environment* parent;
+		std::unordered_map<std::string, VarInfo> variables;
+		int nextVarRegIdx;
 	public:
 		Environment(Environment* _parent);
 
@@ -50,6 +62,7 @@ namespace ramc {
 		bool HasVariable(std::string _id);
 		bool HasVariable(std::string _id, Type* _type);
 		TypeResult GetVariableType(std::string _id, Position _execPos);
+		Argument GetVarRegister(std::string _id);
 	};
 
 	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)

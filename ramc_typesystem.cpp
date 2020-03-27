@@ -1,5 +1,9 @@
 #include "pch.h"
 #include "ramc_typesystem.h"
+#include "ramvm_instruction.h"
+
+using ramvm::Argument;
+using ramvm::ArgType;
 
 namespace ramc {
 	Type* Type::BOOL = new Type(TypeSystemType::BOOL);
@@ -32,9 +36,10 @@ namespace ramc {
 		std::string prefix = _includePos ? "(" + errPosition.ToString() + ") " : "";
 		switch (type)
 		{
-			case ramc::TypeResultType::SUCCESS: return "SUCCESS";
-			case ramc::TypeResultType::ID_NOT_FOUND: return  prefix + "\"" + errString + "\" was not found!";
-			case ramc::TypeResultType::MISMATCH: return prefix + "Mismatch of " + errString;
+			case TypeResultType::SUCCESS: return "SUCCESS";
+			case TypeResultType::ID_NOT_FOUND: return  prefix + "\"" + errString + "\" has not been declared!";
+			case TypeResultType::MISMATCH: return prefix + "Mismatch of " + errString;
+			case TypeResultType::REDECLARATION: return prefix + "Redeclaration of \"" + errString + "\"";
 			default: return prefix + "TypeResult::ToString - TypeResultType not handled!";
 		}
 	}
@@ -42,6 +47,7 @@ namespace ramc {
 	Environment::Environment(Environment* _parent)
 	{
 		parent = _parent;
+		nextVarRegIdx = 0;
 	}
 
 	bool Environment::AddVariable(std::string _id, Type* _type)
@@ -50,7 +56,11 @@ namespace ramc {
 		if (search != variables.end()) { return false; }
 		else
 		{
-			variables.insert_or_assign(_id, _type);
+			VarInfo info;
+			info.type = _type;
+			info.regIdx = nextVarRegIdx++;
+
+			variables.insert_or_assign(_id, info);
 			return true;
 		}
 	}
@@ -64,13 +74,20 @@ namespace ramc {
 	{
 		auto search = variables.find(_id);
 		if (search == variables.end()) { return parent ? parent->HasVariable(_id, _type) : false; }
-		else { return search->second == _type; }
+		else { return search->second.type == _type; }
 	}
 
 	TypeResult Environment::GetVariableType(std::string _id, Position _execPos)
 	{
 		auto search = variables.find(_id);
 		if (search == variables.end()) { return parent ? parent->GetVariableType(_id, _execPos) : TypeResult::GenIDNotFound(_id, _execPos); }
-		else { return TypeResult::GenSuccess(search->second); }
+		else { return TypeResult::GenSuccess(search->second.type); }
+	}
+
+	Argument Environment::GetVarRegister(std::string _id)
+	{
+		auto search = variables.find(_id);
+		if (search == variables.end()) { return parent ? parent->GetVarRegister(_id) : Argument(ArgType::INVALID, 0); }
+		else { return Argument(ArgType::REGISTER, search->second.regIdx); }
 	}
 }

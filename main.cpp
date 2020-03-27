@@ -120,7 +120,6 @@ int CompilerMain()
 		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
 
 		Environment env(0);
-		env.AddVariable("a", Type::INT);
 		TypeResult typeRes = prog->TypeCheck(&env);
 
 		if (!typeRes.IsSuccess())

@@ -102,6 +102,15 @@ namespace ramc {
 				if (tokenStr == "_") { return LexerResult::GenSuccess(Token(TokenType::UNDERSCORE, _tokStartPos, "")); }
 				else if (tokenStr == "true") { return LexerResult::GenSuccess(Token(TokenType::KW_TRUE, _tokStartPos, "")); }
 				else if (tokenStr == "false") { return LexerResult::GenSuccess(Token(TokenType::KW_FALSE, _tokStartPos, "")); }
+				else if (tokenStr == "byte") { return LexerResult::GenSuccess(Token(TokenType::KW_BYTE, _tokStartPos, "")); }
+				else if (tokenStr == "bool") { return LexerResult::GenSuccess(Token(TokenType::KW_BOOL, _tokStartPos, "")); }
+				else if (tokenStr == "int") { return LexerResult::GenSuccess(Token(TokenType::KW_INT, _tokStartPos, "")); }
+				else if (tokenStr == "float") { return LexerResult::GenSuccess(Token(TokenType::KW_FLOAT, _tokStartPos, "")); }
+				else if (tokenStr == "double") { return LexerResult::GenSuccess(Token(TokenType::KW_DOUBLE, _tokStartPos, "")); }
+				else if (tokenStr == "long") { return LexerResult::GenSuccess(Token(TokenType::KW_LONG, _tokStartPos, "")); }
+				else if (tokenStr == "string") { return LexerResult::GenSuccess(Token(TokenType::KW_STRING, _tokStartPos, "")); }
+				else if (tokenStr == "void") { return LexerResult::GenSuccess(Token(TokenType::KW_VOID, _tokStartPos, "")); }
+				else if (tokenStr == "let") { return LexerResult::GenSuccess(Token(TokenType::KW_LET, _tokStartPos, "")); }
 				else { return LexerResult::GenSuccess(Token(TokenType::IDENTIFIER, _tokStartPos, tokenStr)); }
 			}
 		}
@@ -349,6 +358,7 @@ namespace ramc {
 				}
 				else { return LexerResult::GenSuccess(Token(TokenType::LOG_NOT, tokStartPos, "")); }
 			}
+			case '~':  return LexerResult::GenSuccess(Token(TokenType::BIN_NOT, tokStartPos, ""));
 			case '"': return LexStringLiteral(this, tokStartPos);
 			case '`': return LexComment(this, tokStartPos);
 		}
