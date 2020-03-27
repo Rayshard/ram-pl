@@ -1,1 +1,3 @@
--Get rid of TypedArgument and make the DataValue in Argument a DataVariant
+-Copy GenerateCode from binop to unop
+-Finshes Binops Typecheck
+-COMpiler implement ability to have hex literals

@@ -120,12 +120,12 @@ int CompilerMain()
 		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
 
 		Environment env(0);
-		env.AddVariable("a", PrimitiveType::INT);
-		TypeResult typeRes = prog->TypeCheck(env);
+		env.AddVariable("a", Type::INT);
+		TypeResult typeRes = prog->TypeCheck(&env);
 
 		if (!typeRes.IsSuccess())
 		{
-			std::cout << "Type Error: " << typeRes.ToString() << std::endl;
+			std::cout << "Type Error: " << typeRes.ToString(true) << std::endl;
 			return 0;
 		}
 		
@@ -135,7 +135,7 @@ int CompilerMain()
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
 		for (auto instr : instrs)
-			std::cout << "     " << instr->ToOutput() << std::endl;
+			std::cout << "     " << instr->ToString() << std::endl;
 
 		while (OptimizeInstructionSet(instrs)) //Loop till no change
 		{
@@ -144,7 +144,7 @@ int CompilerMain()
 			//for (auto instr : instrs)
 				//std::cout << "     " << instr.ToString() << std::endl;
 		}
-		return 0;
+		//return 0;
 		//Run VM
 		using namespace ramvm;
 

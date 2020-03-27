@@ -24,6 +24,9 @@ namespace ramvm {
 			{
 				case DataType::BYTE: _value = DataVariant(registers[_regIndex].b); break;
 				case DataType::INT: _value = DataVariant(registers[_regIndex].i); break;
+				case DataType::DOUBLE: _value = DataVariant(registers[_regIndex].d); break;
+				case DataType::FLOAT: _value = DataVariant(registers[_regIndex].f); break;
+				case DataType::LONG: _value = DataVariant(registers[_regIndex].l); break;
 				default: return ResultType::ERR_REG_READ;
 			}
 			
@@ -40,6 +43,9 @@ namespace ramvm {
 			{
 				case DataType::BYTE: registers[_regIndex].b = _value.B(); break;
 				case DataType::INT: registers[_regIndex].i = _value.I(); break;
+				case DataType::DOUBLE: registers[_regIndex].d = _value.D(); break;
+				case DataType::FLOAT: registers[_regIndex].f = _value.F(); break;
+				case DataType::LONG: registers[_regIndex].l = _value.L(); break;
 				default: return ResultType::ERR_REG_WRTIE;
 			}
 			
@@ -53,7 +59,7 @@ namespace ramvm {
 		std::cout << "---------------------REGISTERS---------------------" << std::endl;
 
 		for (int i = 0; i < (int)registers.size(); i++)
-			std::cout << "R" << i << ": " << ToHexString(registers[i].i) << ", " << registers[i].i << std::endl;
+			std::cout << "R" << i << ": " << ToHexString(registers[i].i) << ", " << registers[i].i << ", " << registers[i].f << std::endl;
 
 		std::cout << "---------------------------------------------------" << std::endl;
 	}

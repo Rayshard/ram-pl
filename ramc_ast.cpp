@@ -18,6 +18,7 @@ namespace ramc {
 	{
 		type = _type;
 		position = _pos;
+		typeSysType = nullptr;
 	}
 
 #pragma region Program
@@ -48,21 +49,21 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTProgram::TypeCheck(Environment& _env)
+	TypeResult ASTProgram::TypeCheck(Environment* _env)
 	{
 		for (auto const& stmt : stmts)
 		{
-			TypeResult stmtTypeRes = stmt->TypeCheck(_env);
+			TypeResult stmtTypeRes = stmt->GetTypeSysType(_env);
 			if (!stmtTypeRes.IsSuccess())
 				return stmtTypeRes;
 		}
 
-		return TypeResult::GenSuccess(PrimitiveType::VOID);
+		return TypeResult::GenSuccess(Type::VOID);
 	}
 
-	ramvm::InstructionSet ASTProgram::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTProgram::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		ramvm::InstructionSet instrs;
+		InstructionSet instrs;
 
 		for (int i = 0; i < (int)stmts.size(); i++)
 		{
@@ -144,158 +145,428 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTBinopExpr::TypeCheck(Environment& _env)
+	TypeResult ASTBinopExpr::TypeCheck(Environment* _env)
 	{
-		TypeResult leftTypeRes = left->TypeCheck(_env);
+		TypeResult leftTypeRes = left->GetTypeSysType(_env);
 
 		if (!leftTypeRes.IsSuccess())
 			return leftTypeRes;
 
-		TypeResult rightTypeRes = right->TypeCheck(_env);
+		TypeResult rightTypeRes = right->GetTypeSysType(_env);
 
 		if (!rightTypeRes.IsSuccess())
 			return rightTypeRes;
 
-		PrimitiveType leftType = leftTypeRes.GetType(), rightType = rightTypeRes.GetType();
+		Type* leftType = leftTypeRes.GetValue(), * rightType = rightTypeRes.GetValue();
+		
+		switch (ConcatTriple((byte)op, (byte)leftType->GetType(), (byte)rightType->GetType()))
+		{
+#pragma region ADD
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
 
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+
+#pragma region SUB
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+
+#pragma region MUL
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+
+#pragma region DIV
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+
+#pragma region MOD
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+
+#pragma region POW
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::LONG);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
+			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+#pragma endregion
+			
+			default: return TypeResult::GenMismatch("Cannot perform addition on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition());
+		}
+
+		/*
 		switch (op)
 		{
-			case ramc::BinopType::ADD: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::STRING && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else if (leftType == PrimitiveType::STRING && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else if (leftType == PrimitiveType::STRING && rightType == PrimitiveType::STRING) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::STRING) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::STRING) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else { return TypeResult::GenMismatch("Cannot perform addition on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::ADD: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::STRING && rightType == Type::INT) { return TypeResult::GenSuccess(Type::STRING); }
+				else if (leftType == Type::STRING && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::STRING); }
+				else if (leftType == Type::STRING && rightType == Type::STRING) { return TypeResult::GenSuccess(Type::STRING); }
+				else if (leftType == Type::INT && rightType == Type::STRING) { return TypeResult::GenSuccess(Type::STRING); }
+				else if (leftType == Type::FLOAT && rightType == Type::STRING) { return TypeResult::GenSuccess(Type::STRING); }
+				else { return TypeResult::GenMismatch("Cannot perform addition on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::SUB: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform subtraction on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::SUB: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform subtraction on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::MUL: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::STRING && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::STRING) { return TypeResult::GenSuccess(PrimitiveType::STRING); }
-				else { return TypeResult::GenMismatch("Cannot perform multiplication on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::MUL: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::STRING && rightType == Type::INT) { return TypeResult::GenSuccess(Type::STRING); }
+				else if (leftType == Type::INT && rightType == Type::STRING) { return TypeResult::GenSuccess(Type::STRING); }
+				else { return TypeResult::GenMismatch("Cannot perform multiplication on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::DIV: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform diviiosn on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::DIV: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform diviiosn on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::MOD: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform modulo on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::MOD: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform modulo on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::POW: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform exponentiation on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::POW: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform exponentiation on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::BIN_AND: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform binary and on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::BIN_AND: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform binary and on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::BIN_OR: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform binary or on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::BIN_OR: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform binary or on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::BIN_XOR: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform binary xor on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::BIN_XOR: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform binary xor on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::LSHIFT: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform left shift on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::LSHIFT: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform left shift on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::RSHIFT: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::INT); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::FLOAT); }
-				else { return TypeResult::GenMismatch("Cannot perform right shift on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::RSHIFT: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::INT); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::FLOAT); }
+				else { return TypeResult::GenMismatch("Cannot perform right shift on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::LT: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot compare " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::LT: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot compare " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::GT: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot compare " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::GT: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot compare " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::LT_EQ: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot compare " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::LT_EQ: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot compare " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::GT_EQ: {
-				if (leftType == PrimitiveType::INT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::INT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::INT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else if (leftType == PrimitiveType::FLOAT && rightType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot compare " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::GT_EQ: {
+				if (leftType == Type::INT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::INT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::INT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else if (leftType == Type::FLOAT && rightType == Type::FLOAT) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot compare " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::EQ_EQ: return TypeResult::GenSuccess(PrimitiveType::BOOL);
-			case ramc::BinopType::NEQ: return TypeResult::GenSuccess(PrimitiveType::BOOL);
-			case ramc::BinopType::LOG_AND: {
-				if (leftType == PrimitiveType::BOOL && rightType == PrimitiveType::BOOL) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot perform logical and on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::EQ_EQ: return TypeResult::GenSuccess(Type::BOOL);
+			case BinopType::NEQ: return TypeResult::GenSuccess(Type::BOOL);
+			case BinopType::LOG_AND: {
+				if (leftType == Type::BOOL && rightType == Type::BOOL) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot perform logical and on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::LOG_OR: {
-				if (leftType == PrimitiveType::BOOL && rightType == PrimitiveType::BOOL) { return TypeResult::GenSuccess(PrimitiveType::BOOL); }
-				else { return TypeResult::GenMismatch("Cannot perform logical and on " + PrimTypeToString(leftType) + " and " + PrimTypeToString(rightType), GetPosition()); }
+			case BinopType::LOG_OR: {
+				if (leftType == Type::BOOL && rightType == Type::BOOL) { return TypeResult::GenSuccess(Type::BOOL); }
+				else { return TypeResult::GenMismatch("Cannot perform logical and on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition()); }
 			}
-			case ramc::BinopType::EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::ADD_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::SUB_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::MUL_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::DIV_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::MOD_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::POW_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::BIN_AND_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::BIN_OR_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::BIN_XOR_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::LSHIFT_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			case ramc::BinopType::RSHIFT_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-			default: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
-		}
+			case BinopType::EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::ADD_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::SUB_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::MUL_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::DIV_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::MOD_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::POW_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::BIN_AND_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::BIN_OR_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::BIN_XOR_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::LSHIFT_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			case BinopType::RSHIFT_EQ: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
+			default: return TypeResult::GenMismatch("ATSBinopExpr::TypeCheck - Operation not handled!", GetPosition());
+		}*/
 	}
 
 	InstructionSet ASTBinopExpr::GenerateCode(std::map<std::string, std::string> _params)
@@ -308,30 +579,35 @@ namespace ramc {
 		instrs.insert(instrs.end(), leftInstrs.begin(), leftInstrs.end());
 		instrs.insert(instrs.end(), rightInstrs.begin(), rightInstrs.end());
 
-		auto src1 = TypedArgument(DataType::INT, ArgType::SP_OFFSET, -1);
-		auto src2 = TypedArgument(DataType::INT, ArgType::SP_OFFSET, 0);
+		auto src1DataType = TypeSysTypeToDataType(left->GetTypeSysType(nullptr).GetValue()->GetType());
+		auto src2DataType = TypeSysTypeToDataType(right->GetTypeSysType(nullptr).GetValue()->GetType());
+		auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType(nullptr).GetValue()->GetType());
+
+		auto src2 = TypedArgument(src2DataType, ArgType::SP_OFFSET, -1 * GetDataTypeSize(src2DataType) + 1);
+		auto src1 = TypedArgument(src1DataType, ArgType::SP_OFFSET, src2.value.i - GetDataTypeSize(src1DataType));
+		auto stackDest = TypedArgument(destDataType, ArgType::SP_OFFSET, src1.value);
 
 		switch (op)
 		{
-			case ramc::BinopType::ADD: instrs.push_back(new InstrBinop(Binop::ADD, src1, src2, src1)); break;
-			case ramc::BinopType::SUB: instrs.push_back(new InstrBinop(Binop::SUB, src1, src2, src1)); break;
-			case ramc::BinopType::MUL: instrs.push_back(new InstrBinop(Binop::MUL, src1, src2, src1)); break;
-			case ramc::BinopType::DIV: instrs.push_back(new InstrBinop(Binop::DIV, src1, src2, src1)); break;
-			case ramc::BinopType::MOD: instrs.push_back(new InstrBinop(Binop::MOD, src1, src2, src1)); break;
-			case ramc::BinopType::POW: throw "BinopExpr::GenerateCode - BinopType not handled!";
-			case ramc::BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::BIT_AND, src1, src2, src1)); break;
-			case ramc::BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::BIT_OR, src1, src2, src1)); break;
-			case ramc::BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::BIT_XOR, src1, src2, src1)); break;
-			case ramc::BinopType::LSHIFT: instrs.push_back(new InstrBinop(Binop::LSHIFT, src1, src2, src1)); break;
-			case ramc::BinopType::RSHIFT: instrs.push_back(new InstrBinop(Binop::RSHIFT, src1, src2, src1)); break;
-			case ramc::BinopType::LT: instrs.push_back(new InstrBinop(Binop::LT, src1, src2, src1)); break;
-			case ramc::BinopType::GT: instrs.push_back(new InstrBinop(Binop::GT, src1, src2, src1)); break;
-			case ramc::BinopType::LT_EQ: instrs.push_back(new InstrBinop(Binop::LTEQ, src1, src2, src1)); break;
-			case ramc::BinopType::GT_EQ: instrs.push_back(new InstrBinop(Binop::GTEQ, src1, src2, src1)); break;
-			case ramc::BinopType::EQ_EQ: instrs.push_back(new InstrBinop(Binop::EQ, src1, src2, src1)); break;
-			case ramc::BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, src1, src2, src1)); break;
-			case ramc::BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, src1, src2, src1)); break;
-			case ramc::BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, src1, src2, src1)); break;
+			case BinopType::ADD: instrs.push_back(new InstrBinop(Binop::ADD, src1, src2, stackDest)); break;
+			case BinopType::SUB: instrs.push_back(new InstrBinop(Binop::SUB, src1, src2, stackDest)); break;
+			case BinopType::MUL: instrs.push_back(new InstrBinop(Binop::MUL, src1, src2, stackDest)); break;
+			case BinopType::DIV: instrs.push_back(new InstrBinop(Binop::DIV, src1, src2, stackDest)); break;
+			case BinopType::MOD: instrs.push_back(new InstrBinop(Binop::MOD, src1, src2, stackDest)); break;
+			case BinopType::POW: instrs.push_back(new InstrBinop(Binop::POW, src1, src2, stackDest)); break;
+			case BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::BIT_AND, src1, src2, stackDest)); break;
+			case BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::BIT_OR, src1, src2, stackDest)); break;
+			case BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::BIT_XOR, src1, src2, stackDest)); break;
+			case BinopType::LSHIFT: instrs.push_back(new InstrBinop(Binop::LSHIFT, src1, src2, stackDest)); break;
+			case BinopType::RSHIFT: instrs.push_back(new InstrBinop(Binop::RSHIFT, src1, src2, stackDest)); break;
+			case BinopType::LT: instrs.push_back(new InstrBinop(Binop::LT, src1, src2, stackDest)); break;
+			case BinopType::GT: instrs.push_back(new InstrBinop(Binop::GT, src1, src2, stackDest)); break;
+			case BinopType::LT_EQ: instrs.push_back(new InstrBinop(Binop::LTEQ, src1, src2, stackDest)); break;
+			case BinopType::GT_EQ: instrs.push_back(new InstrBinop(Binop::GTEQ, src1, src2, stackDest)); break;
+			case BinopType::EQ_EQ: instrs.push_back(new InstrBinop(Binop::EQ, src1, src2, stackDest)); break;
+			case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, src1, src2, stackDest)); break;
+			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, src1, src2, stackDest)); break;
+			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, src1, src2, stackDest)); break;
 			case BinopType::EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
 			case BinopType::ADD_EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
 			case BinopType::SUB_EQ: throw "BinopExpr::GenerateCode - BinopType not handled!";
@@ -347,17 +623,17 @@ namespace ramc {
 			default: throw "BinopExpr::GenerateCode - BinopType not handled!";
 		}
 
-		//TODO gotta change the pop scale to be based on the return type of this binop
-		//This will require you to store the type during typechecking
-		instrs.push_back(new InstrPop(DataType::INT, Argument(ArgType::VALUE, 1)));
+		//Create Pop to remove the bytes past the result
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, -stackDest.value.i - GetDataTypeSize(stackDest.dataType) + 1)));
 
+		//Create Move to move result to destination
 		auto dest = Argument();
 		IGNORE(ParseArgument(_params["Dest"], dest));
 
 		if (!dest.IsStackTop())
 		{
-			instrs.push_back(new InstrMove(DataType::INT, Argument(ArgType::SP_OFFSET, 0), dest));
-			instrs.push_back(new InstrPop(DataType::INT, Argument(ArgType::VALUE, 1)));
+			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -1 * GetDataTypeSize(destDataType) + 1), dest));
+			instrs.push_back(new InstrPop(destDataType, Argument(ArgType::VALUE, 1)));
 		}
 
 		return instrs;
@@ -400,68 +676,68 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTUnopExpr::TypeCheck(Environment& _env)
+	TypeResult ASTUnopExpr::TypeCheck(Environment* _env)
 	{
-		TypeResult typeRes = right->TypeCheck(_env);
+		TypeResult typeRes = right->GetTypeSysType(_env);
 
 		if (!typeRes.IsSuccess())
 			return typeRes;
 
-		PrimitiveType primType = typeRes.GetType();
+		Type* primType = typeRes.GetValue();
 
 		switch (op)
 		{
 			case UnopType::NEG: {
-				if (primType == PrimitiveType::INT || primType == PrimitiveType::FLOAT) { return typeRes; }
-				else { return TypeResult::GenMismatch("Expected an int or float on the right of arithmetic negation but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::INT || primType == Type::FLOAT) { return typeRes; }
+				else { return TypeResult::GenMismatch("Expected an int or float on the right of arithmetic negation but found " + primType->ToString(false), GetPosition()); }
 			}
 			case UnopType::LOG_NOT: {
-				if (primType == PrimitiveType::BOOL) { return typeRes; }
-				else { return TypeResult::GenMismatch("Expected an bool on the right of logical negation but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::BOOL) { return typeRes; }
+				else { return TypeResult::GenMismatch("Expected an bool on the right of logical negation but found " + primType->ToString(false), GetPosition()); }
 			}
 			case UnopType::PRE_INC: {
-				if (primType == PrimitiveType::INT || primType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::VOID); }
-				else { return TypeResult::GenMismatch("Expected an int or float on the right of increment but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::INT || primType == Type::FLOAT) { return TypeResult::GenSuccess(Type::VOID); }
+				else { return TypeResult::GenMismatch("Expected an int or float on the right of increment but found " + primType->ToString(false), GetPosition()); }
 			}
 			case UnopType::POST_INC: {
-				if (primType == PrimitiveType::INT || primType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::VOID); }
-				else { return TypeResult::GenMismatch("Expected an int or float on the left of increment but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::INT || primType == Type::FLOAT) { return TypeResult::GenSuccess(Type::VOID); }
+				else { return TypeResult::GenMismatch("Expected an int or float on the left of increment but found " + primType->ToString(false), GetPosition()); }
 			}
 			case UnopType::PRE_DEC: {
-				if (primType == PrimitiveType::INT || primType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::VOID); }
-				else { return TypeResult::GenMismatch("Expected an int or float on the right of decrement but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::INT || primType == Type::FLOAT) { return TypeResult::GenSuccess(Type::VOID); }
+				else { return TypeResult::GenMismatch("Expected an int or float on the right of decrement but found " + primType->ToString(false), GetPosition()); }
 			}
 			case UnopType::POST_DEC: {
-				if (primType == PrimitiveType::INT || primType == PrimitiveType::FLOAT) { return TypeResult::GenSuccess(PrimitiveType::VOID); }
-				else { return TypeResult::GenMismatch("Expected an int or float on the left of decrement but found " + PrimTypeToString(primType), GetPosition()); }
+				if (primType == Type::INT || primType == Type::FLOAT) { return TypeResult::GenSuccess(Type::VOID); }
+				else { return TypeResult::GenMismatch("Expected an int or float on the left of decrement but found " + primType->ToString(false), GetPosition()); }
 			}
 			default: return TypeResult::GenMismatch("ATSUnopExpr::TypeCheck - Operation not handled!", GetPosition());
 		}
 	}
 
-	ramvm::InstructionSet ASTUnopExpr::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTUnopExpr::GenerateCode(std::map<std::string, std::string> _params)
 	{
 		InstructionSet instrs = right->GenerateCode({ {"Dest", "[1]" } });
-		auto src = TypedArgument(DataType::INT, ArgType::SP_OFFSET, 0);
-		
+		auto src = TypedArgument(DataType::INT, ArgType::SP_OFFSET, -1 * INT_SIZE + 1);
+
 		switch (op)
 		{
-			case ramc::UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, src, src)); break;
-			case ramc::UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, src, src)); break;
-			case ramc::UnopType::PRE_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
-			case ramc::UnopType::PRE_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
-			case ramc::UnopType::POST_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
-			case ramc::UnopType::POST_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
+			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, src, src)); break;
+			case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, src, src)); break;
+			case UnopType::PRE_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
+			case UnopType::PRE_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
+			case UnopType::POST_INC: throw "UnopExpr::GenerateCode - UnopType not handled!";
+			case UnopType::POST_DEC: throw "UnopExpr::GenerateCode - UnopType not handled!";
 			default: throw "UnopExpr::GenerateCode - UnopType not handled!";
 		}
 
-		
+
 		auto dest = ::Argument();
 		IGNORE(ParseArgument(_params["Dest"], dest));
 
 		if (!dest.IsStackTop())
 		{
-			instrs.push_back(new ::InstrMove(DataType::INT, Argument(ArgType::SP_OFFSET, 0), dest));
+			instrs.push_back(new ::InstrMove(DataType::INT, Argument(ArgType::SP_OFFSET, -1 * INT_SIZE + 1), dest));
 
 			//TODO gotta change the pop scale to be based on the return type of this unop
 			//This will require you to store the type during typechecking
@@ -484,14 +760,14 @@ namespace ramc {
 		return CreateIndent(_indentLvl) + "Identifier: " + id;
 	}
 
-	TypeResult ASTIdentifier::TypeCheck(Environment& _env)
+	TypeResult ASTIdentifier::TypeCheck(Environment* _env)
 	{
-		return _env.GetVariableType(id, GetPosition());
+		return _env->GetVariableType(id, GetPosition());
 	}
 
-	ramvm::InstructionSet ASTIdentifier::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTIdentifier::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		ramvm::InstructionSet instrs;
+		InstructionSet instrs;
 
 		return instrs;
 	}
@@ -500,34 +776,58 @@ namespace ramc {
 #pragma region Literal
 	InstructionSet ASTIntLit::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		auto dest = ramvm::Argument();
-		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, Argument(ArgType::VALUE, GetValue()), dest) };
+		return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, GetValue()), dest) };
 	}
 
 	InstructionSet ASTFloatLit::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		auto dest = ramvm::Argument();
-		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::FLOAT, Argument(ArgType::VALUE, GetValue()), dest) };
+		return { new InstrMove(DataType::FLOAT, Argument(ArgType::VALUE, GetValue()), dest) };
 	}
 
 	InstructionSet ASTStringLit::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		auto dest = ramvm::Argument();
-		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::INT, Argument(ramvm::ArgType::VALUE, 0), dest) };
+		return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, 0), dest) };
 	}
 
 	InstructionSet ASTBoolLit::GenerateCode(std::map<std::string, std::string> _params)
 	{
-		auto dest = ramvm::Argument();
-		IGNORE(ramvm::ParseArgument(_params["Dest"], dest));
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
 
-		return { new ramvm::InstrMove(DataType::BYTE, Argument(ArgType::VALUE, (byte)(GetValue() ? 1 : 0)), dest) };
+		return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, (byte)(GetValue() ? 1 : 0)), dest) };
+	}
+
+	InstructionSet ASTByteLit::GenerateCode(std::map<std::string, std::string> _params)
+	{
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
+
+		return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, GetValue()), dest) };
+	}
+
+	InstructionSet ASTDoubleLit::GenerateCode(std::map<std::string, std::string> _params)
+	{
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
+
+		return { new InstrMove(DataType::DOUBLE, Argument(ArgType::VALUE, GetValue()), dest) };
+	}
+
+	InstructionSet ASTLongLit::GenerateCode(std::map<std::string, std::string> _params)
+	{
+		auto dest = Argument();
+		IGNORE(ParseArgument(_params["Dest"], dest));
+
+		return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), dest) };
 	}
 #pragma endregion
 }

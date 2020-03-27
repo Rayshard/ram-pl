@@ -2,55 +2,41 @@
 #include "ramc_typesystem.h"
 
 namespace ramc {
-	std::string TypeResult::ToString()
+	Type* Type::BOOL = new Type(TypeSystemType::BOOL);
+	Type* Type::BYTE = new Type(TypeSystemType::BYTE);
+	Type* Type::INT = new Type(TypeSystemType::INT);
+	Type* Type::FLOAT = new Type(TypeSystemType::FLOAT);
+	Type* Type::DOUBLE = new Type(TypeSystemType::DOUBLE);
+	Type* Type::LONG = new Type(TypeSystemType::LONG);
+	Type* Type::STRING = new Type(TypeSystemType::STRING);
+	Type* Type::VOID = new Type(TypeSystemType::VOID);
+
+	std::string Type::ToString(int _indentLvl)
 	{
-		switch (resType)
+		switch (type)
 		{
-			case ramc::TypeResultType::SUCCESS: return "SUCCESS";
-			case ramc::TypeResultType::ID_NOT_FOUND: return "(" + errPosition.ToString() + ") \"" + errString + "\" was not found!";
-			case ramc::TypeResultType::MISMATCH: return "(" + errPosition.ToString() + ") Mismatch of " + errString;
-			default: return "(" + errPosition.ToString() + ") TypeResult::ToString - TypeResultType not handled!";
+			case TypeSystemType::BYTE: return "BYTE";
+			case TypeSystemType::INT: return "INT";
+			case TypeSystemType::FLOAT: return "FLOAT";
+			case TypeSystemType::STRING: return "STRING";
+			case TypeSystemType::BOOL: return "BOOL";
+			case TypeSystemType::DOUBLE: return "DOUBLE";
+			case TypeSystemType::LONG: return "LONG";
+			case TypeSystemType::VOID: return "VOID";
+			default: return "Type::ToString - Type not handled!";
 		}
 	}
-
-	TypeResult TypeResult::GenSuccess(PrimitiveType _type)
+	
+	std::string TypeResult::ToString(bool _includePos)
 	{
-		TypeResult result;
-		result.resType = TypeResultType::SUCCESS;
-		result.type = _type;
-		return result;
-	}
-
-	TypeResult TypeResult::GenIDNotFound(std::string _id, Position _pos)
-	{
-		TypeResult result;
-		result.resType = TypeResultType::ID_NOT_FOUND;
-		result.errString = _id;
-		result.errPosition = _pos;
-		return result;
-	}
-
-	TypeResult TypeResult::GenMismatch(std::string _mismatch, Position _pos)
-	{
-		TypeResult result;
-		result.resType = TypeResultType::MISMATCH;
-		result.errString = _mismatch;
-		result.errPosition = _pos;
-		return result;
-	}
-
-	const std::string PrimTypeToString(PrimitiveType _type)
-	{
-		const std::map<PrimitiveType, std::string> strings{
-			{ PrimitiveType::INT, "INT" },
-			{ PrimitiveType::FLOAT, "FLOAT" },
-			{ PrimitiveType::STRING, "STRING" },
-			{ PrimitiveType::BOOL, "BOOL" },
-			{ PrimitiveType::VOID, "VOID" },
-		};
-
-		auto search = strings.find(_type);
-		return search == strings.end() ? "PrimTypeToString - PrimitiveType not handled!" : search->second;
+		std::string prefix = _includePos ? "(" + errPosition.ToString() + ") " : "";
+		switch (type)
+		{
+			case ramc::TypeResultType::SUCCESS: return "SUCCESS";
+			case ramc::TypeResultType::ID_NOT_FOUND: return  prefix + "\"" + errString + "\" was not found!";
+			case ramc::TypeResultType::MISMATCH: return prefix + "Mismatch of " + errString;
+			default: return prefix + "TypeResult::ToString - TypeResultType not handled!";
+		}
 	}
 
 	Environment::Environment(Environment* _parent)
@@ -58,7 +44,7 @@ namespace ramc {
 		parent = _parent;
 	}
 
-	bool Environment::AddVariable(std::string _id, PrimitiveType _type)
+	bool Environment::AddVariable(std::string _id, Type* _type)
 	{
 		auto search = variables.find(_id);
 		if (search != variables.end()) { return false; }
@@ -74,7 +60,7 @@ namespace ramc {
 		return variables.find(_id) != variables.end() || (parent && HasVariable(_id));
 	}
 
-	bool Environment::HasVariable(std::string _id, PrimitiveType _type)
+	bool Environment::HasVariable(std::string _id, Type* _type)
 	{
 		auto search = variables.find(_id);
 		if (search == variables.end()) { return parent ? parent->HasVariable(_id, _type) : false; }

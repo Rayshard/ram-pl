@@ -168,7 +168,6 @@ namespace ramvm {
 							return resType;
 
 						//Push Value to stack
-						int writeStart = GetSP() + 1;
 						stack.insert(stack.end(), argVal.Bytes(), argVal.Bytes() + argVal.GetSize());
 					}
 
@@ -267,12 +266,7 @@ namespace ramvm {
 							return resType;
 
 						//Push Value
-						int writeStart = GetSP() + 1;
-						stack.resize(stack.size() + pushVal.GetSize());
-
-						resType = WriteStack(writeStart, pushVal);
-						if (IsErrorResult(resType))
-							return resType;
+						stack.insert(stack.end(), pushVal.Bytes(), pushVal.Bytes() + pushVal.GetSize());
 					}
 				} break;
 				case InstructionType::POP: {
@@ -353,7 +347,10 @@ namespace ramvm {
 				if (IsErrorResult(res)) { return res; }
 				else { return WriteStack(pos.I(), _value); }
 			}
-			case ArgType::SP_OFFSET: return WriteStack(GetSP() + _arg.value.i, _value);
+			case ArgType::SP_OFFSET: {
+				if (_arg.IsStackTop()) { stack.insert(stack.end(), _value.Bytes(), _value.Bytes() + _value.GetSize()); return ResultType::SUCCESS; }
+				else { return WriteStack(GetSP() + _arg.value.i, _value); }
+			}
 			default: return ResultType::ERR_INVALID_DEST;
 		}
 	}

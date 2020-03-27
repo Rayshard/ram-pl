@@ -35,13 +35,8 @@ namespace ramvm {
 		Lexer(std::istream* _stream, int _tabSize)
 			: RTLexer(_stream, _tabSize) { }
 
-		const std::regex REGEX_LABEL = std::regex("%[A-Za-z_][A-Za-z0-9_]*");
-		const std::regex REGEX_REG = std::regex("R(0|[1-9][0-9]*)");
-		const std::regex REGEX_MEM_REG = std::regex("\\{R(0|[1-9][0-9]*)\\}");
-		const std::regex REGEX_STACK_REG = std::regex("\\[R(0|[1-9][0-9]*)\\]");
-		const std::regex REGEX_SP_OFFSET = std::regex("\\[(0|1|-[1-9][0-9]*)\\]");
-		const std::regex REGEX_HEX_LIT = std::regex("0x[A-Fa-f0-9]+");
-		const std::regex REGEX_SP = std::regex("SP");
+		static std::regex REGEX_LABEL, REGEX_REG, REGEX_MEM_REG, REGEX_STACK_REG,
+			REGEX_SP_OFFSET, REGEX_HEX_LIT, REGEX_INT_LIT, REGEX_FLOAT_LIT, REGEX_DOUBLE_LIT, REGEX_SP;
 
 		LexerResult GetNextToken() override;
 	};

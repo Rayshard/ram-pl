@@ -60,11 +60,11 @@ union DataValue
 	byte bytes[LONG_SIZE];
 
 	DataValue() { l = 0; }
-	DataValue(byte _val) { b = _val; }
-	DataValue(int _val) { i = _val; }
-	DataValue(float _val) { f = _val; }
-	DataValue(double _val) { d = _val; }
-	DataValue(rLong _val) { l = _val; }
+	DataValue(byte _val) { l = 0;  b = _val; }
+	DataValue(int _val) { l = 0; i = _val; }
+	DataValue(float _val) { l = 0; f = _val; }
+	DataValue(double _val) { l = 0; d = _val; }
+	DataValue(rLong _val) { l = 0; l = _val; }
 	DataValue(byte* _bytes, int _length) { memcpy(bytes, _bytes, (int)fmin(LONG_SIZE, _length)); }
 };
 

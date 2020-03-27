@@ -52,6 +52,18 @@
             ASTFloatLit const* node = new ASTFloatLit(std::stof(token.value), token.position);
             return Parser::make_FLOAT_LIT(node);
           }
+          case TokenType::DOUBLE_LIT: {
+            ASTDoubleLit const* node = new ASTDoubleLit(std::stod(token.value), token.position);
+            return Parser::make_DOUBLE_LIT(node);
+          }
+          case TokenType::BYTE_LIT: {
+            ASTByteLit const* node = new ASTByteLit((byte)std::stoll(token.value), token.position);
+            return Parser::make_BYTE_LIT(node);
+          }
+          case TokenType::LONG_LIT: {
+            ASTLongLit const* node = new ASTLongLit(std::stoll(token.value), token.position);
+            return Parser::make_LONG_LIT(node);
+          }
           case TokenType::KW_TRUE: {
             ASTBoolLit const* node = new ASTBoolLit(true, token.position);
             return Parser::make_KW_TRUE(node);
@@ -165,6 +177,9 @@
 %token <ASTIntLit*> INT_LIT "INT_LIT"
 %token <ASTStringLit*> STRING_LIT "STRING_LIT"
 %token <ASTFloatLit*> FLOAT_LIT "FLOAT_LIT"
+%token <ASTByteLit*> BYTE_LIT "BYTE_LIT"
+%token <ASTDoubleLit*> DOUBLE_LIT "DOUBLE_LIT"
+%token <ASTLongLit*> LONG_LIT "LONG_LIT"
 %token <ASTBoolLit*> KW_TRUE "true"
 %token <ASTBoolLit*> KW_FALSE "false"
 %token END_OF_FILE 0
@@ -310,6 +325,9 @@ EXPR14:
 ATOM:
     "INT_LIT"       { $$ = $1; }
   | "FLOAT_LIT"     { $$ = $1; }
+  | "BYTE_LIT"      { $$ = $1; }
+  | "DOUBLE_LIT"    { $$ = $1; }
+  | "LONG_LIT"      { $$ = $1; }
   | "STRING_LIT"    { $$ = $1; }
   | "true"          { $$ = $1; }
   | "false"         { $$ = $1; }

@@ -18,20 +18,23 @@ namespace ramc {
 	};
 
 	enum class UnopType { NEG, LOG_NOT, PRE_INC, POST_INC, PRE_DEC, POST_DEC };
-	enum class LiteralType { INT, FLOAT, STRING, BOOL };
+	enum class LiteralType { INT, FLOAT, STRING, BOOL, BYTE, DOUBLE, LONG };
 
 	class ASTNode {
 	private:
 		ASTNodeType type;
 		Position position;
+		Type* typeSysType;
 	protected:
 		ASTNode(ASTNodeType _type, Position _pos);
+
+		virtual TypeResult TypeCheck(Environment* _env) = 0;
 	public:
 		ASTNodeType GetType() { return type; }
+		TypeResult GetTypeSysType(Environment* _env) { return typeSysType ? TypeResult::GenSuccess(typeSysType) : TypeCheck(_env); }
 		Position GetPosition() { return position; }
 
 		virtual std::string ToString(int _indentLvl) = 0;
-		virtual TypeResult TypeCheck(Environment& _env) = 0;
 		virtual InstructionSet GenerateCode(std::map<std::string, std::string> _params) = 0;
 
 		template<typename T> T* As() { return dynamic_cast<T*>(this); }
@@ -46,7 +49,7 @@ namespace ramc {
 		~ASTProgram();
 
 		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment& _env) override;
+		TypeResult TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
@@ -62,7 +65,7 @@ namespace ramc {
 		BinopType GetOp() { return op; }
 
 		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment& _env) override;
+		TypeResult TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
@@ -78,7 +81,7 @@ namespace ramc {
 		UnopType GetOp() { return op; }
 
 		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment& _env) override;
+		TypeResult TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
@@ -92,7 +95,7 @@ namespace ramc {
 		std::string GetID() { return id; }
 
 		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment& _env) override;
+		TypeResult TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 #pragma endregion
@@ -123,6 +126,9 @@ namespace ramc {
 				case LiteralType::FLOAT: ss << "Float Literal: "; break;
 				case LiteralType::STRING: ss << "String Literal: "; break;
 				case LiteralType::BOOL: ss << "Bool Literal: "; break;
+				case LiteralType::BYTE: ss << "Byte Literal: "; break;
+				case LiteralType::DOUBLE: ss << "Double Literal: "; break;
+				case LiteralType::LONG: ss << "Long Literal: "; break;
 				default: ss << "Literal::ToString - LiteralType not handled!"; break;
 			}
 
@@ -130,14 +136,17 @@ namespace ramc {
 			return ss.str();
 		}
 
-		TypeResult TypeCheck(Environment& _env) override
+		TypeResult TypeCheck(Environment* _env) override
 		{
 			switch (litType)
 			{
-				case LiteralType::INT: return TypeResult::GenSuccess(PrimitiveType::INT);
-				case LiteralType::FLOAT: return TypeResult::GenSuccess(PrimitiveType::FLOAT);
-				case LiteralType::STRING: return TypeResult::GenSuccess(PrimitiveType::STRING);
-				case LiteralType::BOOL: return TypeResult::GenSuccess(PrimitiveType::BOOL);
+				case LiteralType::INT: return TypeResult::GenSuccess(Type::INT);
+				case LiteralType::FLOAT: return TypeResult::GenSuccess(Type::FLOAT);
+				case LiteralType::STRING: return TypeResult::GenSuccess(Type::STRING);
+				case LiteralType::BOOL: return TypeResult::GenSuccess(Type::BOOL);
+				case LiteralType::BYTE: return TypeResult::GenSuccess(Type::BYTE);
+				case LiteralType::DOUBLE: return TypeResult::GenSuccess(Type::DOUBLE);
+				case LiteralType::LONG: return TypeResult::GenSuccess(Type::LONG);
 				default: return TypeResult::GenMismatch("Literal::Typecheck - LiteralType not handled!", GetPosition());
 			}
 		}
@@ -147,6 +156,21 @@ namespace ramc {
 
 	struct ASTIntLit : public ASTLiteral<int> {
 		ASTIntLit(int _val, Position _pos) : ASTLiteral(LiteralType::INT, _val, _pos) { }
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+	};
+
+	struct ASTByteLit : public ASTLiteral<byte> {
+		ASTByteLit(byte _val, Position _pos) : ASTLiteral(LiteralType::BYTE, _val, _pos) { }
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+	};
+
+	struct ASTDoubleLit : public ASTLiteral<double> {
+		ASTDoubleLit(double _val, Position _pos) : ASTLiteral(LiteralType::DOUBLE, _val, _pos) { }
+		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+	};
+
+	struct ASTLongLit : public ASTLiteral<rLong> {
+		ASTLongLit(rLong _val, Position _pos) : ASTLiteral(LiteralType::LONG, _val, _pos) { }
 		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
 	};
 

@@ -7,55 +7,58 @@
 namespace ramvm {
 	ResultType ParseArgument(std::string& _token, Argument& _arg)
 	{
-		return ResultType::ERR_ARGUMENT;
-		/*if (std::regex_match(_token, std::regex("(byte|int|float|double|long)[(]-?(0|[1-9][0-9]*)(\\.[0-9]+)?[)]")) ||
-			std::regex_match(_token, std::regex("-?0|[1-9][0-9]*")) ||
-			std::regex_match(_token, std::regex("R(0|[1-9][0-9]*)")) ||
-			std::regex_match(_token, std::regex("\\{R(0|[1-9][0-9]*)\\}")) ||
-			std::regex_match(_token, std::regex("\\[R(0|[1-9][0-9]*)\\]")) ||
-			std::regex_match(_token, std::regex("\\[(0|1|-[1-9][0-9]*)\\]")) ||
-			_token == "SP")
+		if (std::regex_match(_token, Lexer::REGEX_REG))
 		{
-			ResultType result;
-			DataVariant value;
+			std::string idx = _token.substr(1, _token.length() - 1);
 
-			//Get Value Data Type
-			switch (_token[0])
-			{
-				case 'b': value = DataVariant(DataType::BYTE); break;
-				case 'i': value = DataVariant(DataType::INT); break;
-				case 'f': value = DataVariant(DataType::FLOAT); break;
-				case 'd': value = DataVariant(DataType::DOUBLE); break;
-				case 'l': value = DataVariant(DataType::LONG); break;
-				default: value = DataVariant(DataType::INT); break;
-			}
-
-			//Get Number in Token
-			if (_token != "SP")
-			{
-				std::string subStr = _token.substr(_token.find_first_of("-0123456789"));
-				subStr.erase(subStr.find_last_of("0123456789") + 1);
-				result = ParseNumericLiteral(subStr, value);
-			}
-
-			if (IsErrorResult(result))
-				return result;
-
-			switch (_token[0])
-			{
-				case 'R': _arg = Argument(ArgType::REGISTER, value); break;
-				case '{': _arg = Argument(ArgType::MEM_REG, value); break;
-				case '[': {
-					if (isdigit(_token[1]) || _token[1] == '-') { _arg = Argument(ArgType::SP_OFFSET, value); }
-					else { _arg = Argument(ArgType::STACK_REG, value); }
-				} break;
-				case 'S': _arg = Argument(ArgType::STACK_PTR, value); break;
-				default: _arg = Argument(ArgType::VALUE, value);
-			}
-
-			return ResultType::SUCCESS;
+			if (IsInt(idx)) { _arg = Argument(ArgType::REGISTER, std::stoi(idx)); }
+			else { return ResultType::ERR_REG_IDX_OOB; }
 		}
-		else { return ResultType::PARSE_ERR_INVALID_ARG; }*/
+		else if (std::regex_match(_token, Lexer::REGEX_MEM_REG))
+		{
+			std::string idx = _token.substr(2, _token.length() - 3);
+
+			if (IsInt(idx)) { _arg = Argument(ArgType::MEM_REG, std::stoi(idx)); }
+			else { return ResultType::ERR_REG_IDX_OOB; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_STACK_REG))
+		{
+			std::string idx = _token.substr(2, _token.length() - 3);
+
+			if (IsInt(idx)) { _arg = Argument(ArgType::STACK_REG, std::stoi(idx)); }
+			else { return ResultType::ERR_REG_IDX_OOB; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_SP_OFFSET))
+		{
+			std::string idx = _token.substr(1, _token.length() - 2);
+
+			if (IsInt(idx)) { _arg = Argument(ArgType::SP_OFFSET, std::stoi(idx)); }
+			else { return ResultType::ERR_REG_IDX_OOB; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_SP)) { _arg = Argument(ArgType::STACK_PTR, 0); }
+		else if (std::regex_match(_token, Lexer::REGEX_INT_LIT))
+		{
+			try { _arg = Argument(ArgType::VALUE, std::stoll(_token)); }
+			catch (...) { return ResultType::ERR_ARGUMENT; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_FLOAT_LIT))
+		{
+			try { _arg = Argument(ArgType::VALUE, std::stof(_token)); }
+			catch (...) { return ResultType::ERR_ARGUMENT; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_DOUBLE_LIT))
+		{
+			try { _arg = Argument(ArgType::VALUE, std::stod(_token)); }
+			catch (...) { return ResultType::ERR_ARGUMENT; }
+		}
+		else if (std::regex_match(_token, Lexer::REGEX_HEX_LIT))
+		{
+			try { _arg = Argument(ArgType::VALUE, std::stoll(_token, 0, 16)); }
+			catch (...) { return ResultType::ERR_ARGUMENT; }
+		}
+		else { return ResultType::PARSE_ERR_INVALID_ARG; }
+
+		return ResultType::SUCCESS;
 	}
 
 	bool ParseResult::IsSuccess() { return success; }

@@ -5,8 +5,11 @@
 namespace ramc {
 	enum class LexerResultType {
 		SUCCESS,
+		BYTE_LIT_OOB,
 		INT_LIT_OOB,
 		FLOAT_LIT_OOB,
+		DOUBLE_LIT_OOB,
+		LONG_LIT_OOB,
 		STR_LIT_CLOSE,
 		COMMENT_CLOSE,
 		STR_LIT_INVALID_ESC,

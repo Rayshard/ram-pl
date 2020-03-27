@@ -9,8 +9,11 @@ namespace ramc {
 		switch (GetType())
 		{
 			case LexerResultType::SUCCESS: return "SUCCESS";
-			case LexerResultType::INT_LIT_OOB: return prefix + "Integer Literal Out of -(2^32) to (2^32 - 1) bound: " + GetErrorString();
-			case LexerResultType::FLOAT_LIT_OOB: return prefix + "Float Literal Out of -(2^32) to (2^32 - 1) bound: " + GetErrorString();
+			case LexerResultType::BYTE_LIT_OOB: return prefix + "Byte Literal Out of 8 Bit Bound: " + GetErrorString();
+			case LexerResultType::INT_LIT_OOB: return prefix + "Interger Literal Out of 32 Bit Bound: " + GetErrorString();
+			case LexerResultType::DOUBLE_LIT_OOB: return prefix + "Double Literal Out of 64 Bit Bound: " + GetErrorString();
+			case LexerResultType::LONG_LIT_OOB: return prefix + "Long Literal Out of 64 Bit Bound: " + GetErrorString();
+			case LexerResultType::FLOAT_LIT_OOB: return prefix + "Float Literal Out of 32 Bit Bound: " + GetErrorString();
 			case LexerResultType::STR_LIT_CLOSE: return prefix + "Missing closing '\"' for string literal: " + GetErrorString();
 			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + GetErrorString();
 			case LexerResultType::TOO_MANY_DECIMALS: return prefix + "Float Literal has more than one decimal: " + GetErrorString();
@@ -41,21 +44,44 @@ namespace ramc {
 			{
 				if (hasDecimal)
 				{
-					try
+					if (peekedChar == 'd' || peekedChar == 'D')
 					{
-						std::stof(tokenStr);
-						return  LexerResult::GenSuccess(Token(TokenType::FLOAT_LIT, _tokStartPos, tokenStr));
+						try { IGNORE(_lexer->ReadNextChar()); std::stod(tokenStr); return LexerResult::GenSuccess(Token(TokenType::DOUBLE_LIT, _tokStartPos, tokenStr)); }
+						catch (...) { return LexerResult::GenError(LexerResultType::DOUBLE_LIT_OOB, tokenStr, _lexer->GetPosition()); }
 					}
-					catch (...) { return LexerResult::GenError(LexerResultType::FLOAT_LIT_OOB, tokenStr, _lexer->GetPosition()); }
+					else
+					{
+						if (peekedChar == 'f' || peekedChar == 'F')
+							IGNORE(_lexer->ReadNextChar());
+						
+						try { std::stof(tokenStr); return LexerResult::GenSuccess(Token(TokenType::FLOAT_LIT, _tokStartPos, tokenStr)); }
+						catch (...) { return LexerResult::GenError(LexerResultType::FLOAT_LIT_OOB, tokenStr, _lexer->GetPosition()); }
+					}
 				}
 				else
 				{
-					try
+					if (peekedChar == 'b' || peekedChar == 'B')
 					{
-						std::stoi(tokenStr);
-						return  LexerResult::GenSuccess(Token(TokenType::INT_LIT, _tokStartPos, tokenStr));
+						IGNORE(_lexer->ReadNextChar());
+
+						try
+						{
+							rLong val = std::stoll(tokenStr);
+							if (val < 0 || val >255) { throw 0; }
+							else { return LexerResult::GenSuccess(Token(TokenType::BYTE_LIT, _tokStartPos, tokenStr)); }
+						}
+						catch (...) { return LexerResult::GenError(LexerResultType::BYTE_LIT_OOB, tokenStr, _lexer->GetPosition()); }
 					}
-					catch (...) { return LexerResult::GenError(LexerResultType::INT_LIT_OOB, tokenStr, _lexer->GetPosition()); }
+					else if (peekedChar == 'l' || peekedChar == 'L')
+					{
+						try { IGNORE(_lexer->ReadNextChar()); std::stoll(tokenStr); return LexerResult::GenSuccess(Token(TokenType::LONG_LIT, _tokStartPos, tokenStr)); }
+						catch (...) { return LexerResult::GenError(LexerResultType::LONG_LIT_OOB, tokenStr, _lexer->GetPosition()); }
+					}
+					else
+					{
+						try { std::stoi(tokenStr); return  LexerResult::GenSuccess(Token(TokenType::INT_LIT, _tokStartPos, tokenStr)); }
+						catch (...) { return LexerResult::GenError(LexerResultType::INT_LIT_OOB, tokenStr, _lexer->GetPosition()); }
+					}
 				}
 			}
 		}
@@ -126,7 +152,7 @@ namespace ramc {
 	{
 		std::string tokenStr;
 		Position tokStartPos = _lexer->GetPosition();
-		
+
 		while (true)
 		{
 			char peekedChar = (char)_lexer->PeekNextChar();

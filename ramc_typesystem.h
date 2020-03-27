@@ -1,11 +1,25 @@
 #pragma once
+#include "result.h"
 
 namespace ramc {
-	enum class PrimitiveType {
-		INT, FLOAT, STRING, BOOL, VOID
+	enum class TypeSystemType {
+		VOID, BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING
 	};
 
-	const std::string PrimTypeToString(PrimitiveType _type);
+	class Type {
+	private:
+		TypeSystemType type;
+	protected:
+		Type(TypeSystemType _type) : type(_type) { }
+	public:
+		static Type* INT, * FLOAT, * STRING, * BOOL, * VOID, * DOUBLE, * LONG,
+			* BYTE;
+
+		virtual std::string ToString(int _indentLvl);
+
+		TypeSystemType GetType() { return type; }
+		template<typename T> T* As() { return dynamic_cast<T*>(this); }
+	};
 
 	enum class TypeResultType {
 		SUCCESS,
@@ -13,33 +27,42 @@ namespace ramc {
 		MISMATCH
 	};
 
-	class TypeResult {
-		TypeResultType resType;
-		PrimitiveType type;
-
-		std::string errString;
-		Position errPosition;
+	class TypeResult : public Result<TypeResultType, Type*> {
+		TypeResult(TypeResultType _type, Type* _val, std::string _errStr, Position _errPos)
+			: Result(_type, _val, _errStr, _errPos) { }
 	public:
-		bool IsSuccess() { return resType == TypeResultType::SUCCESS; }
-		PrimitiveType GetType() { return type; }
+		Type* GetValue() override { return IsSuccess() ? value : nullptr; }
+		std::string ToString(bool _includePos) override;
 
-		std::string ToString();
-
-		static TypeResult GenSuccess(PrimitiveType _type);
-		static TypeResult GenIDNotFound(std::string _id, Position _pos);
-		static TypeResult GenMismatch(std::string _mismatch, Position _pos);
+		static TypeResult GenSuccess(Type* _type) { return TypeResult(TypeResultType::SUCCESS, _type, "", Position()); }
+		static TypeResult GenIDNotFound(std::string _id, Position _pos) { return TypeResult(TypeResultType::ID_NOT_FOUND, nullptr, _id, _pos); }
+		static TypeResult GenMismatch(std::string _mismatch, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mismatch, _pos); }
 	};
 
 	class Environment {
 		Environment* parent;
-		std::unordered_map<std::string, PrimitiveType> variables;
+		std::unordered_map<std::string, Type*> variables;
 
 	public:
 		Environment(Environment* _parent);
 
-		bool AddVariable(std::string _id, PrimitiveType _type);
+		bool AddVariable(std::string _id, Type* _type);
 		bool HasVariable(std::string _id);
-		bool HasVariable(std::string _id, PrimitiveType _type);
+		bool HasVariable(std::string _id, Type* _type);
 		TypeResult GetVariableType(std::string _id, Position _execPos);
 	};
+
+	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)
+	{
+		switch (_type)
+		{
+			case TypeSystemType::BYTE: return DataType::BYTE;
+			case TypeSystemType::INT: return DataType::INT;
+			case TypeSystemType::FLOAT: return DataType::FLOAT;
+			case TypeSystemType::BOOL: return DataType::BYTE;
+			case TypeSystemType::DOUBLE: return DataType::DOUBLE;
+			case TypeSystemType::LONG: return DataType::LONG;
+			default: return DataType::UNKNOWN;
+		}
+	}
 }

@@ -4,7 +4,7 @@
 
 namespace ramc {
 	enum class TokenType {
-		INT_LIT, FLOAT_LIT, STRING_LIT, 
+		BYTE_LIT, INT_LIT, FLOAT_LIT, DOUBLE_LIT, LONG_LIT, STRING_LIT, 
 		
 		KW_TRUE, KW_FALSE,
 

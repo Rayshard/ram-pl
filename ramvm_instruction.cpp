@@ -697,7 +697,7 @@ namespace ramvm {
 	{
 		switch (type)
 		{
-			case ramvm::ArgType::VALUE: return ToHexString(value);
+			case ramvm::ArgType::VALUE: return ToHexString(value.bytes, LONG_SIZE);
 			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value.i);
 			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.i) + "}";
 			case ramvm::ArgType::STACK_PTR: return "SP";
@@ -728,16 +728,6 @@ namespace ramvm {
 	std::string InstrBinop::ToString()
 	{
 		std::stringstream ss;
-		ss << BinopToString(op) << " ";
-		ss << src1.ToString() << " ";
-		ss << src2.ToString() << " ";
-		ss << dest.ToString();
-		return ss.str();
-	}
-
-	std::string InstrBinop::ToOutput()
-	{
-		std::stringstream ss;
 		ss << BinopToString(op) << '<' << DataTypeToChar(src1.dataType) << DataTypeToChar(src2.dataType) << DataTypeToChar(dest.dataType) << "> ";
 		ss << src1.ToString() << " ";
 		ss << src2.ToString() << " ";
@@ -756,15 +746,6 @@ namespace ramvm {
 	std::string InstrUnop::ToString()
 	{
 		std::stringstream ss;
-		ss << UnopToString(op) << " ";
-		ss << src.ToString() << " ";
-		ss << dest.ToString();
-		return ss.str();
-	}
-
-	std::string InstrUnop::ToOutput()
-	{
-		std::stringstream ss;
 		ss << UnopToString(op) << '<' << DataTypeToChar(src.dataType) << DataTypeToChar(dest.dataType) << "> ";
 		ss << src.ToString() << " ";
 		ss << dest.ToString();
@@ -780,17 +761,6 @@ namespace ramvm {
 	}
 
 	std::string InstrCall::ToString()
-	{
-		std::stringstream ss;
-		ss << "CALL " << labelIdx << " " << regCnt;
-
-		for (auto src : argSrcs)
-			ss << " " << src.ToString();
-
-		return ss.str();
-	}
-
-	std::string InstrCall::ToOutput()
 	{
 		std::stringstream ss;
 		ss << "CALL<";
@@ -813,17 +783,6 @@ namespace ramvm {
 	}
 
 	std::string InstrReturn::ToString()
-	{
-		std::stringstream ss;
-		ss << "RET";
-
-		for (auto src : srcs)
-			ss << " " << src.ToString();
-
-		return ss.str();
-	}
-
-	std::string InstrReturn::ToOutput()
 	{
 		std::stringstream ss;
 		ss << "RET<";
@@ -881,17 +840,6 @@ namespace ramvm {
 	std::string InstrPush::ToString()
 	{
 		std::stringstream ss;
-		ss << "PUSH";
-
-		for (auto src : srcs)
-			ss << " " << src.ToString();
-
-		return ss.str();
-	}
-
-	std::string InstrPush::ToOutput()
-	{
-		std::stringstream ss;
 		ss << "PUSH<";
 
 		std::string srcsStr;
@@ -920,18 +868,6 @@ namespace ramvm {
 	}
 
 	std::string InstrStore::ToString()
-	{
-		std::stringstream ss;
-		ss << "STORE";
-
-		for (auto src : srcs)
-			ss << " " << src.ToString();
-
-		ss << "" << dest.ToString();
-		return ss.str();
-	}
-
-	std::string InstrStore::ToOutput()
 	{
 		std::stringstream ss;
 		ss << "STORE<";
