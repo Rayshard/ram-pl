@@ -14,6 +14,7 @@ namespace ramvm {
 			case LexerResultType::INVALID_REGISTER: return prefix + "Invalid Register: " + GetErrorString();
 			case LexerResultType::INVALID_REG_IDX: return prefix + "Invalid Register Index: " + GetErrorString();
 			case LexerResultType::INVAILD_LABEL_ID: return prefix + "Invalid Label Identifier: " + GetErrorString();
+			case LexerResultType::INSTR_OFFSET_OOB: return prefix + "Instruction offset is out of integer bounds: " + GetErrorString();
 			case LexerResultType::INVALID_OFFSET: return prefix + "Invalid Offset: " + GetErrorString();
 			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + GetErrorString();
 			case LexerResultType::MISSING_CLOSE_BRACKET: return prefix + "Missing closing bracket: " + GetErrorString();
@@ -56,6 +57,7 @@ namespace ramvm {
 		else if (_tokStr == "CJUMP") { return LexerResult::GenSuccess(Token(TokenType::KW_CJUMP, _tokStartPos, "")); }
 		else if (std::regex_match(_tokStr, std::regex("CALL<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_CALL, _tokStartPos, _tokStr.substr(5, _tokStr.length() - 6))); }
 		else if (std::regex_match(_tokStr, std::regex("STORE<[BIFDL]+>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_STORE, _tokStartPos, _tokStr.substr(6, _tokStr.length() - 7))); }
+		else if (std::regex_match(_tokStr, std::regex("COMPARE"))) { return LexerResult::GenSuccess(Token(TokenType::KW_COMPARE, _tokStartPos, "")); }
 		else if (std::regex_match(_tokStr, std::regex("ADD<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_ADD, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (std::regex_match(_tokStr, std::regex("SUB<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_SUB, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (std::regex_match(_tokStr, std::regex("MUL<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MUL, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
@@ -83,16 +85,17 @@ namespace ramvm {
 
 	bool IsWhitespace(char _char) { return _char == ' ' || _char == '\n' || _char == '\r' || _char == '\t'; }
 
-	std::regex Lexer::REGEX_LABEL = std::regex("%[A-Za-z_][A-Za-z0-9_]*");
-	std::regex Lexer::REGEX_REG = std::regex("R(0|[1-9][0-9]*)");
-	std::regex Lexer::REGEX_MEM_REG = std::regex("\\{R(0|[1-9][0-9]*)\\}");
-	std::regex Lexer::REGEX_STACK_REG = std::regex("\\[R(0|[1-9][0-9]*)\\]");
-	std::regex Lexer::REGEX_SP_OFFSET = std::regex("\\[(0|1|-[1-9][0-9]*)\\]");
-	std::regex Lexer::REGEX_HEX_LIT = std::regex("0x[A-Fa-f0-9]+");
-	std::regex Lexer::REGEX_INT_LIT = std::regex("-?0|[1-9][0-9]*");
-	std::regex Lexer::REGEX_FLOAT_LIT = std::regex("-?(0|[1-9][0-9]*)\\.[0-9]+f");
-	std::regex Lexer::REGEX_DOUBLE_LIT = std::regex("-?(0|[1-9][0-9]*)\\.[0-9]+d");
-	std::regex Lexer::REGEX_SP = std::regex("SP");
+	const std::regex Lexer::REGEX_LABEL = std::regex("%[A-Za-z_][A-Za-z0-9_]*");
+	const std::regex Lexer::REGEX_INSTR_OFFSET = std::regex("%[<>][1-9][0-9]*");
+	const std::regex Lexer::REGEX_REG = std::regex("R(0|[1-9][0-9]*)");
+	const std::regex Lexer::REGEX_MEM_REG = std::regex("\\{R(0|[1-9][0-9]*)\\}");
+	const std::regex Lexer::REGEX_STACK_REG = std::regex("\\[R(0|[1-9][0-9]*)\\]");
+	const std::regex Lexer::REGEX_SP_OFFSET = std::regex("\\[(0|1|-[1-9][0-9]*)\\]");
+	const std::regex Lexer::REGEX_HEX_LIT = std::regex("0x[A-Fa-f0-9]+");
+	const std::regex Lexer::REGEX_INT_LIT = std::regex("-?(0|[1-9][0-9]*)");
+	const std::regex Lexer::REGEX_FLOAT_LIT = std::regex("-?(0|[1-9][0-9]*)\\.[0-9]+f?");
+	const std::regex Lexer::REGEX_DOUBLE_LIT = std::regex("-?(0|[1-9][0-9]*)\\.[0-9]+d");
+	const std::regex Lexer::REGEX_SP = std::regex("SP");
 
 	LexerResult Lexer::GetNextToken()
 	{
@@ -149,6 +152,13 @@ namespace ramvm {
 				{
 					std::string id = tokenStr.substr(1, tokenStr.length() - 1);
 					return LexerResult::GenSuccess(Token(TokenType::LABEL, tokStartPos, id));
+				}
+				else if (std::regex_match(tokenStr, REGEX_INSTR_OFFSET))
+				{
+					std::string off = (tokenStr[1] == '<' ? '-' : '+') + tokenStr.substr(2, tokenStr.length() - 1);
+
+					try { std::stoi(off); return LexerResult::GenSuccess(Token(TokenType::INSTR_OFFSET, tokStartPos, off)); }
+					catch (...) { return LexerResult::GenError(LexerResultType::INSTR_OFFSET_OOB, tokenStr, tokStartPos); }
 				}
 				else { return LexerResult::GenError(LexerResultType::INVAILD_LABEL_ID, tokenStr, position); }
 			}

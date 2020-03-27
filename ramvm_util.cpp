@@ -7,11 +7,11 @@ namespace ramvm {
 		switch (_type)
 		{
 			case ResultType::SUCCESS: std::cout << "Success" << std::endl; break;
+			case ResultType::ERR_INVALID_IP: std::cout << "Error: Invalid Instruction Index" << std::endl; break;
 			case ResultType::ERR_MALLOC: std::cout << "Error: Malloc" << std::endl; break;
 			case ResultType::ERR_FREE: std::cout << "Error: Free" << std::endl; break;
 			case ResultType::ERR_MEMREAD: std::cout << "Error: Memory Read" << std::endl; break;
 			case ResultType::ERR_MEMWRITE: std::cout << "Error: Memory Write" << std::endl; break;
-			case ResultType::ERR_NOHALT: std::cout << "Error: Exit Before HALT" << std::endl; break;
 			case ResultType::ERR_UNKNOWNINSTR: std::cout << "Error: Unknown Instruction" << std::endl; break;
 			case ResultType::ERR_REG_IDX_OOB: std::cout << "Error: Register Index Out of Bounds" << std::endl;  break;
 			case ResultType::ERR_INVALID_DEST: std::cout << "Error: Invalid Destination" << std::endl; break;

@@ -5,9 +5,16 @@
 #include "ramvm_parser.h"
 
 using ramvm::InstructionSet;
+using ramvm::Argument;
 
 namespace ramc {
-	enum class ASTNodeType { PROGAM, ASSIGNMENT, LITERAL, BINOP_EXPR, UNOP_EXPR, IDENTIFIER };
+	class ASTStmt;
+	class ASTIdentifier;
+	class ASTBinopEpxr;
+
+	enum class ASTNodeType { PROGAM, STMT, EXPR };
+	enum class ASTStmtType { ASSIGNMENT, EXPR, VARDECL };
+	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL };
 
 	enum class BinopType {
 		ADD, SUB, MUL, DIV, MOD, POW,
@@ -23,121 +30,163 @@ namespace ramc {
 	enum class UnopType { NEG, LOG_NOT, BIN_NOT };
 	enum class LiteralType { INT, FLOAT, STRING, BOOL, BYTE, DOUBLE, LONG };
 
+#pragma region ASTNode
 	class ASTNode {
 	private:
 		ASTNodeType type;
 		Position position;
-		Type* typeSysType;
+		TypePtr typeSysType;
 	protected:
 		ASTNode(ASTNodeType _type, Position _pos);
 
-		virtual TypeResult TypeCheck(Environment* _env) = 0;
+		virtual TypeResult _TypeCheck(Environment* _env) = 0;
 	public:
+		TypeResult TypeCheck(Environment* _env);
+
 		ASTNodeType GetType() { return type; }
-		TypeResult GetTypeSysType(Environment* _env)
-		{
-			if (typeSysType) { return TypeResult::GenSuccess(typeSysType); }
-			else
-			{
-				TypeResult typeRes = TypeCheck(_env);
-				typeSysType = typeRes.GetValue();
-				return typeRes;
-			}
-		}
+		TypePtr GetTypeSysType() { return typeSysType; }
 		Position GetPosition() { return position; }
 
-		virtual std::string ToString(int _indentLvl) = 0;
-		virtual InstructionSet GenerateCode(std::map<std::string, std::string> _params) = 0;
-
-		template<typename T> T* As() { return dynamic_cast<T*>(this); }
+		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
 	};
-
-	class ASTIdentifier;
-	class ASTBinopEpxr;
+#pragma endregion
 
 #pragma region Program
+	struct ProgramInfo
+	{
+		InstructionSet offsetedCtrlInstrs;
+		InstructionSet labeledCtrlInstrs;
+	};
+
 	class ASTProgram : public ASTNode {
 		std::string fileName;
-		std::vector<ASTNode*> stmts;
+		std::vector<ASTStmt*> stmts;
 	public:
-		ASTProgram(std::string _fileName, std::vector<ASTNode*> _stmts);
+		ASTProgram(std::string _fileName, std::vector<ASTStmt*> _stmts);
 		~ASTProgram();
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode();
+	};
+#pragma endregion
+
+#pragma region ASTStmt
+	class ASTStmt : public ASTNode {
+	private:
+		ASTStmtType stmtType;
+	protected:
+		ASTStmt(ASTStmtType _type, Position _pos)
+			: ASTNode(ASTNodeType::STMT, _pos), stmtType(_type) { }
+
+		virtual TypeResult _TypeCheck(Environment* _env) = 0;
+	public:
+		ASTStmtType GetStmtType() { return stmtType; }
+
+		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
+		virtual InstructionSet GenerateCode(ProgramInfo& _progInfo) = 0;
+	};
+#pragma endregion
+
+#pragma region ASTExpr
+	class ASTExpr : public ASTNode {
+	private:
+		ASTExprType exprType;
+	protected:
+		ASTExpr(ASTExprType _type, Position _pos)
+			: ASTNode(ASTNodeType::EXPR, _pos), exprType(_type) { }
+
+		virtual TypeResult _TypeCheck(Environment* _env) = 0;
+	public:
+		ASTExprType GetExprType() { return exprType; }
+
+		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
+		virtual InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) = 0;
 	};
 #pragma endregion
 
 #pragma region VarDeclaration
-	class ASTVarDecl : public ASTNode {
+	class ASTVarDecl : public ASTStmt {
 		ASTIdentifier* id;
-		ASTNode* expr;
+		ASTExpr* expr;
 		bool isUnderscore;
-		Type* restraint;
+		TypePtr restraint;
 	public:
-		ASTVarDecl(ASTIdentifier*  _id, ASTNode* _expr, Position _pos);
-		ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTNode* _expr, Position _pos);
-		ASTVarDecl(ASTNode* _expr, Position _pos);
+		ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, Position _pos);
+		ASTVarDecl(ASTIdentifier* _id, TypePtr _restraint, ASTExpr* _expr, Position _pos);
+		ASTVarDecl(ASTExpr* _expr, Position _pos);
 		~ASTVarDecl();
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
+#pragma region If Expression
+	class ASTIfExpr : public ASTExpr {
+		ASTExpr* condExpr, * thenExpr, * elseExpr;
+	public:
+		ASTIfExpr(ASTExpr* _condExpr, ASTExpr* _thenExpr, ASTExpr* _elseExpr, Position _pos);
+		~ASTIfExpr();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region Assignment
-	class ASTAssignment : public ASTNode {
+	class ASTAssignment : public ASTStmt {
 		ASTIdentifier* id;
-		ASTNode* expr;
+		ASTExpr* expr;
 		AssignmentType assignType;
 	public:
-		ASTAssignment(ASTIdentifier* _id, ASTNode* _expr, AssignmentType _assignType);
+		ASTAssignment(ASTIdentifier* _id, ASTExpr* _expr, AssignmentType _assignType);
 		~ASTAssignment();
 
 		AssignmentType GetAssignType() { return assignType; }
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region BinopExpr
-	class ASTBinopExpr : public ASTNode {
-		ASTNode* left, * right;
+	class ASTBinopExpr : public ASTExpr {
+		ASTExpr* left, * right;
 		BinopType op;
 	public:
-		ASTBinopExpr(ASTNode* _left, ASTNode* _right, BinopType _op);
+		ASTBinopExpr(ASTExpr* _left, ASTExpr* _right, BinopType _op);
 		~ASTBinopExpr();
 
 		BinopType GetOp() { return op; }
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region UnopExpr
-	class ASTUnopExpr : public ASTNode {
-		ASTNode* expr;
+	class ASTUnopExpr : public ASTExpr {
+		ASTExpr* expr;
 		UnopType op;
 	public:
-		ASTUnopExpr(ASTNode* _expr, UnopType _op);
+		ASTUnopExpr(ASTExpr* _expr, UnopType _op);
 		~ASTUnopExpr();
 
 		UnopType GetOp() { return op; }
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region Identifier
-	class ASTIdentifier : public ASTNode {
+	class ASTIdentifier : public ASTExpr {
 		std::string id;
 		Argument source;
 	public:
@@ -146,19 +195,19 @@ namespace ramc {
 		std::string GetID() { return id; }
 		Argument GetSource() { return source; }
 
-		std::string ToString(int _indentLvl) override;
-		TypeResult TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region Literal
-	template<typename T> class ASTLiteral : public ASTNode {
+	template<typename T> class ASTLiteral : public ASTExpr {
 		LiteralType litType;
 		T value;
 	protected:
 		ASTLiteral(LiteralType _type, T _val, Position _pos)
-			: ASTNode(ASTNodeType::LITERAL, _pos)
+			: ASTExpr(ASTExprType::LITERAL, _pos)
 		{
 			litType = _type;
 			value = _val;
@@ -167,10 +216,10 @@ namespace ramc {
 		T GetValue() { return value; }
 		LiteralType GetLitType() { return litType; }
 
-		std::string ToString(int _indentLvl) override
+		std::string ToString(int _indentLvl, std::string _prefix = "") override
 		{
 			std::stringstream ss;
-			ss << CreateIndent(_indentLvl);
+			ss << CreateIndent(_indentLvl) << _prefix;
 
 			switch (litType)
 			{
@@ -188,7 +237,7 @@ namespace ramc {
 			return ss.str();
 		}
 
-		TypeResult TypeCheck(Environment* _env) override
+		TypeResult _TypeCheck(Environment* _env) override
 		{
 			switch (litType)
 			{
@@ -203,42 +252,42 @@ namespace ramc {
 			}
 		}
 
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override = 0;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override = 0;
 	};
 
 	struct ASTIntLit : public ASTLiteral<int> {
 		ASTIntLit(int _val, Position _pos) : ASTLiteral(LiteralType::INT, _val, _pos) { }
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTByteLit : public ASTLiteral<byte> {
 		ASTByteLit(byte _val, Position _pos) : ASTLiteral(LiteralType::BYTE, _val, _pos) { }
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTDoubleLit : public ASTLiteral<double> {
 		ASTDoubleLit(double _val, Position _pos) : ASTLiteral(LiteralType::DOUBLE, _val, _pos) { }
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTLongLit : public ASTLiteral<rLong> {
 		ASTLongLit(rLong _val, Position _pos) : ASTLiteral(LiteralType::LONG, _val, _pos) { }
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTFloatLit : public ASTLiteral<float> {
 		ASTFloatLit(float _val, Position _pos) : ASTLiteral(LiteralType::FLOAT, _val, _pos) { }
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTStringLit : public ASTLiteral<std::string> {
 		ASTStringLit(std::string _val, Position _pos) : ASTLiteral(LiteralType::STRING, _val, _pos) {}
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 
 	struct ASTBoolLit : public ASTLiteral<bool> {
 		ASTBoolLit(bool _val, Position _pos) : ASTLiteral(LiteralType::BOOL, _val, _pos) {}
-		InstructionSet GenerateCode(std::map<std::string, std::string> _params) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 }

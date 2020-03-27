@@ -32,6 +32,8 @@ namespace ramc {
 	{
 		bool ignoreWhitespace, ignoreComments;
 	public:
+		static const std::unordered_map<std::string, TokenType> KEYWORDS;
+
 		Lexer(std::istream* _stream, bool _ignoreWhitespace, bool _ignoreComments, int _tabSize)
 			: RTLexer(_stream, _tabSize), ignoreWhitespace(_ignoreWhitespace), ignoreComments(_ignoreComments) { }
 

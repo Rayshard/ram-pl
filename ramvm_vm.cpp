@@ -19,8 +19,11 @@ namespace ramvm {
 
 	ResultType VM::Run(ResultInfo& _info)
 	{
-		while (ip < (int)instructions.size())
+		while (true)
 		{
+			if (ip < 0 || ip >= (int)instructions.size())
+				return ResultType::ERR_INVALID_IP;
+
 			ExecutionFrame& execFrame = execFrames.empty() ? topLevelExecFrame : execFrames.back();
 			Instruction* curInstr = instructions[ip];
 
@@ -101,7 +104,7 @@ namespace ramvm {
 					//Print
 					printf(chars.data());
 				} break;
-				case InstructionType::JUMP: ip = ((InstrJump*)curInstr)->labelIdx; continue;
+				case InstructionType::JUMP: ip = ((InstrJump*)curInstr)->instrIdx; continue;
 				case InstructionType::CJUMP: {
 					InstrCJump* instr = (InstrCJump*)curInstr;
 					DataVariant condVal(DataType::BYTE);
@@ -110,7 +113,7 @@ namespace ramvm {
 					if (IsErrorResult(resType)) { return resType; }
 					else if (condVal.B() != 0)
 					{
-						ip = instr->labelIdx;
+						ip = instr->instrIdx;
 						continue;
 					}
 				} break;
@@ -251,6 +254,38 @@ namespace ramvm {
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
+				case InstructionType::COMPARE: {
+					InstrCompare* instr = (InstrCompare*)curInstr;
+					ResultType resType = ResultType::SUCCESS;
+					DataVariant cmpAmt(DataType::INT);
+
+					//Get Length
+					resType = ReadFromSrcArg(execFrame, instr->length, cmpAmt, _info);
+					if (IsErrorResult(resType))
+						return resType;
+
+					int length = cmpAmt.I();
+					byte* src1Bytes = new byte[length];
+					byte* src2Bytes = new byte[length];
+
+					//Get Src1 Bytes
+					resType = ReadFromSrcArg(execFrame, instr->src1, src1Bytes, length, _info);
+					if (IsErrorResult(resType))
+						return resType;
+
+					//Get Src1 Bytes
+					resType = ReadFromSrcArg(execFrame, instr->src2, src2Bytes, length, _info);
+					if (IsErrorResult(resType))
+						return resType;
+
+					//Write Result to Dest
+					bool equal = !memcmp(src1Bytes, src2Bytes, length);
+					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(equal ? (byte)1 : (byte)0), _info);
+					delete[] src2Bytes;
+					delete[] src1Bytes;
+					if (IsErrorResult(resType))
+						return resType;					
+				} break;
 				case InstructionType::PUSH: {
 					InstrPush* instr = (InstrPush*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
@@ -292,8 +327,6 @@ namespace ramvm {
 
 			ip++;
 		}
-
-		return ResultType::ERR_NOHALT;
 	}
 
 	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _arg, DataVariant& _value, ResultInfo& _info)
@@ -328,6 +361,29 @@ namespace ramvm {
 		}
 	}
 
+	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _arg, byte* _buffer, int _length, ResultInfo& _info)
+	{
+		switch (_arg.type)
+		{
+			case ArgType::MEM_REG: {
+				DataVariant addr(DataType::INT);
+				ResultType res = _execFrame.ReadRegister(_arg.value.i, addr, _info);
+
+				if (IsErrorResult(res)) { return res; }
+				else { return memory.ReadBuffer(addr.I(), _length, _buffer, _info); }
+			}
+			case ArgType::STACK_REG: {
+				DataVariant pos(DataType::INT);
+				ResultType res = _execFrame.ReadRegister(_arg.value.i, pos, _info);
+
+				if (IsErrorResult(res)) { return res; }
+				else { return ReadStack(pos.I(), _length, _buffer); }
+			}
+			case ArgType::SP_OFFSET: return ReadStack(GetSP() + _arg.value.i, _length, _buffer);
+			default: return ResultType::ERR_ARGUMENT;
+		}
+	}
+
 	ResultType VM::WriteToDestArg(ExecutionFrame& _execFrame, Argument _arg, DataVariant _value, ResultInfo& _info)
 	{
 		switch (_arg.type)
@@ -357,9 +413,21 @@ namespace ramvm {
 
 	ResultType VM::ReadStack(int _pos, DataVariant& _value)
 	{
-		if (_pos >= 0 && _pos + _value.GetSize() <= (int)stack.size())
+		if (_value.GetSize() < 0) { return ResultType::ERR_STACK_READ; }
+		else if (_pos >= 0 && _pos + _value.GetSize() <= (int)stack.size())
 		{
 			_value = BufferToDataValue(_value.GetType(), &stack[_pos]);
+			return ResultType::SUCCESS;
+		}
+		else { return ResultType::ERR_STACK_READ; }
+	}
+
+	ResultType VM::ReadStack(int _pos, int _length, byte* _buffer)
+	{
+		if (_length < 0) { return ResultType::ERR_STACK_READ; }
+		else if (_pos >= 0 && _pos + _length <= (int)stack.size())
+		{
+			std::copy(stack.begin() + _pos, stack.begin() + (_pos + _length), _buffer);
 			return ResultType::SUCCESS;
 		}
 		else { return ResultType::ERR_STACK_READ; }

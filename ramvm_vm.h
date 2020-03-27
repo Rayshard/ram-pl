@@ -23,8 +23,10 @@ namespace ramvm {
 		ResultType Run(ResultInfo& _info);
 
 		ResultType ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _src, DataVariant& _value, ResultInfo& _info);
+		ResultType ReadFromSrcArg(ExecutionFrame& _execFrame, Argument _arg, byte* _buffer, int _length, ResultInfo& _info);
 		ResultType WriteToDestArg(ExecutionFrame& _execFrame, Argument _dest, DataVariant _value, ResultInfo& _info);
 		ResultType ReadStack(int _pos, DataVariant& _value);
+		ResultType ReadStack(int _pos, int _length, byte* _buffer);
 		ResultType WriteStack(int _pos, DataVariant _value);
 
 		int GetSP() { return stack.size() - 1; }

@@ -23,9 +23,18 @@ namespace ramc {
 			case TokenType::KW_TRUE: str += "Keyword: true"; break;
 			case TokenType::KW_FALSE: str += "Keyword: false"; break;
 
-			case TokenType::KW_LET: str += "Keyword: true"; break;
+			case TokenType::KW_LET: str += "Keyword: let"; break;
+			case TokenType::KW_IF: str += "Keyword: if"; break;
+			case TokenType::KW_THEN: str += "Keyword: then"; break;
+			case TokenType::KW_ELSE: str += "Keyword: else"; break;
+			case TokenType::KW_WHILE: str += "Keyword: while"; break;
+			case TokenType::KW_FOR: str += "Keyword: for"; break;
+
+			case TokenType::KW_CONTINUE: str += "Keyword: continue"; break;
+			case TokenType::KW_BREAK: str += "Keyword: break"; break;
+			case TokenType::KW_RETURN: str += "Keyword: return"; break;
 			
-			case TokenType::KW_BYTE: str += "Keyword: false"; break;
+			case TokenType::KW_BYTE: str += "Keyword: byte"; break;
 			case TokenType::KW_BOOL: str += "Keyword: bool"; break;
 			case TokenType::KW_INT: str += "Keyword: int"; break;
 			case TokenType::KW_FLOAT: str += "Keyword: float"; break;

@@ -3,6 +3,7 @@
 #include "ramvm_parser.h"
 #include "ramvm_instruction.h"
 
+#pragma region RamVM Usings
 using ramvm::Argument;
 using ramvm::TypedArgument;
 using ramvm::ArgType;
@@ -13,6 +14,10 @@ using ramvm::Unop;
 using ramvm::InstrMove;
 using ramvm::InstrPop;
 using ramvm::InstrPush;
+using ramvm::InstrCJump;
+using ramvm::InstrJump;
+using ramvm::InstructionType;
+#pragma endregion
 
 namespace ramc {
 	ASTNode::ASTNode(ASTNodeType _type, Position _pos)
@@ -22,8 +27,15 @@ namespace ramc {
 		typeSysType = nullptr;
 	}
 
+	TypeResult ASTNode::TypeCheck(Environment* _env)
+	{
+		TypeResult result = _TypeCheck(_env);
+		typeSysType = result.GetValue();
+		return result;
+	}
+
 #pragma region Program
-	ASTProgram::ASTProgram(std::string _fileName, std::vector<ASTNode*> _stmts)
+	ASTProgram::ASTProgram(std::string _fileName, std::vector<ASTStmt*> _stmts)
 		: ASTNode(ASTNodeType::PROGAM, Position(0, 0))
 	{
 		fileName = _fileName;
@@ -36,11 +48,11 @@ namespace ramc {
 			delete (*it);
 	}
 
-	std::string ASTProgram::ToString(int _indentLvl)
+	std::string ASTProgram::ToString(int _indentLvl, std::string _prefix)
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "Start:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "Start:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Filename: " << fileName << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Statements: " << std::endl;
 
@@ -50,11 +62,11 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTProgram::TypeCheck(Environment* _env)
+	TypeResult ASTProgram::_TypeCheck(Environment* _env)
 	{
 		for (auto const& stmt : stmts)
 		{
-			TypeResult stmtTypeRes = stmt->GetTypeSysType(_env);
+			TypeResult stmtTypeRes = stmt->TypeCheck(_env);
 			if (!stmtTypeRes.IsSuccess())
 				return stmtTypeRes;
 		}
@@ -62,14 +74,24 @@ namespace ramc {
 		return TypeResult::GenSuccess(Type::VOID);
 	}
 
-	InstructionSet ASTProgram::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTProgram::GenerateCode()
 	{
+		ProgramInfo info;
 		InstructionSet instrs;
 
 		for (int i = 0; i < (int)stmts.size(); i++)
 		{
-			auto stmtInstrs = stmts[i]->GenerateCode({ { "Dest", "R0" } });
+			auto stmtInstrs = stmts[i]->GenerateCode(info);
 			instrs.insert(instrs.end(), stmtInstrs.begin(), stmtInstrs.end());
+		}
+
+		for (int i = 0; i < (int)info.offsetedCtrlInstrs.size(); i++)
+		{
+			auto instr = info.offsetedCtrlInstrs[i];
+			int idx = std::find(instrs.begin(), instrs.end(), instr) - instrs.begin();
+
+			if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx += idx; }
+			else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx += idx; }
 		}
 
 		return instrs;
@@ -77,8 +99,8 @@ namespace ramc {
 #pragma endregion
 
 #pragma region VarDecl
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, ASTNode* _expr, Position _pos)
-		: ASTNode(ASTNodeType::ASSIGNMENT, _pos)
+	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, Position _pos)
+		: ASTStmt(ASTStmtType::VARDECL, _pos)
 	{
 		id = _id;
 		expr = _expr;
@@ -86,8 +108,8 @@ namespace ramc {
 		restraint = nullptr;
 	}
 
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTNode* _expr, Position _pos)
-		: ASTNode(ASTNodeType::ASSIGNMENT, _pos)
+	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, TypePtr _restraint, ASTExpr* _expr, Position _pos)
+		: ASTStmt(ASTStmtType::VARDECL, _pos)
 	{
 		id = _id;
 		expr = _expr;
@@ -95,8 +117,8 @@ namespace ramc {
 		restraint = _restraint;
 	}
 
-	ASTVarDecl::ASTVarDecl(ASTNode* _expr, Position _pos)
-		: ASTNode(ASTNodeType::ASSIGNMENT, _pos)
+	ASTVarDecl::ASTVarDecl(ASTExpr* _expr, Position _pos)
+		: ASTStmt(ASTStmtType::VARDECL, _pos)
 	{
 		id = nullptr;
 		expr = _expr;
@@ -110,11 +132,11 @@ namespace ramc {
 		delete expr;
 	}
 
-	std::string ASTVarDecl::ToString(int _indentLvl)
+	std::string ASTVarDecl::ToString(int _indentLvl, std::string _prefix)
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "Var Declaration:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "Var Declaration:" << std::endl;
 		ss << (isUnderscore ? CreateIndent(_indentLvl + 1) + "UNDERSCORE" : id->ToString(_indentLvl + 1)) << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Restraint: " << (restraint ? restraint->ToString(0) : "variable") << std::endl;
 		ss << expr->ToString(_indentLvl + 1);
@@ -122,18 +144,15 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTVarDecl::TypeCheck(Environment* _env)
+	TypeResult ASTVarDecl::_TypeCheck(Environment* _env)
 	{
-		if (isUnderscore)
-			return TypeResult::GenSuccess(Type::VOID);
+		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
-		if (_env->HasVariable(id->GetID()))
-			return TypeResult::GenRedecalartion(id->GetID(), GetPosition());
-
-		TypeResult exprTypeRes = expr->GetTypeSysType(_env);
+		if (isUnderscore) { return TypeResult::GenSuccess(Type::VOID); }
+		else if (_env->HasVariable(id->GetID())) { return TypeResult::GenRedecalartion(id->GetID(), GetPosition()); }
 
 		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
-		else if (restraint && (exprTypeRes.GetValue() != restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
+		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
 		else
 		{
 			_env->AddVariable(id->GetID(), exprTypeRes.GetValue());
@@ -142,7 +161,16 @@ namespace ramc {
 		}
 	}
 
-	InstructionSet ASTVarDecl::GenerateCode(std::map<std::string, std::string> _params) { return expr->GenerateCode({ {"Dest", "R0" } }); }
+	InstructionSet ASTVarDecl::GenerateCode(ProgramInfo& _progInfo)
+	{
+		if (isUnderscore)
+		{
+			InstructionSet instrs = expr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, expr->GetTypeSysType()->GetByteSize())));
+			return instrs;
+		}
+		else { return expr->GenerateCode(id->GetSource(), _progInfo); }
+	}
 #pragma endregion
 
 #pragma region Assignment
@@ -167,8 +195,8 @@ namespace ramc {
 		return search == strings.end() ? "AssignmentTypeToString - AssignmentType not handled!" : search->second;
 	}
 
-	ASTAssignment::ASTAssignment(ASTIdentifier* _id, ASTNode* _expr, AssignmentType _assignType)
-		: ASTNode(ASTNodeType::ASSIGNMENT, _id->GetPosition())
+	ASTAssignment::ASTAssignment(ASTIdentifier* _id, ASTExpr* _expr, AssignmentType _assignType)
+		: ASTStmt(ASTStmtType::ASSIGNMENT, _id->GetPosition())
 	{
 		id = _id;
 		expr = _expr;
@@ -188,7 +216,7 @@ namespace ramc {
 			case AssignmentType::BIN_XOR_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_XOR); break;
 			case AssignmentType::LSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::LSHIFT); break;
 			case AssignmentType::RSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::RSHIFT); break;
-			default: throw "ASTAssignment() - AssignmentType not handled!";
+			default: throw std::runtime_error("ASTAssignment() - AssignmentType not handled!");
 		}
 	}
 
@@ -198,11 +226,11 @@ namespace ramc {
 		delete expr;
 	}
 
-	std::string ASTAssignment::ToString(int _indentLvl)
+	std::string ASTAssignment::ToString(int _indentLvl, std::string _prefix)
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "Assignment:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "Assignment:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Type: " << AssignmentTypeToString(assignType) << std::endl;
 		ss << id->ToString(_indentLvl + 1) << std::endl;
 		ss << expr->ToString(_indentLvl + 1);
@@ -210,23 +238,23 @@ namespace ramc {
 		return ss.str();
 	}
 
-	TypeResult ASTAssignment::TypeCheck(Environment* _env)
+	TypeResult ASTAssignment::_TypeCheck(Environment* _env)
 	{
-		TypeResult exprTypeRes = expr->GetTypeSysType(_env);
+		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
 		if (!exprTypeRes.IsSuccess())
 			return exprTypeRes;
 
-		TypeResult idTypeRes = id->GetTypeSysType(_env);
+		TypeResult idTypeRes = id->TypeCheck(_env);
 
 		if (!idTypeRes.IsSuccess())
 			return idTypeRes;
 
-		if (idTypeRes.GetValue() == exprTypeRes.GetValue()) { return TypeResult::GenSuccess(Type::VOID); }
+		if (Type::Matches(idTypeRes.GetValue(), exprTypeRes.GetValue())) { return TypeResult::GenSuccess(Type::VOID); }
 		else { return TypeResult::GenMismatch("Cannot assign " + exprTypeRes.GetValue()->ToString(false) + " to " + idTypeRes.GetValue()->ToString(false), GetPosition()); }
 	}
 
-	InstructionSet ASTAssignment::GenerateCode(std::map<std::string, std::string> _params) { return expr->GenerateCode({ {"Dest", id->GetSource().ToString() } }); }
+	InstructionSet ASTAssignment::GenerateCode(ProgramInfo& _progInfo) { return expr->GenerateCode(id->GetSource(), _progInfo); }
 #pragma endregion
 
 #pragma region BinopExpr
@@ -260,8 +288,8 @@ namespace ramc {
 		return search == strings.end() ? "BinopTypeToString - BinopType not handled!" : search->second;
 	}
 
-	ASTBinopExpr::ASTBinopExpr(ASTNode* _left, ASTNode* _right, BinopType _op)
-		: ASTNode(ASTNodeType::BINOP_EXPR, _right->GetPosition())
+	ASTBinopExpr::ASTBinopExpr(ASTExpr* _left, ASTExpr* _right, BinopType _op)
+		: ASTExpr(ASTExprType::BINOP, _right->GetPosition())
 	{
 		left = _left;
 		right = _right;
@@ -274,31 +302,31 @@ namespace ramc {
 		delete right;
 	}
 
-	std::string ASTBinopExpr::ToString(int _indentLvl)
+	std::string ASTBinopExpr::ToString(int _indentLvl, std::string _prefix)
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "Binop Expression:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "Binop Expression:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "OP: " << BinopTypeToString(op) << std::endl;
-		ss << left->ToString(_indentLvl + 1) << std::endl;
-		ss << right->ToString(_indentLvl + 1);
+		ss << left->ToString(_indentLvl + 1, "Left: ") << std::endl;
+		ss << right->ToString(_indentLvl + 1, "Right: ");
 
 		return ss.str();
 	}
 
-	TypeResult ASTBinopExpr::TypeCheck(Environment* _env)
+	TypeResult ASTBinopExpr::_TypeCheck(Environment* _env)
 	{
-		TypeResult leftTypeRes = left->GetTypeSysType(_env);
+		TypeResult leftTypeRes = left->TypeCheck(_env);
 
 		if (!leftTypeRes.IsSuccess())
 			return leftTypeRes;
 
-		TypeResult rightTypeRes = right->GetTypeSysType(_env);
+		TypeResult rightTypeRes = right->TypeCheck(_env);
 
 		if (!rightTypeRes.IsSuccess())
 			return rightTypeRes;
 
-		Type* leftType = leftTypeRes.GetValue(), * rightType = rightTypeRes.GetValue();
+		TypePtr leftType = leftTypeRes.GetValue(), rightType = rightTypeRes.GetValue();
 
 		switch (ConcatTriple((byte)op, (byte)leftType->GetType(), (byte)rightType->GetType()))
 		{
@@ -1107,27 +1135,31 @@ namespace ramc {
 		}
 	}
 
-	InstructionSet ASTBinopExpr::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTBinopExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
 	{
 		InstructionSet instrs;
 
-		auto leftInstrs = left->GenerateCode({ {"Dest", "[1]"} });
-		auto rightInstrs = right->GenerateCode({ {"Dest", "[1]" } });
+		auto leftInstrs = left->GenerateCode(Argument::CreateStackTop(), _progInfo);
+		auto rightInstrs = right->GenerateCode(Argument::CreateStackTop(), _progInfo);
 
 		instrs.insert(instrs.end(), leftInstrs.begin(), leftInstrs.end());
 		instrs.insert(instrs.end(), rightInstrs.begin(), rightInstrs.end());
 
-		auto src1DataType = TypeSysTypeToDataType(left->GetTypeSysType(nullptr).GetValue()->GetType());
-		auto src2DataType = TypeSysTypeToDataType(right->GetTypeSysType(nullptr).GetValue()->GetType());
-		auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType(nullptr).GetValue()->GetType());
+		auto src1DataType = TypeSysTypeToDataType(left->GetTypeSysType()->GetType());
+		auto src2DataType = TypeSysTypeToDataType(right->GetTypeSysType()->GetType());
+		auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
+
+		int src1ByteSize = left->GetTypeSysType()->GetByteSize();
+		int src2ByteSize = right->GetTypeSysType()->GetByteSize();
+		int destByteSize = this->GetTypeSysType()->GetByteSize();
+		int sizeDiff = destByteSize - src1ByteSize - src2ByteSize;
 
 		//Extend the stack to make room for the result if it takes up more space than the operands
-		int sizeDiff = GetDataTypeSize(destDataType) - GetDataTypeSize(src1DataType) - GetDataTypeSize(src2DataType);
 		if (sizeDiff > 0)
 			instrs.push_back(new InstrPush({ TypedArgument(DataType::BYTE, ArgType::VALUE, sizeDiff) }));
 
-		auto src2 = TypedArgument(src2DataType, ArgType::SP_OFFSET, -1 * GetDataTypeSize(src2DataType) + 1);
-		auto src1 = TypedArgument(src1DataType, ArgType::SP_OFFSET, src2.value.i - GetDataTypeSize(src1DataType));
+		auto src2 = TypedArgument(src2DataType, ArgType::SP_OFFSET, -1 * src2ByteSize + 1);
+		auto src1 = TypedArgument(src1DataType, ArgType::SP_OFFSET, src2.value.i - src1ByteSize);
 		auto stackDest = TypedArgument(destDataType, ArgType::SP_OFFSET, src1.value);
 
 		switch (op)
@@ -1151,7 +1183,7 @@ namespace ramc {
 			case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, src1, src2, stackDest)); break;
 			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, src1, src2, stackDest)); break;
 			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, src1, src2, stackDest)); break;
-			default: throw "BinopExpr::GenerateCode - BinopType not handled!";
+			default: throw std::runtime_error("BinopExpr::GenerateCode - BinopType not handled!");
 		}
 
 		//Create Pop to remove the bytes past the result
@@ -1159,12 +1191,9 @@ namespace ramc {
 			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, -sizeDiff)));
 
 		//Create Move to move result to destination
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
-
-		if (!dest.IsStackTop())
+		if (!_dest.IsStackTop())
 		{
-			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -1 * GetDataTypeSize(destDataType) + 1), dest));
+			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -1 * destByteSize + 1), _dest));
 			instrs.push_back(new InstrPop(destDataType, Argument(ArgType::VALUE, 1)));
 		}
 
@@ -1185,8 +1214,8 @@ namespace ramc {
 		return search == strings.end() ? "UnopTypeToString - UnopType not handled!" : search->second;
 	}
 
-	ASTUnopExpr::ASTUnopExpr(ASTNode* _expr, UnopType _op)
-		: ASTNode(ASTNodeType::UNOP_EXPR, _expr->GetPosition())
+	ASTUnopExpr::ASTUnopExpr(ASTExpr* _expr, UnopType _op)
+		: ASTExpr(ASTExprType::UNOP, _expr->GetPosition())
 	{
 		expr = _expr;
 		op = _op;
@@ -1194,25 +1223,25 @@ namespace ramc {
 
 	ASTUnopExpr::~ASTUnopExpr() { delete expr; }
 
-	std::string ASTUnopExpr::ToString(int _indentLvl)
+	std::string ASTUnopExpr::ToString(int _indentLvl, std::string _prefix)
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "Unop Expression:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "Unop Expression:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "OP: " << UnopTypeToString(op) << std::endl;
 		ss << expr->ToString(_indentLvl + 1);
 
 		return ss.str();
 	}
 
-	TypeResult ASTUnopExpr::TypeCheck(Environment* _env)
+	TypeResult ASTUnopExpr::_TypeCheck(Environment* _env)
 	{
-		TypeResult typeRes = expr->GetTypeSysType(_env);
+		TypeResult typeRes = expr->TypeCheck(_env);
 
 		if (!typeRes.IsSuccess())
 			return typeRes;
 
-		Type* exprType = typeRes.GetValue();
+		TypePtr exprType = typeRes.GetValue();
 
 		switch (ConcatDouble((byte)op, (byte)exprType->GetType()))
 		{
@@ -1241,19 +1270,22 @@ namespace ramc {
 		}
 	}
 
-	InstructionSet ASTUnopExpr::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTUnopExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
 	{
-		InstructionSet instrs = expr->GenerateCode({ {"Dest", "[1]" } });
+		InstructionSet instrs = expr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 
-		auto srcDataType = TypeSysTypeToDataType(expr->GetTypeSysType(nullptr).GetValue()->GetType());
-		auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType(nullptr).GetValue()->GetType());
+		auto srcDataType = TypeSysTypeToDataType(expr->GetTypeSysType()->GetType());
+		auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
+
+		int srcByteSize = expr->GetTypeSysType()->GetByteSize();
+		int destByteSize = this->GetTypeSysType()->GetByteSize();
+		int sizeDiff = destByteSize - srcByteSize;
 
 		//Extend the stack to make room for the result if it takes up more space than the operand
-		int sizeDiff = GetDataTypeSize(destDataType) - GetDataTypeSize(srcDataType);
 		if (sizeDiff > 0)
 			instrs.push_back(new InstrPush({ TypedArgument(DataType::BYTE, ArgType::VALUE, sizeDiff) }));
 
-		auto src = TypedArgument(srcDataType, ArgType::SP_OFFSET, -1 * GetDataTypeSize(srcDataType) + 1);
+		auto src = TypedArgument(srcDataType, ArgType::SP_OFFSET, -1 * srcByteSize + 1);
 		auto stackDest = TypedArgument(destDataType, ArgType::SP_OFFSET, src.value.i - fmax(0, sizeDiff));
 
 		switch (op)
@@ -1261,7 +1293,7 @@ namespace ramc {
 			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, src, stackDest)); break;
 			case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, src, stackDest)); break;
 			case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::BIN_NOT, src, stackDest)); break;
-			default: throw "UnopExpr::GenerateCode - UnopType not handled!";
+			default: throw std::runtime_error("UnopExpr::GenerateCode - UnopType not handled!");
 		}
 
 		//Create Pop to remove the bytes past the result if any
@@ -1269,12 +1301,9 @@ namespace ramc {
 			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, -sizeDiff)));
 
 		//Create Move to move result to destination
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
-
-		if (!dest.IsStackTop())
+		if (!_dest.IsStackTop())
 		{
-			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -1 * GetDataTypeSize(destDataType) + 1), dest));
+			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -1 * destByteSize + 1), _dest));
 			instrs.push_back(new InstrPop(destDataType, Argument(ArgType::VALUE, 1)));
 		}
 
@@ -1284,87 +1313,115 @@ namespace ramc {
 
 #pragma region Identifier
 	ASTIdentifier::ASTIdentifier(std::string _id, Position _pos)
-		: ASTNode(ASTNodeType::IDENTIFIER, _pos)
+		: ASTExpr(ASTExprType::IDENTIFIER, _pos)
 	{
 		id = _id;
 	}
 
-	std::string ASTIdentifier::ToString(int _indentLvl)
-	{
-		return CreateIndent(_indentLvl) + "Identifier: " + id;
-	}
+	std::string ASTIdentifier::ToString(int _indentLvl, std::string _prefix) { return CreateIndent(_indentLvl) + _prefix + "Identifier: " + id; }
 
-	TypeResult ASTIdentifier::TypeCheck(Environment* _env)
+	TypeResult ASTIdentifier::_TypeCheck(Environment* _env)
 	{
 		source = _env->GetVarRegister(id);
 		return _env->GetVariableType(id, GetPosition());
 	}
 
-	InstructionSet ASTIdentifier::GenerateCode(std::map<std::string, std::string> _params)
-	{
-		DataType dataType = TypeSysTypeToDataType(this->GetTypeSysType(nullptr).GetValue()->GetType());
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
-
-		return { new InstrMove(dataType, GetSource(), dest) };
-	}
+	InstructionSet ASTIdentifier::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(TypeSysTypeToDataType(this->GetTypeSysType()->GetType()), GetSource(), _dest) }; }
 #pragma endregion
 
 #pragma region Literal
-	InstructionSet ASTIntLit::GenerateCode(std::map<std::string, std::string> _params)
-	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+	InstructionSet ASTIntLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, GetValue()), _dest) }; }
 
-		return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, GetValue()), dest) };
+	InstructionSet ASTFloatLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::FLOAT, Argument(ArgType::VALUE, GetValue()), _dest) }; }
+
+	InstructionSet ASTStringLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, 0), _dest) }; }
+
+	InstructionSet ASTBoolLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, (byte)(GetValue() ? 1 : 0)), _dest) }; }
+
+	InstructionSet ASTByteLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
+
+	InstructionSet ASTDoubleLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::DOUBLE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
+
+	InstructionSet ASTLongLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), _dest) }; }
+#pragma endregion
+
+#pragma region IfExpr
+	ASTIfExpr::ASTIfExpr(ASTExpr* _condExpr, ASTExpr* _thenExpr, ASTExpr* _elseExpr, Position _pos)
+		: ASTExpr(ASTExprType::IF, _pos)
+	{
+		condExpr = _condExpr;
+		thenExpr = _thenExpr;
+		elseExpr = _elseExpr;
 	}
 
-	InstructionSet ASTFloatLit::GenerateCode(std::map<std::string, std::string> _params)
+	ASTIfExpr::~ASTIfExpr()
 	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
-
-		return { new InstrMove(DataType::FLOAT, Argument(ArgType::VALUE, GetValue()), dest) };
+		delete condExpr;
+		delete thenExpr;
+		delete elseExpr;
 	}
 
-	InstructionSet ASTStringLit::GenerateCode(std::map<std::string, std::string> _params)
+	std::string ASTIfExpr::ToString(int _indentLvl, std::string _prefix)
 	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+		std::stringstream ss;
 
-		return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, 0), dest) };
+		ss << CreateIndent(_indentLvl) << "If Statement:" << std::endl;
+		ss << condExpr->ToString(_indentLvl + 1, "Condition: ") << std::endl;
+		ss << thenExpr->ToString(_indentLvl + 1, "Then: ") << std::endl;
+		ss << elseExpr->ToString(_indentLvl + 1, "Else: ");
+
+		return ss.str();
 	}
 
-	InstructionSet ASTBoolLit::GenerateCode(std::map<std::string, std::string> _params)
+	TypeResult ASTIfExpr::_TypeCheck(Environment* _env)
 	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+		TypeResult condTypeRes = condExpr->TypeCheck(_env);
+		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
+		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
 
-		return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, (byte)(GetValue() ? 1 : 0)), dest) };
+		TypeResult thenTypeRes = thenExpr->TypeCheck(_env);
+		if (!thenTypeRes.IsSuccess())
+			return thenTypeRes;
+
+		TypeResult elseTypeRes = elseExpr->TypeCheck(_env);
+		if (!elseTypeRes.IsSuccess())
+			return elseTypeRes;
+
+		if (Type::Matches(thenTypeRes.GetValue(), elseTypeRes.GetValue())) { return thenTypeRes; }
+		else { return TypeResult::GenExpectation(thenTypeRes.GetValue()->ToString(0), elseTypeRes.GetValue()->ToString(false), elseExpr->GetPosition()); }
 	}
 
-	InstructionSet ASTByteLit::GenerateCode(std::map<std::string, std::string> _params)
+	InstructionSet ASTIfExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
 	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
+		int resultByteSize = this->GetTypeSysType()->GetByteSize();
 
-		return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, GetValue()), dest) };
-	}
+		InstructionSet thenInstrs = thenExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+		InstructionSet elseInstrs = elseExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 
-	InstructionSet ASTDoubleLit::GenerateCode(std::map<std::string, std::string> _params)
-	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+		instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0)));
+		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
 
-		return { new InstrMove(DataType::DOUBLE, Argument(ArgType::VALUE, GetValue()), dest) };
-	}
+		//False
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		instrs.insert(instrs.end(), elseInstrs.begin(), elseInstrs.end());
+		instrs.push_back(new InstrJump(thenInstrs.size() + 2)); //Jump past true instructions
+		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
 
-	InstructionSet ASTLongLit::GenerateCode(std::map<std::string, std::string> _params)
-	{
-		auto dest = Argument();
-		IGNORE(ParseArgument(_params["Dest"], dest));
+		//True
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end());
 
-		return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), dest) };
+		//Move value to destination
+		if (!_dest.IsStackTop())
+		{
+			auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
+			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -resultByteSize + 1), _dest));
+			instrs.push_back(new InstrPop(destDataType, Argument(ArgType::VALUE, 1)));
+		}
+
+		return instrs;
 	}
 #pragma endregion
 }

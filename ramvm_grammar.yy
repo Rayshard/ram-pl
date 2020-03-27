@@ -57,8 +57,10 @@
 					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
 					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
 					case TokenType::LABEL: return Parser::make_TOK_LABEL(value);
+					case TokenType::INSTR_OFFSET: return Parser::make_TOK_INSTR_OFFSET(std::stoi(value));
 					case TokenType::KW_SP: return Parser::make_TOK_SP();
 					case TokenType::KW_HALT: return Parser::make_TOK_HALT();
+					case TokenType::KW_COMPARE: return Parser::make_TOK_COMPARE();
 					case TokenType::KW_MOV: return Parser::make_TOK_MOV(CharToDataType(value[0]));
 					case TokenType::KW_RET: return Parser::make_TOK_RET(CharsToDataTypes(value));
 					case TokenType::KW_MALLOC: return Parser::make_TOK_MALLOC();
@@ -112,12 +114,14 @@
 %token <int> TOK_STACK_REG "sreg"
 %token <int> TOK_SP_OFFSET "spoff"
 %token <std::string> TOK_LABEL "LABEL"
+%token <int> TOK_INSTR_OFFSET "ipOff"
 %token TOK_SP "SP"
 %token TOK_HALT "HALT"
 %token <DataType> TOK_MOV "MOV"
 %token <std::vector<DataType>> TOK_RET "RET"
 %token TOK_MALLOC "MALLOC"
 %token TOK_FREE "FREE"
+%token TOK_COMPARE "COMPARE"
 %token <std::vector<DataType>> TOK_STORE "STORE"
 %token <std::vector<DataType>> TOK_PUSH "PUSH"
 %token <DataType> TOK_POP "POP"
@@ -168,20 +172,24 @@ STMTS:
 ;
 
 STMT:
-		"HALT"								{ $$ = new InstrHalt(); }
-	|	"RET" ARGUMENTS						{ $$ = new InstrReturn(BindArgDataTypes($1, $2)); }
-	|	"MOV" ARGUMENT DEST_ARG				{ $$ = new InstrMove($1, $2, $3); }
-	|	"MALLOC" ARGUMENT DEST_ARG			{ $$ = new InstrMalloc($2, $3); }
-	|	"FREE" ARGUMENT						{ $$ = new InstrFree($2); }
-	|	"PRINT" ARGUMENT ARGUMENT			{ $$ = new InstrPrint($2, $3); }
-	|	"JUMP" "LABEL"						{ $$ = new InstrJump(-1); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"CJUMP" "LABEL" ARGUMENT			{ $$ = new InstrCJump(-1, $3); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"CALL" "LABEL" "hex" ARGUMENTS		{ $$ = new InstrCall(-1, $3.i, BindArgDataTypes($1, $4)); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"PUSH" ARGUMENTS					{ $$ = new InstrPush(BindArgDataTypes($1, $2)); }
-	|	"POP" ARGUMENT						{ $$ = new InstrPop($1, $2); }
-	|	"STORE" ARGUMENTS DEST_ARG 			{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
-	|	BINOP ARGUMENT ARGUMENT DEST_ARG	{ $$ = new InstrBinop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3), TypedArgument(std::get<2>($1.second), $4)); }
-	|	UNOP ARGUMENT DEST_ARG				{ $$ = new InstrUnop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3)); }
+		"HALT"											{ $$ = new InstrHalt(); }
+	|	"RET" ARGUMENTS									{ $$ = new InstrReturn(BindArgDataTypes($1, $2)); }
+	|	"MOV" ARGUMENT DEST_ARG							{ $$ = new InstrMove($1, $2, $3); }
+	|	"MALLOC" ARGUMENT DEST_ARG						{ $$ = new InstrMalloc($2, $3); }
+	|	"FREE" ARGUMENT									{ $$ = new InstrFree($2); }
+	|	"PRINT" ARGUMENT ARGUMENT						{ $$ = new InstrPrint($2, $3); }
+	|	"JUMP" "LABEL"									{ $$ = new InstrJump(-1); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"JUMP" "ipOff"									{ $$ = new InstrJump(result.size() + $2); }
+	|	"CJUMP" "LABEL" ARGUMENT						{ $$ = new InstrCJump(-1, $3); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"CJUMP" "ipOff" ARGUMENT						{ $$ = new InstrCJump(result.size() + $2, $3); }
+	|	"CALL" "LABEL" "hex" ARGUMENTS					{ $$ = new InstrCall(-1, $3.i, BindArgDataTypes($1, $4)); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"CALL" "hex" "hex" ARGUMENTS					{ $$ = new InstrCall(result.size() + $2.i, $3.i, BindArgDataTypes($1, $4)); }
+	|	"PUSH" ARGUMENTS								{ $$ = new InstrPush(BindArgDataTypes($1, $2)); }
+	|	"POP" ARGUMENT									{ $$ = new InstrPop($1, $2); }
+	|	"STORE" ARGUMENTS DEST_ARG 						{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
+	|	"COMPARE" DEST_ARG DEST_ARG ARGUMENT DEST_ARG 	{ $$ = new InstrCompare($2, $3, $4, $5); }
+	|	BINOP ARGUMENT ARGUMENT DEST_ARG				{ $$ = new InstrBinop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3), TypedArgument(std::get<2>($1.second), $4)); }
+	|	UNOP ARGUMENT DEST_ARG							{ $$ = new InstrUnop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3)); }
 ;
 
 ARGUMENTS:

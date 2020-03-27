@@ -3,11 +3,11 @@
 namespace ramvm {
 	enum class ResultType {
 		SUCCESS,
+		ERR_INVALID_IP,
 		ERR_MALLOC,
 		ERR_FREE,
 		ERR_MEMREAD,
 		ERR_MEMWRITE,
-		ERR_NOHALT,
 		ERR_UNKNOWNINSTR,
 		ERR_REG_IDX_OOB,
 		ERR_DIVBYZERO,

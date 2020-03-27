@@ -6,14 +6,14 @@ using ramvm::Argument;
 using ramvm::ArgType;
 
 namespace ramc {
-	Type* Type::BOOL = new Type(TypeSystemType::BOOL);
-	Type* Type::BYTE = new Type(TypeSystemType::BYTE);
-	Type* Type::INT = new Type(TypeSystemType::INT);
-	Type* Type::FLOAT = new Type(TypeSystemType::FLOAT);
-	Type* Type::DOUBLE = new Type(TypeSystemType::DOUBLE);
-	Type* Type::LONG = new Type(TypeSystemType::LONG);
-	Type* Type::STRING = new Type(TypeSystemType::STRING);
-	Type* Type::VOID = new Type(TypeSystemType::VOID);
+	TypePtr Type::BOOL = std::shared_ptr<Type>(new Type(TypeSystemType::BOOL));
+	TypePtr Type::BYTE = std::shared_ptr<Type>(new Type(TypeSystemType::BYTE));
+	TypePtr Type::INT = std::shared_ptr<Type>(new Type(TypeSystemType::INT));
+	TypePtr Type::FLOAT = std::shared_ptr<Type>(new Type(TypeSystemType::FLOAT));
+	TypePtr Type::DOUBLE = std::shared_ptr<Type>(new Type(TypeSystemType::DOUBLE));
+	TypePtr Type::LONG = std::shared_ptr<Type>(new Type(TypeSystemType::LONG));
+	TypePtr Type::STRING = std::shared_ptr<Type>(new Type(TypeSystemType::STRING));
+	TypePtr Type::VOID = std::shared_ptr<Type>(new Type(TypeSystemType::VOID));
 
 	std::string Type::ToString(int _indentLvl)
 	{
@@ -30,7 +30,24 @@ namespace ramc {
 			default: return "Type::ToString - Type not handled!";
 		}
 	}
-	
+
+	int Type::GetByteSize()
+	{
+		switch (type)
+		{
+			case TypeSystemType::BYTE: return BYTE_SIZE;
+			case TypeSystemType::INT: return INT_SIZE;
+			case TypeSystemType::FLOAT: return FLOAT_SIZE;
+			case TypeSystemType::BOOL: return BYTE_SIZE;
+			case TypeSystemType::DOUBLE: return DOUBLE_SIZE;
+			case TypeSystemType::LONG: return LONG_SIZE;
+			case TypeSystemType::STRING: throw std::runtime_error("Type::GetByteSize - String not handled!");
+			case TypeSystemType::VOID: return 0;
+			default: throw std::runtime_error("Type::GetByteSize - TypeSystemType not handled!");
+
+		}
+	}
+
 	std::string TypeResult::ToString(bool _includePos)
 	{
 		std::string prefix = _includePos ? "(" + errPosition.ToString() + ") " : "";
@@ -51,7 +68,7 @@ namespace ramc {
 		nextVarRegIdx = 0;
 	}
 
-	bool Environment::AddVariable(std::string _id, Type* _type)
+	bool Environment::AddVariable(std::string _id, TypePtr _type)
 	{
 		auto search = variables.find(_id);
 		if (search != variables.end()) { return false; }
@@ -71,7 +88,7 @@ namespace ramc {
 		return variables.find(_id) != variables.end() || (parent && HasVariable(_id));
 	}
 
-	bool Environment::HasVariable(std::string _id, Type* _type)
+	bool Environment::HasVariable(std::string _id, TypePtr _type)
 	{
 		auto search = variables.find(_id);
 		if (search == variables.end()) { return parent ? parent->HasVariable(_id, _type) : false; }

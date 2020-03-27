@@ -108,8 +108,8 @@ namespace ramvm {
 				if (search != labels.end())
 				{
 					Instruction* instr = it->first;
-					if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->labelIdx = labels[it->second.first]; }
-					else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->labelIdx = labels[it->second.first]; }
+					if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx = labels[it->second.first]; }
+					else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx = labels[it->second.first]; }
 					else if (instr->GetType() == InstructionType::CALL) { ((InstrCall*)instr)->labelIdx = labels[it->second.first]; }
 				}
 				else { return ParseResult::GenError("Unknown label: " + it->second.first, it->second.second, true); }

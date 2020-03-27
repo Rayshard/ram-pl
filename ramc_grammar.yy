@@ -24,87 +24,96 @@
     namespace ramc {
       namespace bison {
       // Return the next token.
-      auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
-      {
-        LexerResult readRes = _lexer.GetNextToken();
+		auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
+		{
+			LexerResult readRes = _lexer.GetNextToken();
 
-        if (!readRes.IsSuccess())
-          throw std::runtime_error(readRes.ToString(false));
+			if (!readRes.IsSuccess())
+				throw std::runtime_error(readRes.ToString(false));
 
-        Token token = readRes.GetValue();
-        _pos = token.position;
+			Token token = readRes.GetValue();
+			_pos = token.position;
 
-        switch (token.type)
-        {
-            case TokenType::INT_LIT: { ASTIntLit const* node = new ASTIntLit(std::stoi(token.value), token.position); return Parser::make_INT_LIT(node); }
-		    case TokenType::IDENTIFIER: { ASTIdentifier const* node = new ASTIdentifier(token.value, token.position); return Parser::make_IDENTIFIER(node); }
-		    case TokenType::UNDERSCORE: return Parser::make_UNDERSCORE();
-		    case TokenType::STRING_LIT: { ASTStringLit const* node = new ASTStringLit(token.value, token.position); return Parser::make_STRING_LIT(node); }
-		    case TokenType::FLOAT_LIT: { ASTFloatLit const* node = new ASTFloatLit(std::stof(token.value), token.position); return Parser::make_FLOAT_LIT(node); }
-		    case TokenType::DOUBLE_LIT: { ASTDoubleLit const* node = new ASTDoubleLit(std::stod(token.value), token.position); return Parser::make_DOUBLE_LIT(node); }
-		    case TokenType::BYTE_LIT: { ASTByteLit const* node = new ASTByteLit((byte)std::stoll(token.value), token.position); return Parser::make_BYTE_LIT(node); }
-		    case TokenType::LONG_LIT: { ASTLongLit const* node = new ASTLongLit(std::stoll(token.value), token.position); return Parser::make_LONG_LIT(node); }
+			switch (token.type)
+			{
+				case TokenType::INT_LIT: { ASTIntLit const* node = new ASTIntLit(std::stoi(token.value), token.position); return Parser::make_INT_LIT(node); }
+				case TokenType::IDENTIFIER: { ASTIdentifier const* node = new ASTIdentifier(token.value, token.position); return Parser::make_IDENTIFIER(node); }
+				case TokenType::UNDERSCORE: return Parser::make_UNDERSCORE();
+				case TokenType::STRING_LIT: { ASTStringLit const* node = new ASTStringLit(token.value, token.position); return Parser::make_STRING_LIT(node); }
+				case TokenType::FLOAT_LIT: { ASTFloatLit const* node = new ASTFloatLit(std::stof(token.value), token.position); return Parser::make_FLOAT_LIT(node); }
+				case TokenType::DOUBLE_LIT: { ASTDoubleLit const* node = new ASTDoubleLit(std::stod(token.value), token.position); return Parser::make_DOUBLE_LIT(node); }
+				case TokenType::BYTE_LIT: { ASTByteLit const* node = new ASTByteLit((byte)std::stoll(token.value), token.position); return Parser::make_BYTE_LIT(node); }
+				case TokenType::LONG_LIT: { ASTLongLit const* node = new ASTLongLit(std::stoll(token.value), token.position); return Parser::make_LONG_LIT(node); }
 
-		    case TokenType::KW_TRUE: { ASTBoolLit const* node = new ASTBoolLit(true, token.position); return Parser::make_KW_TRUE(node); }
-		    case TokenType::KW_FALSE: { ASTBoolLit const* node = new ASTBoolLit(false, token.position); return Parser::make_KW_FALSE(node); }
-		    case TokenType::KW_BYTE: { Type const* type = Type::BYTE; return Parser::make_KW_BYTE(type); }
-		    case TokenType::KW_BOOL: { Type const* type = Type::BOOL; return Parser::make_KW_BOOL(type); }
-		    case TokenType::KW_INT: { Type const* type = Type::INT; return Parser::make_KW_INT(type); }
-		    case TokenType::KW_FLOAT: { Type const* type = Type::FLOAT; return Parser::make_KW_FLOAT(type); }
-		    case TokenType::KW_DOUBLE: { Type const* type = Type::DOUBLE; return Parser::make_KW_DOUBLE(type); }
-		    case TokenType::KW_LONG: { Type const* type = Type::LONG; return Parser::make_KW_LONG(type); }
-		    case TokenType::KW_STRING: { Type const* type = Type::STRING; return Parser::make_KW_STRING(type); }
-		    case TokenType::KW_VOID: { Type const* type = Type::VOID; return Parser::make_KW_VOID(type); }
+				case TokenType::KW_TRUE: { ASTBoolLit const* node = new ASTBoolLit(true, token.position); return Parser::make_KW_TRUE(node); }
+				case TokenType::KW_FALSE: { ASTBoolLit const* node = new ASTBoolLit(false, token.position); return Parser::make_KW_FALSE(node); }
 
-		    case TokenType::KW_LET: return Parser::make_KW_LET(token.position);
-          
-              case TokenType::PLUS: return Parser::make_PLUS();
-              case TokenType::MINUS: return Parser::make_MINUS();
-              case TokenType::TIMES: return Parser::make_TIMES();
-              case TokenType::DIVIDE: return Parser::make_DIVIDE();
-              case TokenType::MOD: return Parser::make_MOD();
-              case TokenType::POW: return Parser::make_POW();
-              case TokenType::BIN_AND: return Parser::make_BIN_AND();
-              case TokenType::BIN_OR: return Parser::make_BIN_OR();
-              case TokenType::BIN_XOR: return Parser::make_BIN_XOR();
-              case TokenType::LSHIFT: return Parser::make_LSHIFT();
-              case TokenType::RSHIFT: return Parser::make_RSHIFT();
-              case TokenType::LT: return Parser::make_LT();
-              case TokenType::GT: return Parser::make_GT();
-              case TokenType::LT_EQ: return Parser::make_LT_EQ();
-              case TokenType::GT_EQ: return Parser::make_GT_EQ();
-              case TokenType::EQ_EQ: return Parser::make_EQ_EQ();
-              case TokenType::NEQ: return Parser::make_NEQ();
-              case TokenType::LOG_AND: return Parser::make_LOG_AND();
-              case TokenType::LOG_OR: return Parser::make_LOG_OR();
-              case TokenType::LOG_NOT: return Parser::make_LOG_NOT();
-              case TokenType::BIN_NOT: return Parser::make_BIN_NOT();
-              case TokenType::EQ: return Parser::make_EQ();
-              case TokenType::PLUS_EQ: return Parser::make_ADD_EQ();
-              case TokenType::MINUS_EQ: return Parser::make_SUB_EQ();
-              case TokenType::TIMES_EQ: return Parser::make_MUL_EQ();
-              case TokenType::DIVIDE_EQ: return Parser::make_DIV_EQ();
-              case TokenType::MOD_EQ: return Parser::make_MOD_EQ();
-              case TokenType::POW_EQ: return Parser::make_POW_EQ();
-              case TokenType::BIN_AND_EQ: return Parser::make_BIN_AND_EQ();
-              case TokenType::BIN_OR_EQ: return Parser::make_BIN_OR_EQ();
-              case TokenType::BIN_XOR_EQ: return Parser::make_BIN_XOR_EQ();
-              case TokenType::LSHIFT_EQ: return Parser::make_LSHIFT_EQ();
-              case TokenType::RSHIFT_EQ: return Parser::make_RSHIFT_EQ();
-              case TokenType::LPAREN: return Parser::make_LPAREN();
-              case TokenType::RPAREN: return Parser::make_RPAREN();
-              case TokenType::LCBRACKET: return Parser::make_LCBRACKET();
-              case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
-              case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
-              case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
-              case TokenType::SEMICOLON: return Parser::make_SEMICOLON();
-              case TokenType::PERIOD: return Parser::make_PERIOD();
-              case TokenType::COLON: return Parser::make_COLON();
-              case TokenType::COMMA: return Parser::make_COMMA();
-              case TokenType::END_OF_FILE: return Parser::make_END_OF_FILE();
-              default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
-        }
-      }
+				case TokenType::KW_BYTE: { TypePtr type = Type::BYTE; return Parser::make_KW_BYTE(type); }
+				case TokenType::KW_BOOL: { TypePtr type = Type::BOOL; return Parser::make_KW_BOOL(type); }
+				case TokenType::KW_INT: { TypePtr type = Type::INT; return Parser::make_KW_INT(type); }
+				case TokenType::KW_FLOAT: { TypePtr type = Type::FLOAT; return Parser::make_KW_FLOAT(type); }
+				case TokenType::KW_DOUBLE: { TypePtr type = Type::DOUBLE; return Parser::make_KW_DOUBLE(type); }
+				case TokenType::KW_LONG: { TypePtr type = Type::LONG; return Parser::make_KW_LONG(type); }
+				case TokenType::KW_STRING: { TypePtr type = Type::STRING; return Parser::make_KW_STRING(type); }
+				case TokenType::KW_VOID: { TypePtr type = Type::VOID; return Parser::make_KW_VOID(type); }
+
+				case TokenType::KW_LET: return Parser::make_KW_LET(token.position);
+				case TokenType::KW_IF: return Parser::make_KW_IF(token.position);
+				case TokenType::KW_THEN: return Parser::make_KW_THEN(token.position);
+				case TokenType::KW_ELSE: return Parser::make_KW_ELSE(token.position);
+				case TokenType::KW_WHILE: return Parser::make_KW_WHILE(token.position);
+				case TokenType::KW_FOR: return Parser::make_KW_FOR(token.position);
+				case TokenType::KW_CONTINUE: return Parser::make_KW_CONTINUE(token.position);
+				case TokenType::KW_BREAK: return Parser::make_KW_BREAK(token.position);
+				case TokenType::KW_RETURN: return Parser::make_KW_RETURN(token.position);
+
+				case TokenType::PLUS: return Parser::make_PLUS();
+				case TokenType::MINUS: return Parser::make_MINUS();
+				case TokenType::TIMES: return Parser::make_TIMES();
+				case TokenType::DIVIDE: return Parser::make_DIVIDE();
+				case TokenType::MOD: return Parser::make_MOD();
+				case TokenType::POW: return Parser::make_POW();
+				case TokenType::BIN_AND: return Parser::make_BIN_AND();
+				case TokenType::BIN_OR: return Parser::make_BIN_OR();
+				case TokenType::BIN_XOR: return Parser::make_BIN_XOR();
+				case TokenType::LSHIFT: return Parser::make_LSHIFT();
+				case TokenType::RSHIFT: return Parser::make_RSHIFT();
+				case TokenType::LT: return Parser::make_LT();
+				case TokenType::GT: return Parser::make_GT();
+				case TokenType::LT_EQ: return Parser::make_LT_EQ();
+				case TokenType::GT_EQ: return Parser::make_GT_EQ();
+				case TokenType::EQ_EQ: return Parser::make_EQ_EQ();
+				case TokenType::NEQ: return Parser::make_NEQ();
+				case TokenType::LOG_AND: return Parser::make_LOG_AND();
+				case TokenType::LOG_OR: return Parser::make_LOG_OR();
+				case TokenType::LOG_NOT: return Parser::make_LOG_NOT();
+				case TokenType::BIN_NOT: return Parser::make_BIN_NOT();
+				case TokenType::EQ: return Parser::make_EQ();
+				case TokenType::PLUS_EQ: return Parser::make_ADD_EQ();
+				case TokenType::MINUS_EQ: return Parser::make_SUB_EQ();
+				case TokenType::TIMES_EQ: return Parser::make_MUL_EQ();
+				case TokenType::DIVIDE_EQ: return Parser::make_DIV_EQ();
+				case TokenType::MOD_EQ: return Parser::make_MOD_EQ();
+				case TokenType::POW_EQ: return Parser::make_POW_EQ();
+				case TokenType::BIN_AND_EQ: return Parser::make_BIN_AND_EQ();
+				case TokenType::BIN_OR_EQ: return Parser::make_BIN_OR_EQ();
+				case TokenType::BIN_XOR_EQ: return Parser::make_BIN_XOR_EQ();
+				case TokenType::LSHIFT_EQ: return Parser::make_LSHIFT_EQ();
+				case TokenType::RSHIFT_EQ: return Parser::make_RSHIFT_EQ();
+				case TokenType::LPAREN: return Parser::make_LPAREN();
+				case TokenType::RPAREN: return Parser::make_RPAREN();
+				case TokenType::LCBRACKET: return Parser::make_LCBRACKET();
+				case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
+				case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
+				case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
+				case TokenType::SEMICOLON: return Parser::make_SEMICOLON();
+				case TokenType::PERIOD: return Parser::make_PERIOD();
+				case TokenType::COLON: return Parser::make_COLON();
+				case TokenType::COMMA: return Parser::make_COMMA();
+				case TokenType::END_OF_FILE: return Parser::make_END_OF_FILE();
+				default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
+			}
+		}
     }
   }
 }
@@ -166,37 +175,46 @@
 %token <ASTLongLit*> LONG_LIT "LONG_LIT"
 %token <ASTBoolLit*> KW_TRUE "true"
 %token <ASTBoolLit*> KW_FALSE "false"
-%token <Type*> KW_BYTE "byte"
-%token <Type*> KW_BOOL "bool"
-%token <Type*> KW_INT "int"
-%token <Type*> KW_FLOAT "float"
-%token <Type*> KW_DOUBLE "double"
-%token <Type*> KW_LONG "long"
-%token <Type*> KW_STRING "string"
-%token <Type*> KW_VOID "void"
+%token <TypePtr> KW_BYTE "byte"
+%token <TypePtr> KW_BOOL "bool"
+%token <TypePtr> KW_INT "int"
+%token <TypePtr> KW_FLOAT "float"
+%token <TypePtr> KW_DOUBLE "double"
+%token <TypePtr> KW_LONG "long"
+%token <TypePtr> KW_STRING "string"
+%token <TypePtr> KW_VOID "void"
 %token <Position> KW_LET "let"
+%token <Position> KW_IF "if"
+%token <Position> KW_THEN "then"
+%token <Position> KW_ELSE "else"
+%token <Position> KW_WHILE "while"
+%token <Position> KW_FOR "for"
+%token <Position> KW_BREAK "break"
+%token <Position> KW_CONTINUE "continue"
+%token <Position> KW_RETURN "return"
 %token END_OF_FILE 0
 
-%nterm <ASTNode*> PROGRAM;
-%nterm <ASTNode*> STMT;
-%nterm <ASTNode*> ASSIGNMENT;
-%nterm <ASTNode*> VARDECL;
-%nterm <Type*> TYPE;
-%nterm <ASTNode*> EXPR1;
-%nterm <ASTNode*> EXPR2;
-%nterm <ASTNode*> EXPR3;
-%nterm <ASTNode*> EXPR4;
-%nterm <ASTNode*> EXPR5;
-%nterm <ASTNode*> EXPR6;
-%nterm <ASTNode*> EXPR7;
-%nterm <ASTNode*> EXPR8;
-%nterm <ASTNode*> EXPR9;
-%nterm <ASTNode*> EXPR10;
-%nterm <ASTNode*> EXPR11;
-%nterm <ASTNode*> EXPR12;
-%nterm <ASTNode*> ATOM;
+%nterm <ASTProgram*> PROGRAM;
+%nterm <ASTStmt*> STMT;
+%nterm <ASTStmt*> ASSIGNMENT;
+%nterm <ASTStmt*> VARDECL;
+%nterm <TypePtr> TYPE;
+%nterm <ASTExpr*> EXPR;
+%nterm <ASTExpr*> EXPR1;
+%nterm <ASTExpr*> EXPR2;
+%nterm <ASTExpr*> EXPR3;
+%nterm <ASTExpr*> EXPR4;
+%nterm <ASTExpr*> EXPR5;
+%nterm <ASTExpr*> EXPR6;
+%nterm <ASTExpr*> EXPR7;
+%nterm <ASTExpr*> EXPR8;
+%nterm <ASTExpr*> EXPR9;
+%nterm <ASTExpr*> EXPR10;
+%nterm <ASTExpr*> EXPR11;
+%nterm <ASTExpr*> EXPR12;
+%nterm <ASTExpr*> ATOM;
 
-%nterm <std::vector<ASTNode*>> STMTS;
+%nterm <std::vector<ASTStmt*>> STMTS;
 %nterm <AssignmentType> OP_ASSIGN;
 
 %%
@@ -216,9 +234,9 @@ STMT:
 ;
 
 VARDECL:
-    "let" "ID" "=" EXPR1             { $$ = new ASTVarDecl($2, $4, $1); }
-  | "let" "ID" ":" TYPE "=" EXPR1    { $$ = new ASTVarDecl($2, $4, $6, $1); }
-  | "let" "_" "=" EXPR1              { $$ = new ASTVarDecl($4, $1); }
+    "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }
+  | "let" "ID" ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, $1); }
+  | "let" "_" "=" EXPR              { $$ = new ASTVarDecl($4, $1); }
 ;
 
 TYPE:
@@ -232,7 +250,7 @@ TYPE:
   | "void"     { $$ = $1; }
 ;
 
-ASSIGNMENT: "ID" OP_ASSIGN EXPR1 { $$ = new ASTAssignment($1, $3, $2); };
+ASSIGNMENT: "ID" OP_ASSIGN EXPR { $$ = new ASTAssignment($1, $3, $2); };
 
 OP_ASSIGN:
     "="     { $$ = AssignmentType::EQ; }
@@ -247,6 +265,11 @@ OP_ASSIGN:
   | "^="    { $$ = AssignmentType::BIN_XOR_EQ; }
   | "<<="   { $$ = AssignmentType::LSHIFT_EQ; }
   | ">>="   { $$ = AssignmentType::RSHIFT_EQ; }
+
+EXPR:
+        EXPR1                                 { $$ = $1; }
+    |   "if" EXPR1 "then" EXPR "else" EXPR    { $$ = new ASTIfExpr($2, $4, $6, $1); }
+;        
 
 EXPR1:
     EXPR1 "||" EXPR2  { $$ = new ASTBinopExpr($1, $3, BinopType::LOG_OR); }
@@ -328,7 +351,7 @@ ATOM:
   | "true"          { $$ = $1; }
   | "false"         { $$ = $1; }
   | "ID"            { $$ = $1; }
-  | "(" EXPR1 ")"   { $$ = $2; }
+  | "(" EXPR ")"	{ $$ = $2; }
 ;
 
 %%

@@ -801,13 +801,13 @@ namespace ramvm {
 	InstrJump::InstrJump(int _labelIdx)
 		: Instruction(InstructionType::JUMP)
 	{
-		labelIdx = _labelIdx;
+		instrIdx = _labelIdx;
 	}
 
 	InstrCJump::InstrCJump(int _labelIdx, Argument _condSrc)
 		: Instruction(InstructionType::CJUMP)
 	{
-		labelIdx = _labelIdx;
+		instrIdx = _labelIdx;
 		condSrc = _condSrc;
 	}
 
@@ -881,5 +881,14 @@ namespace ramvm {
 
 		ss << ">" << srcsStr << " " << dest.ToString();
 		return ss.str();
+	}
+
+	InstrCompare::InstrCompare(Argument _src1, Argument _src2, Argument _len, Argument _dest)
+		: Instruction(InstructionType::COMPARE)
+	{
+		src1 = _src1;
+		src2 = _src2;
+		length = _len;
+		dest = _dest;
 	}
 }

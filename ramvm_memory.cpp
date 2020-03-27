@@ -91,6 +91,9 @@ namespace ramvm {
 
 	ResultType Memory::ReadBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info)
 	{
+		if (_length < 0)
+			return ResultType::ERR_MEMREAD;
+
 		int endAddr = _start + _length - 1;
 
 		if (IsAddress(_start) && IsAddress(endAddr))

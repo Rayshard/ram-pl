@@ -4,7 +4,7 @@ namespace ramvm {
 	enum class InstructionType {
 		HALT, MOVE, BINOP, UNOP, JUMP,
 		CJUMP, CALL, RETURN, PRINT, MALLOC,
-		PUSH, POP, FREE, STORE
+		PUSH, POP, FREE, STORE, COMPARE
 	};
 
 	enum class ArgType {
@@ -124,6 +124,16 @@ namespace ramvm {
 	};
 #pragma endregion
 
+#pragma region Compare
+	struct InstrCompare : Instruction {
+		Argument src1, src2, length, dest;
+
+		InstrCompare(Argument _src1, Argument _src2, Argument _len, Argument _dest);
+
+		std::string ToString() override { return "COMPARE " + src1.ToString() + " " + src2.ToString() + " " + length.ToString() + " " + dest.ToString(); }
+	};
+#pragma endregion
+
 #pragma region Return
 	struct InstrReturn : Instruction {
 		std::vector<TypedArgument> srcs;
@@ -136,22 +146,22 @@ namespace ramvm {
 
 #pragma region Jump
 	struct InstrJump : Instruction {
-		int labelIdx;
+		int instrIdx;
 
-		InstrJump(int _labelIdx);
+		InstrJump(int _instrIdx);
 
-		std::string ToString() override { return "JUMP " + std::to_string(labelIdx); }
+		std::string ToString() override { return "JUMP " + std::to_string(instrIdx); }
 	};
 #pragma endregion
 
 #pragma region CJump
 	struct InstrCJump : Instruction {
-		int labelIdx;
+		int instrIdx;
 		Argument condSrc;
 
-		InstrCJump(int _labelIdx, Argument _condSrc);
+		InstrCJump(int _instrIdx, Argument _condSrc);
 
-		std::string ToString() override { return "CJUMP " + std::to_string(labelIdx) + " " + condSrc.ToString(); }
+		std::string ToString() override { return "CJUMP " + std::to_string(instrIdx) + " " + condSrc.ToString(); }
 	};
 #pragma endregion
 
@@ -213,7 +223,7 @@ namespace ramvm {
 			}
 		}
 
-		std::string ToString() override { return "POP<" + std::string(1, DataTypeToChar(GetDataType())) + ">" + amt.ToString(); }
+		std::string ToString() override { return "POP<" + std::string(1, DataTypeToChar(GetDataType())) + "> " + amt.ToString(); }
 	};
 #pragma endregion
 }

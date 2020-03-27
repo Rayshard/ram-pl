@@ -22,12 +22,14 @@ namespace ramvm {
             case ramvm::TokenType::STACK_REG: str += "Stack Register: " + value; break;
             case ramvm::TokenType::SP_OFFSET: str += "Stack Pointer Offet: " + value; break;
             case ramvm::TokenType::LABEL: str += "Label: " + value; break;
+            case ramvm::TokenType::INSTR_OFFSET: str += "Instruction Offset: " + value; break;
             case ramvm::TokenType::KW_SP: str += "SP"; break;
             case ramvm::TokenType::KW_HALT: str += "HALT"; break;
             case ramvm::TokenType::KW_MOV: str += "MOV"; break;
             case ramvm::TokenType::KW_RET: str += "RET"; break;
             case ramvm::TokenType::KW_MALLOC: str += "MALLOC"; break;
             case ramvm::TokenType::KW_STORE: str += "STORE"; break;
+            case ramvm::TokenType::KW_COMPARE: str += "COMPARE"; break;
             case ramvm::TokenType::KW_FREE: str += "FREE"; break;
             case ramvm::TokenType::KW_PUSH: str += "PUSH"; break;
             case ramvm::TokenType::KW_POP: str += "POP" + value; break;

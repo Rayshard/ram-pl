@@ -115,7 +115,7 @@ int CompilerMain()
 	if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
 	else
 	{
-		ASTProgram* prog = result.GetNode()->As<ASTProgram>();
+		ASTProgram* prog = dynamic_cast<ASTProgram*>(result.GetNode());
 
 		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
 
@@ -128,7 +128,7 @@ int CompilerMain()
 			return 0;
 		}
 		
-		auto instrs = prog->GenerateCode({});
+		auto instrs = prog->GenerateCode();
 		instrs.push_back(new ramvm::InstrHalt());
 
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
@@ -217,6 +217,6 @@ int VMMain()
 
 int main()
 {
-	//return VMMain();
+	return VMMain();
 	return CompilerMain();
 }
