@@ -424,6 +424,7 @@ namespace ramc { namespace bison {
       // "long"
       // "string"
       // "void"
+      // TYPE
       char dummy12[sizeof (Type*)];
 
       // STMTS
@@ -778,19 +779,19 @@ switch (yytype)
       case 67: // STMT
       case 68: // ASSIGNMENT
       case 69: // VARDECL
-      case 70: // EXPR1
-      case 71: // EXPR2
-      case 72: // EXPR3
-      case 73: // EXPR4
-      case 74: // EXPR5
-      case 75: // EXPR6
-      case 76: // EXPR7
-      case 77: // EXPR8
-      case 78: // EXPR9
-      case 79: // EXPR10
-      case 80: // EXPR11
-      case 81: // EXPR12
-      case 82: // ATOM
+      case 71: // EXPR1
+      case 72: // EXPR2
+      case 73: // EXPR3
+      case 74: // EXPR4
+      case 75: // EXPR5
+      case 76: // EXPR6
+      case 77: // EXPR7
+      case 78: // EXPR8
+      case 79: // EXPR9
+      case 80: // EXPR10
+      case 81: // EXPR11
+      case 82: // EXPR12
+      case 83: // ATOM
         value.template destroy< ASTNode* > ();
         break;
 
@@ -798,7 +799,7 @@ switch (yytype)
         value.template destroy< ASTStringLit* > ();
         break;
 
-      case 84: // OP_ASSIGN
+      case 85: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
@@ -814,10 +815,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
+      case 70: // TYPE
         value.template destroy< Type* > ();
         break;
 
-      case 83: // STMTS
+      case 84: // STMTS
         value.template destroy< std::vector<ASTNode*> > ();
         break;
 
@@ -2340,8 +2342,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 91,     ///< Last index in yytable_.
-      yynnts_ = 20,  ///< Number of nonterminal symbols.
+      yylast_ = 103,     ///< Last index in yytable_.
+      yynnts_ = 21,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 65  ///< Number of tokens.
     };
@@ -2448,19 +2450,19 @@ switch (yytype)
       case 67: // STMT
       case 68: // ASSIGNMENT
       case 69: // VARDECL
-      case 70: // EXPR1
-      case 71: // EXPR2
-      case 72: // EXPR3
-      case 73: // EXPR4
-      case 74: // EXPR5
-      case 75: // EXPR6
-      case 76: // EXPR7
-      case 77: // EXPR8
-      case 78: // EXPR9
-      case 79: // EXPR10
-      case 80: // EXPR11
-      case 81: // EXPR12
-      case 82: // ATOM
+      case 71: // EXPR1
+      case 72: // EXPR2
+      case 73: // EXPR3
+      case 74: // EXPR4
+      case 75: // EXPR5
+      case 76: // EXPR6
+      case 77: // EXPR7
+      case 78: // EXPR8
+      case 79: // EXPR9
+      case 80: // EXPR10
+      case 81: // EXPR11
+      case 82: // EXPR12
+      case 83: // ATOM
         value.move< ASTNode* > (std::move (that.value));
         break;
 
@@ -2468,7 +2470,7 @@ switch (yytype)
         value.move< ASTStringLit* > (std::move (that.value));
         break;
 
-      case 84: // OP_ASSIGN
+      case 85: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
@@ -2484,10 +2486,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
+      case 70: // TYPE
         value.move< Type* > (std::move (that.value));
         break;
 
-      case 83: // STMTS
+      case 84: // STMTS
         value.move< std::vector<ASTNode*> > (std::move (that.value));
         break;
 
@@ -2538,19 +2541,19 @@ switch (yytype)
       case 67: // STMT
       case 68: // ASSIGNMENT
       case 69: // VARDECL
-      case 70: // EXPR1
-      case 71: // EXPR2
-      case 72: // EXPR3
-      case 73: // EXPR4
-      case 74: // EXPR5
-      case 75: // EXPR6
-      case 76: // EXPR7
-      case 77: // EXPR8
-      case 78: // EXPR9
-      case 79: // EXPR10
-      case 80: // EXPR11
-      case 81: // EXPR12
-      case 82: // ATOM
+      case 71: // EXPR1
+      case 72: // EXPR2
+      case 73: // EXPR3
+      case 74: // EXPR4
+      case 75: // EXPR5
+      case 76: // EXPR6
+      case 77: // EXPR7
+      case 78: // EXPR8
+      case 79: // EXPR9
+      case 80: // EXPR10
+      case 81: // EXPR11
+      case 82: // EXPR12
+      case 83: // ATOM
         value.copy< ASTNode* > (YY_MOVE (that.value));
         break;
 
@@ -2558,7 +2561,7 @@ switch (yytype)
         value.copy< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
-      case 84: // OP_ASSIGN
+      case 85: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
@@ -2574,10 +2577,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
+      case 70: // TYPE
         value.copy< Type* > (YY_MOVE (that.value));
         break;
 
-      case 83: // STMTS
+      case 84: // STMTS
         value.copy< std::vector<ASTNode*> > (YY_MOVE (that.value));
         break;
 
@@ -2636,19 +2640,19 @@ switch (yytype)
       case 67: // STMT
       case 68: // ASSIGNMENT
       case 69: // VARDECL
-      case 70: // EXPR1
-      case 71: // EXPR2
-      case 72: // EXPR3
-      case 73: // EXPR4
-      case 74: // EXPR5
-      case 75: // EXPR6
-      case 76: // EXPR7
-      case 77: // EXPR8
-      case 78: // EXPR9
-      case 79: // EXPR10
-      case 80: // EXPR11
-      case 81: // EXPR12
-      case 82: // ATOM
+      case 71: // EXPR1
+      case 72: // EXPR2
+      case 73: // EXPR3
+      case 74: // EXPR4
+      case 75: // EXPR5
+      case 76: // EXPR6
+      case 77: // EXPR7
+      case 78: // EXPR8
+      case 79: // EXPR9
+      case 80: // EXPR10
+      case 81: // EXPR11
+      case 82: // EXPR12
+      case 83: // ATOM
         value.move< ASTNode* > (YY_MOVE (s.value));
         break;
 
@@ -2656,7 +2660,7 @@ switch (yytype)
         value.move< ASTStringLit* > (YY_MOVE (s.value));
         break;
 
-      case 84: // OP_ASSIGN
+      case 85: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
@@ -2672,10 +2676,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
+      case 70: // TYPE
         value.move< Type* > (YY_MOVE (s.value));
         break;
 
-      case 83: // STMTS
+      case 84: // STMTS
         value.move< std::vector<ASTNode*> > (YY_MOVE (s.value));
         break;
 
@@ -2734,7 +2739,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 2738 "ramc_bison_parser.hpp"
+#line 2743 "ramc_bison_parser.hpp"
 
 
 

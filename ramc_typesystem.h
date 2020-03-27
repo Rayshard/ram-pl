@@ -29,7 +29,8 @@ namespace ramc {
 		SUCCESS,
 		ID_NOT_FOUND,
 		MISMATCH,
-		REDECLARATION
+		REDECLARATION,
+		EXPECTATION
 	};
 
 	class TypeResult : public Result<TypeResultType, Type*> {
@@ -41,7 +42,8 @@ namespace ramc {
 
 		static TypeResult GenSuccess(Type* _type) { return TypeResult(TypeResultType::SUCCESS, _type, "", Position()); }
 		static TypeResult GenIDNotFound(std::string _id, Position _pos) { return TypeResult(TypeResultType::ID_NOT_FOUND, nullptr, _id, _pos); }
-		static TypeResult GenMismatch(std::string _mismatch, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mismatch, _pos); }
+		static TypeResult GenExpectation(std::string _expected, std::string _found, Position _pos) { return TypeResult(TypeResultType::EXPECTATION, nullptr, "Expected " + _expected + " but found " + _found, _pos); }
+		static TypeResult GenMismatch(std::string _mistach, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mistach, _pos); }
 		static TypeResult GenRedecalartion(std::string _id, Position _pos) { return TypeResult(TypeResultType::REDECLARATION, nullptr, _id, _pos); }
 	};
 

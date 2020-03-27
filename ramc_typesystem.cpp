@@ -39,6 +39,7 @@ namespace ramc {
 			case TypeResultType::SUCCESS: return "SUCCESS";
 			case TypeResultType::ID_NOT_FOUND: return  prefix + "\"" + errString + "\" has not been declared!";
 			case TypeResultType::MISMATCH: return prefix + "Mismatch of " + errString;
+			case TypeResultType::EXPECTATION: return prefix + errString;
 			case TypeResultType::REDECLARATION: return prefix + "Redeclaration of \"" + errString + "\"";
 			default: return prefix + "TypeResult::ToString - TypeResultType not handled!";
 		}

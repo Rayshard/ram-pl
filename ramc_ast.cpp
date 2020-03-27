@@ -83,6 +83,16 @@ namespace ramc {
 		id = _id;
 		expr = _expr;
 		isUnderscore = false;
+		restraint = nullptr;
+	}
+
+	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTNode* _expr, Position _pos)
+		: ASTNode(ASTNodeType::ASSIGNMENT, _pos)
+	{
+		id = _id;
+		expr = _expr;
+		isUnderscore = false;
+		restraint = _restraint;
 	}
 
 	ASTVarDecl::ASTVarDecl(ASTNode* _expr, Position _pos)
@@ -91,6 +101,7 @@ namespace ramc {
 		id = nullptr;
 		expr = _expr;
 		isUnderscore = true;
+		restraint = nullptr;
 	}
 
 	ASTVarDecl::~ASTVarDecl()
@@ -105,6 +116,7 @@ namespace ramc {
 
 		ss << CreateIndent(_indentLvl) << "Var Declaration:" << std::endl;
 		ss << (isUnderscore ? CreateIndent(_indentLvl + 1) + "UNDERSCORE" : id->ToString(_indentLvl + 1)) << std::endl;
+		ss << CreateIndent(_indentLvl + 1) << "Restraint: " << (restraint ? restraint->ToString(0) : "variable") << std::endl;
 		ss << expr->ToString(_indentLvl + 1);
 
 		return ss.str();
@@ -112,7 +124,7 @@ namespace ramc {
 
 	TypeResult ASTVarDecl::TypeCheck(Environment* _env)
 	{
-		if(isUnderscore)
+		if (isUnderscore)
 			return TypeResult::GenSuccess(Type::VOID);
 
 		if (_env->HasVariable(id->GetID()))
@@ -120,12 +132,14 @@ namespace ramc {
 
 		TypeResult exprTypeRes = expr->GetTypeSysType(_env);
 
-		if (!exprTypeRes.IsSuccess())
-			return exprTypeRes;
-
-		_env->AddVariable(id->GetID(), exprTypeRes.GetValue());
-		IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
-		return TypeResult::GenSuccess(Type::VOID);
+		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
+		else if (restraint && (exprTypeRes.GetValue() != restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
+		else
+		{
+			_env->AddVariable(id->GetID(), exprTypeRes.GetValue());
+			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
+			return TypeResult::GenSuccess(Type::VOID);
+		}
 	}
 
 	InstructionSet ASTVarDecl::GenerateCode(std::map<std::string, std::string> _params) { return expr->GenerateCode({ {"Dest", "R0" } }); }

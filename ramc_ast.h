@@ -74,8 +74,10 @@ namespace ramc {
 		ASTIdentifier* id;
 		ASTNode* expr;
 		bool isUnderscore;
+		Type* restraint;
 	public:
 		ASTVarDecl(ASTIdentifier*  _id, ASTNode* _expr, Position _pos);
+		ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTNode* _expr, Position _pos);
 		ASTVarDecl(ASTNode* _expr, Position _pos);
 		~ASTVarDecl();
 

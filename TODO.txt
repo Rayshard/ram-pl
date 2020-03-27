@@ -1,2 +1,3 @@
 -Implement TRASH for vm so underscore can write to nothing
+-Types to shared pointer
 -COMpiler implement ability to have hex literals

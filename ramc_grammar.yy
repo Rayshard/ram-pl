@@ -181,6 +181,7 @@
 %nterm <ASTNode*> STMT;
 %nterm <ASTNode*> ASSIGNMENT;
 %nterm <ASTNode*> VARDECL;
+%nterm <Type*> TYPE;
 %nterm <ASTNode*> EXPR1;
 %nterm <ASTNode*> EXPR2;
 %nterm <ASTNode*> EXPR3;
@@ -215,11 +216,21 @@ STMT:
 ;
 
 VARDECL:
-    "let" "ID" "=" EXPR1    { $$ = new ASTVarDecl($2, $4, $1); }
-  | "let" "_" "=" EXPR1     { $$ = new ASTVarDecl($4, $1); }
+    "let" "ID" "=" EXPR1             { $$ = new ASTVarDecl($2, $4, $1); }
+  | "let" "ID" ":" TYPE "=" EXPR1    { $$ = new ASTVarDecl($2, $4, $6, $1); }
+  | "let" "_" "=" EXPR1              { $$ = new ASTVarDecl($4, $1); }
 ;
 
-
+TYPE:
+    "byte"     { $$ = $1; }
+  | "bool"     { $$ = $1; }
+  | "int"      { $$ = $1; }
+  | "float"    { $$ = $1; }
+  | "double"   { $$ = $1; }
+  | "long"     { $$ = $1; }
+  | "string"   { $$ = $1; }
+  | "void"     { $$ = $1; }
+;
 
 ASSIGNMENT: "ID" OP_ASSIGN EXPR1 { $$ = new ASTAssignment($1, $3, $2); };
 
