@@ -26,7 +26,7 @@ namespace ramc {
 		virtual bool Matches(TypePtr _t) { return type == _t->type; }
 
 		TypeSystemType GetType() { return type; }
-		
+
 		static bool Matches(TypePtr _t1, TypePtr _t2) { return _t1->Matches(_t2) && _t2->Matches(_t1); }
 	};
 
@@ -61,15 +61,20 @@ namespace ramc {
 
 		Environment* parent;
 		std::unordered_map<std::string, VarInfo> variables;
-		int nextVarRegIdx;
+		std::unordered_map<Environment*, bool> subEnvs;
+		int nextVarRegIdx, numVarRegNeeded;
+
+		void SetMaxNumVarRegNeeded(int _val);
 	public:
-		Environment(Environment* _parent);
+		Environment(Environment* _parent, bool _incrParentRegCnt);
 
 		bool AddVariable(std::string _id, TypePtr _type);
-		bool HasVariable(std::string _id);
-		bool HasVariable(std::string _id, TypePtr _type);
+		bool HasVariable(std::string _id, bool _localCheck);
+		bool HasVariable(std::string _id, TypePtr _type, bool _localCheck);
 		TypeResult GetVariableType(std::string _id, Position _execPos);
 		Argument GetVarRegister(std::string _id);
+
+		int GetNumVarRegNeeded() { return numVarRegNeeded; }
 	};
 
 	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)

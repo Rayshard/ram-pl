@@ -62,10 +62,43 @@ namespace ramc {
 		}
 	}
 
-	Environment::Environment(Environment* _parent)
+	void Environment::SetMaxNumVarRegNeeded(int _val)
+	{
+		if (_val > numVarRegNeeded)
+			numVarRegNeeded = _val;
+
+		if (parent)
+		{
+			auto search = parent->subEnvs.find(this);
+			if (search->second)
+				parent->SetMaxNumVarRegNeeded(_val);
+		}
+	}
+
+	Environment::Environment(Environment* _parent, bool _incrParentRegCnt)
 	{
 		parent = _parent;
-		nextVarRegIdx = 0;
+
+		if (parent != 0)
+		{
+			numVarRegNeeded = _parent->numVarRegNeeded;
+
+			if (_incrParentRegCnt)
+			{
+				nextVarRegIdx = parent->nextVarRegIdx;
+				parent->subEnvs.insert_or_assign(this, true);
+			}
+			else
+			{
+				nextVarRegIdx = 0;
+				parent->subEnvs.insert_or_assign(this, false);
+			}
+		}
+		else
+		{
+			nextVarRegIdx = 0;
+			numVarRegNeeded = 0;
+		}
 	}
 
 	bool Environment::AddVariable(std::string _id, TypePtr _type)
@@ -78,20 +111,22 @@ namespace ramc {
 			info.type = _type;
 			info.regIdx = nextVarRegIdx++;
 
+			SetMaxNumVarRegNeeded(nextVarRegIdx);
+
 			variables.insert_or_assign(_id, info);
 			return true;
 		}
 	}
 
-	bool Environment::HasVariable(std::string _id)
+	bool Environment::HasVariable(std::string _id, bool _localCheck)
 	{
-		return variables.find(_id) != variables.end() || (parent && HasVariable(_id));
+		return variables.find(_id) != variables.end() || (!_localCheck && (parent ? parent->HasVariable(_id, false) : false));
 	}
 
-	bool Environment::HasVariable(std::string _id, TypePtr _type)
+	bool Environment::HasVariable(std::string _id, TypePtr _type, bool _localCheck)
 	{
 		auto search = variables.find(_id);
-		if (search == variables.end()) { return parent ? parent->HasVariable(_id, _type) : false; }
+		if (search == variables.end()) { return !_localCheck && (parent ? parent->HasVariable(_id, _type, false) : false); }
 		else { return search->second.type == _type; }
 	}
 

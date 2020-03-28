@@ -63,6 +63,7 @@
 				case TokenType::KW_ELSE: return Parser::make_KW_ELSE(token.position);
 				case TokenType::KW_WHILE: return Parser::make_KW_WHILE(token.position);
 				case TokenType::KW_FOR: return Parser::make_KW_FOR(token.position);
+				case TokenType::KW_DO: return Parser::make_KW_DO(token.position);
 				case TokenType::KW_CONTINUE: return Parser::make_KW_CONTINUE(token.position);
 				case TokenType::KW_BREAK: return Parser::make_KW_BREAK(token.position);
 				case TokenType::KW_RETURN: return Parser::make_KW_RETURN(token.position);
@@ -102,7 +103,7 @@
 				case TokenType::RSHIFT_EQ: return Parser::make_RSHIFT_EQ();
 				case TokenType::LPAREN: return Parser::make_LPAREN();
 				case TokenType::RPAREN: return Parser::make_RPAREN();
-				case TokenType::LCBRACKET: return Parser::make_LCBRACKET();
+				case TokenType::LCBRACKET: return Parser::make_LCBRACKET(token.position);
 				case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
 				case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
 				case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
@@ -157,8 +158,8 @@
 %token RSHIFT_EQ ">>="
 %token LPAREN "("
 %token RPAREN ")"
-%token LCBRACKET "}"
-%token RCBRACKET "{"
+%token <Position> LCBRACKET "{"
+%token RCBRACKET "}"
 %token LSBRACKET "["
 %token RSBRACKET "]"
 %token SEMICOLON ";"
@@ -189,6 +190,7 @@
 %token <Position> KW_ELSE "else"
 %token <Position> KW_WHILE "while"
 %token <Position> KW_FOR "for"
+%token <Position> KW_DO "do"
 %token <Position> KW_BREAK "break"
 %token <Position> KW_CONTINUE "continue"
 %token <Position> KW_RETURN "return"
@@ -196,9 +198,12 @@
 
 %nterm <ASTProgram*> PROGRAM;
 %nterm <ASTStmt*> STMT;
+%nterm <ASTStmt*> OPEN_STMT;
+%nterm <ASTStmt*> CLOSED_STMT;
 %nterm <ASTStmt*> ASSIGNMENT;
 %nterm <ASTStmt*> VARDECL;
-%nterm <TypePtr> TYPE;
+%nterm <ASTStmt*> WHILE_STMT;
+%nterm <ASTStmt*> FOR_STMT;
 %nterm <ASTExpr*> EXPR;
 %nterm <ASTExpr*> EXPR1;
 %nterm <ASTExpr*> EXPR2;
@@ -216,22 +221,36 @@
 
 %nterm <std::vector<ASTStmt*>> STMTS;
 %nterm <AssignmentType> OP_ASSIGN;
+%nterm <TypePtr> TYPE;
 
 %%
 %start PROGRAM;
-PROGRAM: 
-    STMTS   { result = new ASTProgram("Test File", $1); }
+PROGRAM: STMTS { result = new ASTProgram("Test File", $1); };
+
+STMTS: %empty      { $$ = { }; }
+	 | STMTS STMT  { $1.push_back($2); $$ = $1; }
 ;
 
-STMTS:
-    %empty      { $$ = { }; }
-  | STMTS STMT  { $1.push_back($2); $$ = $1; }
+STMT: OPEN_STMT   { $$ = $1; }
+    | CLOSED_STMT { $$ = $1; }   
 ;
 
-STMT:
-    ASSIGNMENT ";" { $$ = $1; }
-  | VARDECL ";"    { $$ = $1; }
+OPEN_STMT: "if" EXPR1 "then" STMT					        { $$ = new ASTIfStmt($2, $4, nullptr, $1); }
+		 | "if" EXPR1 "then" CLOSED_STMT "else" OPEN_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
+		 | WHILE_STMT										{ $$ = $1; }
 ;
+
+CLOSED_STMT: ASSIGNMENT ";"										{ $$ = $1; }
+		   | VARDECL ";"										{ $$ = $1; }
+		   | "{" STMTS "}"										{ $$ = new ASTBlock($2, $1);}
+		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
+		   | FOR_STMT											{ $$ = $1; }
+;
+
+WHILE_STMT: "while" EXPR1 "do" STMT	{ $$ = new ASTWhileStmt($2, $4, $1); }
+
+FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" STMT "then" CLOSED_STMT	{ $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $11, $13, $1); }
+		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" STMT "then" CLOSED_STMT			{ $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $9, $11, $1); }
 
 VARDECL:
     "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }

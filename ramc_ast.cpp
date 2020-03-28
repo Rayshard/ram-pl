@@ -149,7 +149,7 @@ namespace ramc {
 		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
 		if (isUnderscore) { return TypeResult::GenSuccess(Type::VOID); }
-		else if (_env->HasVariable(id->GetID())) { return TypeResult::GenRedecalartion(id->GetID(), GetPosition()); }
+		else if (_env->HasVariable(id->GetID(), true)) { return TypeResult::GenRedecalartion(id->GetID(), GetPosition()); }
 
 		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
 		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
@@ -1345,6 +1345,91 @@ namespace ramc {
 	InstructionSet ASTLongLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), _dest) }; }
 #pragma endregion
 
+#pragma region IfStmt
+	ASTIfStmt::ASTIfStmt(ASTExpr* _condExpr, ASTStmt* _thenStmt, ASTStmt* _elseStmt, Position _pos)
+		: ASTStmt(ASTStmtType::IF, _pos)
+	{
+		condExpr = _condExpr;
+		thenStmt = _thenStmt;
+		elseStmt = _elseStmt;
+	}
+
+	ASTIfStmt::~ASTIfStmt()
+	{
+		delete condExpr;
+		delete thenStmt;
+
+		if (elseStmt)
+			delete elseStmt;
+	}
+
+	std::string ASTIfStmt::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "If Statement:" << std::endl;
+		ss << condExpr->ToString(_indentLvl + 1, "Condition: ") << std::endl;
+		ss << thenStmt->ToString(_indentLvl + 1, "Then: ") << std::endl;
+
+		if (elseStmt)
+			ss << elseStmt->ToString(_indentLvl + 1, "Else: ");
+
+		return ss.str();
+	}
+
+	TypeResult ASTIfStmt::_TypeCheck(Environment* _env)
+	{
+		TypeResult condTypeRes = condExpr->TypeCheck(_env);
+		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
+		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+
+		Environment thenSubEnv(_env, true);
+		TypeResult thenTypeRes = thenStmt->TypeCheck(&thenSubEnv);
+		if (!thenTypeRes.IsSuccess())
+			return thenTypeRes;
+
+		if (elseStmt)
+		{
+			Environment elseSubEnv(_env, true);
+			TypeResult elseTypeRes = elseStmt->TypeCheck(&elseSubEnv);
+			if (!elseTypeRes.IsSuccess())
+				return elseTypeRes;
+		}
+
+		return TypeResult::GenSuccess(Type::VOID);
+	}
+
+	InstructionSet ASTIfStmt::GenerateCode(ProgramInfo& _progInfo)
+	{
+		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
+		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+		InstructionSet thenInstrs = thenStmt->GenerateCode(_progInfo);
+
+		if (elseStmt)
+		{
+			InstructionSet elseInstrs = elseStmt->GenerateCode(_progInfo);
+
+			instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), false));
+			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+
+			//False
+			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+			instrs.insert(instrs.end(), elseInstrs.begin(), elseInstrs.end());
+			instrs.push_back(new InstrJump(thenInstrs.size() + 2)); //Jump past true instructions
+			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		}
+		else
+		{
+			instrs.push_back(new InstrCJump(thenInstrs.size() + 2, Argument(ArgType::SP_OFFSET, 0), true));
+			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		}
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end());
+		return instrs;
+	}
+#pragma endregion
+
 #pragma region IfExpr
 	ASTIfExpr::ASTIfExpr(ASTExpr* _condExpr, ASTExpr* _thenExpr, ASTExpr* _elseExpr, Position _pos)
 		: ASTExpr(ASTExprType::IF, _pos)
@@ -1365,7 +1450,7 @@ namespace ramc {
 	{
 		std::stringstream ss;
 
-		ss << CreateIndent(_indentLvl) << "If Statement:" << std::endl;
+		ss << CreateIndent(_indentLvl) << _prefix << "If Expression:" << std::endl;
 		ss << condExpr->ToString(_indentLvl + 1, "Condition: ") << std::endl;
 		ss << thenExpr->ToString(_indentLvl + 1, "Then: ") << std::endl;
 		ss << elseExpr->ToString(_indentLvl + 1, "Else: ");
@@ -1400,7 +1485,7 @@ namespace ramc {
 		InstructionSet elseInstrs = elseExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 
-		instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0)));
+		instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), false));
 		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
 
 		//False
@@ -1419,6 +1504,158 @@ namespace ramc {
 			auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
 			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -resultByteSize + 1), _dest));
 			instrs.push_back(new InstrPop(destDataType, Argument(ArgType::VALUE, 1)));
+		}
+
+		return instrs;
+	}
+#pragma endregion
+
+#pragma region WhileStmt
+	ASTWhileStmt::ASTWhileStmt(ASTExpr* _condExpr, ASTStmt* _body, Position _pos)
+		: ASTStmt(ASTStmtType::WHILE, _pos)
+	{
+		condExpr = _condExpr;
+		body = _body;
+	}
+
+	ASTWhileStmt::~ASTWhileStmt()
+	{
+		delete condExpr;
+		delete body;
+	}
+
+	std::string ASTWhileStmt::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "While Statement:" << std::endl;
+		ss << condExpr->ToString(_indentLvl + 1, "Condition: ") << std::endl;
+		ss << body->ToString(_indentLvl + 1, "Body: ") << std::endl;
+
+		return ss.str();
+	}
+
+	TypeResult ASTWhileStmt::_TypeCheck(Environment* _env)
+	{
+		TypeResult condTypeRes = condExpr->TypeCheck(_env);
+		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
+		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+
+		Environment subEnv(_env, true);
+		return body->TypeCheck(&subEnv);
+	}
+
+	InstructionSet ASTWhileStmt::GenerateCode(ProgramInfo& _progInfo)
+	{
+		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
+		InstructionSet condInstrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);;
+		InstructionSet bodyInstrs = body->GenerateCode(_progInfo);
+		InstructionSet instrs = condInstrs;
+
+		instrs.push_back(new InstrCJump(bodyInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), true));
+		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition if do
+		instrs.insert(instrs.end(), bodyInstrs.begin(), bodyInstrs.end());
+
+		instrs.push_back(new InstrJump(-int(bodyInstrs.size() + condInstrs.size() + 2))); //Jump back to condition instructions
+		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition if not do
+
+		return instrs;
+	}
+#pragma endregion
+
+#pragma region ForStmt
+	ASTForStmt::ASTForStmt(ASTVarDecl* _initStmt, ASTExpr* _condExpr, ASTStmt* _body, ASTStmt* _thenStmt, Position _pos)
+		: ASTStmt(ASTStmtType::FOR, _pos)
+	{
+		initStmt = _initStmt;
+		condExpr = _condExpr;
+		body = _body;
+		thenStmt = _thenStmt;
+		blockHolder = new ASTBlock({ initStmt, new ASTWhileStmt(condExpr, new ASTBlock({ body, thenStmt }, _pos), _pos) }, _pos);
+	}
+
+	ASTForStmt::~ASTForStmt() { delete blockHolder; }
+
+	std::string ASTForStmt::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "For Statement:" << std::endl;
+		ss << initStmt->ToString(_indentLvl + 1) << std::endl;
+		ss << body->ToString(_indentLvl + 1, "Body: ") << std::endl;
+		ss << thenStmt->ToString(_indentLvl + 1, "Then: ") << std::endl;
+
+		return ss.str();
+	}
+
+	TypeResult ASTForStmt::_TypeCheck(Environment* _env)
+	{
+		Environment subEnv(_env, true);
+
+		TypeResult initTypeRes = initStmt->TypeCheck(&subEnv);
+		if (!initTypeRes.IsSuccess())
+			return initTypeRes;
+
+		TypeResult condTypeRes = condExpr->TypeCheck(&subEnv);
+		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
+		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+
+		TypeResult bodyTypeRes = body->TypeCheck(&subEnv);
+		if (!bodyTypeRes.IsSuccess())
+			return bodyTypeRes;
+
+		return thenStmt->TypeCheck(&subEnv);
+	}
+
+	InstructionSet ASTForStmt::GenerateCode(ProgramInfo& _progInfo) { return blockHolder->GenerateCode(_progInfo); }
+#pragma endregion
+
+#pragma region Block
+	ASTBlock::ASTBlock(const std::vector<ASTStmt*>& _stmts, Position _pos)
+		: ASTStmt(ASTStmtType::BLOCK, _pos), stmts(_stmts) { }
+
+	ASTBlock::~ASTBlock()
+	{
+		for (auto it = stmts.begin(); it != stmts.end(); it++)
+			delete (*it);
+	}
+
+	std::string ASTBlock::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "Block:" << std::endl;
+
+		for (auto it = stmts.begin(); it != stmts.end(); it++)
+			ss << (*it)->ToString(_indentLvl + 1) << std::endl;
+
+		return ss.str();
+	}
+
+	TypeResult ASTBlock::_TypeCheck(Environment* _env)
+	{
+		for (auto it = stmts.begin(); it != stmts.end(); it++)
+		{
+			TypeResult typeRes = (*it)->TypeCheck(_env);
+			if (!typeRes.IsSuccess())
+				return typeRes;
+		}
+
+		return TypeResult::GenSuccess(Type::VOID);
+	}
+
+	InstructionSet ASTBlock::GenerateCode(ProgramInfo& _progInfo)
+	{
+		InstructionSet instrs;
+
+		for (auto it = stmts.begin(); it != stmts.end(); it++)
+		{
+			InstructionSet stmtInstrs = (*it)->GenerateCode(_progInfo);
+			instrs.insert(instrs.end(), stmtInstrs.begin(), stmtInstrs.end());
 		}
 
 		return instrs;

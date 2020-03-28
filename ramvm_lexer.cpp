@@ -46,18 +46,19 @@ namespace ramvm {
 	LexerResult LexKeyword(std::string _tokStr, Position _tokStartPos)
 	{
 		if (_tokStr == "HALT") { return LexerResult::GenSuccess(Token(TokenType::KW_HALT, _tokStartPos, "")); }
-		else if (std::regex_match(_tokStr, std::regex("RET<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_RET, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (_tokStr == "MALLOC") { return LexerResult::GenSuccess(Token(TokenType::KW_MALLOC, _tokStartPos, "")); }
 		else if (_tokStr == "FREE") { return LexerResult::GenSuccess(Token(TokenType::KW_FREE, _tokStartPos, "")); }
-		else if (std::regex_match(_tokStr, std::regex("PUSH<[BIFDL]+>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_PUSH, _tokStartPos, _tokStr.substr(5, _tokStr.length() - 6))); }
-		else if (std::regex_match(_tokStr, std::regex("POP<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_POP, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
-		else if (std::regex_match(_tokStr, std::regex("MOV<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MOV, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (_tokStr == "PRINT") { return LexerResult::GenSuccess(Token(TokenType::KW_PRINT, _tokStartPos, "")); }
 		else if (_tokStr == "JUMP") { return LexerResult::GenSuccess(Token(TokenType::KW_JUMP, _tokStartPos, "")); }
-		else if (_tokStr == "CJUMP") { return LexerResult::GenSuccess(Token(TokenType::KW_CJUMP, _tokStartPos, "")); }
+		else if (_tokStr == "JUMPT") { return LexerResult::GenSuccess(Token(TokenType::KW_JUMPT, _tokStartPos, "")); }
+		else if (_tokStr == "JUMPF") { return LexerResult::GenSuccess(Token(TokenType::KW_JUMPF, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("RET<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_RET, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
+		else if (std::regex_match(_tokStr, std::regex("PUSH<[BIFDL]+>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_PUSH, _tokStartPos, _tokStr.substr(5, _tokStr.length() - 6))); }
+		else if (std::regex_match(_tokStr, std::regex("COMPARE"))) { return LexerResult::GenSuccess(Token(TokenType::KW_COMPARE, _tokStartPos, "")); }
+		else if (std::regex_match(_tokStr, std::regex("POP<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_POP, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
+		else if (std::regex_match(_tokStr, std::regex("MOV<[BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MOV, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (std::regex_match(_tokStr, std::regex("CALL<[BIFDL]*>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_CALL, _tokStartPos, _tokStr.substr(5, _tokStr.length() - 6))); }
 		else if (std::regex_match(_tokStr, std::regex("STORE<[BIFDL]+>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_STORE, _tokStartPos, _tokStr.substr(6, _tokStr.length() - 7))); }
-		else if (std::regex_match(_tokStr, std::regex("COMPARE"))) { return LexerResult::GenSuccess(Token(TokenType::KW_COMPARE, _tokStartPos, "")); }
 		else if (std::regex_match(_tokStr, std::regex("ADD<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_ADD, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (std::regex_match(_tokStr, std::regex("SUB<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_SUB, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }
 		else if (std::regex_match(_tokStr, std::regex("MUL<[BIFDL][BIFDL][BIFDL]>"))) { return LexerResult::GenSuccess(Token(TokenType::KW_MUL, _tokStartPos, _tokStr.substr(4, _tokStr.length() - 5))); }

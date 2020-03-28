@@ -17,7 +17,7 @@ namespace ramvm {
 		ArgType type;
 		DataValue value;
 
-		Argument() = default;
+		Argument() : type(ArgType::INVALID), value(0) { }
 		Argument(ArgType _type, DataValue _val);
 		std::string ToString();
 
@@ -158,10 +158,11 @@ namespace ramvm {
 	struct InstrCJump : Instruction {
 		int instrIdx;
 		Argument condSrc;
+		bool jumpOnFalse;
 
-		InstrCJump(int _instrIdx, Argument _condSrc);
+		InstrCJump(int _instrIdx, Argument _condSrc, bool _jumpOnFalse);
 
-		std::string ToString() override { return "CJUMP " + std::to_string(instrIdx) + " " + condSrc.ToString(); }
+		std::string ToString() override { return (jumpOnFalse ? "JUMPF " : "JUMPT ") + std::to_string(instrIdx) + " " + condSrc.ToString(); }
 	};
 #pragma endregion
 

@@ -13,7 +13,7 @@ namespace ramc {
 	class ASTBinopEpxr;
 
 	enum class ASTNodeType { PROGAM, STMT, EXPR };
-	enum class ASTStmtType { ASSIGNMENT, EXPR, VARDECL };
+	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FOR };
 	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL };
 
 	enum class BinopType {
@@ -105,6 +105,19 @@ namespace ramc {
 	};
 #pragma endregion
 
+#pragma region Block
+	class ASTBlock : public ASTStmt {
+		std::vector<ASTStmt*> stmts;
+	public:
+		ASTBlock(const std::vector<ASTStmt*>& _stmts, Position _pos);
+		~ASTBlock();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
 #pragma region VarDeclaration
 	class ASTVarDecl : public ASTStmt {
 		ASTIdentifier* id;
@@ -123,6 +136,20 @@ namespace ramc {
 	};
 #pragma endregion
 
+#pragma region If Statement
+	class ASTIfStmt : public ASTStmt {
+		ASTExpr* condExpr;
+		ASTStmt* thenStmt, * elseStmt;
+	public:
+		ASTIfStmt(ASTExpr* _condExpr, ASTStmt* _thenStmt, ASTStmt* _elseStmt, Position _pos);
+		~ASTIfStmt();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
 #pragma region If Expression
 	class ASTIfExpr : public ASTExpr {
 		ASTExpr* condExpr, * thenExpr, * elseExpr;
@@ -133,6 +160,41 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
+#pragma region While Statement
+	class ASTWhileStmt : public ASTStmt {
+		ASTExpr* condExpr;
+		ASTStmt* body;
+	public:
+		ASTWhileStmt(ASTExpr* _condExpr, ASTStmt* _body, Position _pos);
+		~ASTWhileStmt();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
+#pragma region For Statement
+	class ASTForStmt : public ASTStmt {
+		ASTVarDecl* initStmt;
+		ASTExpr* condExpr;
+		ASTStmt* body;
+		ASTStmt* thenStmt;
+
+		//Holds the elements so that I just have to call its
+		//GenerateCode function instead of copying the code; I will delete
+		//this rather than the elements
+		ASTBlock* blockHolder;
+	public:
+		ASTForStmt(ASTVarDecl* _initStmt, ASTExpr* _condExpr, ASTStmt* _body, ASTStmt* _thenStmt, Position _pos);
+		~ASTForStmt();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 

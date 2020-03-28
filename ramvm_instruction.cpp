@@ -804,11 +804,12 @@ namespace ramvm {
 		instrIdx = _labelIdx;
 	}
 
-	InstrCJump::InstrCJump(int _labelIdx, Argument _condSrc)
+	InstrCJump::InstrCJump(int _labelIdx, Argument _condSrc, bool _jumpOnFalse)
 		: Instruction(InstructionType::CJUMP)
 	{
 		instrIdx = _labelIdx;
 		condSrc = _condSrc;
+		jumpOnFalse = _jumpOnFalse;
 	}
 
 	InstrPrint::InstrPrint(Argument _start, Argument _len)

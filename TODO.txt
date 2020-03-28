@@ -1,4 +1,6 @@
--Separate statements from expression in ast
 -if/while/for and breaks for them
--remove inc and dec tokens
+-register must propaate up
+-functions
+-structs
+-arrays/strings
 -COMpiler implement ability to have hex literals

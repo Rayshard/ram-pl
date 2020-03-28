@@ -119,7 +119,7 @@ int CompilerMain()
 
 		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
 
-		Environment env(0);
+		Environment env(0, false);
 		TypeResult typeRes = prog->TypeCheck(&env);
 
 		if (!typeRes.IsSuccess())
@@ -133,8 +133,8 @@ int CompilerMain()
 
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
-		for (auto instr : instrs)
-			std::cout << "     " << instr->ToString() << std::endl;
+		for (int i = 0; i < (int)instrs.size(); i++)
+			std::cout << i << "     " << instrs[i]->ToString() << std::endl;
 
 		while (OptimizeInstructionSet(instrs)) //Loop till no change
 		{
@@ -149,7 +149,7 @@ int CompilerMain()
 
 		try
 		{
-			VM vm = VM(4, 1024, instrs);
+			VM vm = VM(env.GetNumVarRegNeeded(), 1024, instrs);
 
 			ResultInfo resInfo;
 			ResultType result = vm.Run(resInfo);
@@ -217,6 +217,6 @@ int VMMain()
 
 int main()
 {
-	return VMMain();
+	//return VMMain();
 	return CompilerMain();
 }

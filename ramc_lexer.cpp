@@ -25,15 +25,16 @@ namespace ramc {
 
 	const std::unordered_map<std::string, TokenType> KEYWORDS = {
 		{ "true", TokenType::KW_TRUE }, { "false", TokenType::KW_FALSE },
-	
+
 		{ "byte", TokenType::KW_BYTE }, { "bool", TokenType::KW_BOOL }, { "int", TokenType::KW_INT },
 		{ "double", TokenType::KW_DOUBLE }, { "float", TokenType::KW_FLOAT }, { "long", TokenType::KW_LONG },
 		{ "string", TokenType::KW_STRING }, { "void", TokenType::KW_VOID },
-	
+
 		{ "let", TokenType::KW_LET }, { "if", TokenType::KW_IF }, { "then", TokenType::KW_THEN },
 		{ "else", TokenType::KW_ELSE }, { "while", TokenType::KW_WHILE }, { "for", TokenType::KW_FOR },
-		
-		{ "continue", TokenType::KW_CONTINUE }, { "break", TokenType::KW_BREAK }, { "return", TokenType::KW_RETURN }, 
+		{ "do", TokenType::KW_DO },
+
+		{ "continue", TokenType::KW_CONTINUE }, { "break", TokenType::KW_BREAK }, { "return", TokenType::KW_RETURN },
 
 		{ "_", TokenType::UNDERSCORE },
 	};
@@ -225,12 +226,8 @@ namespace ramc {
 			case ']': return LexerResult::GenSuccess(Token(TokenType::RSBRACKET, tokStartPos, ""));
 			case '+': {
 				char peekedChar = (char)stream->peek();
-
-				if (peekedChar == '+') {
-					ReadNextChar();
-					return LexerResult::GenSuccess(Token(TokenType::INC, tokStartPos, ""));
-				}
-				else if (peekedChar == '=') {
+				
+				if (peekedChar == '=') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::PLUS_EQ, tokStartPos, ""));
 				}
@@ -239,11 +236,7 @@ namespace ramc {
 			case '-': {
 				char peekedChar = (char)stream->peek();
 
-				if (peekedChar == '-') {
-					ReadNextChar();
-					return LexerResult::GenSuccess(Token(TokenType::DEC, tokStartPos, ""));
-				}
-				else if (isdigit(peekedChar)) {
+				if (isdigit(peekedChar)) {
 					ReadNextChar();
 					return LexNumericLiteral(this, firstChar, true, tokStartPos);
 				}

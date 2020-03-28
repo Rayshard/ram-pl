@@ -111,7 +111,7 @@ namespace ramvm {
 					ResultType resType = ReadFromSrcArg(execFrame, instr->condSrc, condVal, _info);
 
 					if (IsErrorResult(resType)) { return resType; }
-					else if (condVal.B() != 0)
+					else if ((condVal.B() == 0 && instr->jumpOnFalse) || (condVal.B() != 0 && !instr->jumpOnFalse))
 					{
 						ip = instr->instrIdx;
 						continue;

@@ -408,8 +408,12 @@ namespace ramc { namespace bison {
       char dummy9[sizeof (ASTProgram*)];
 
       // STMT
+      // OPEN_STMT
+      // CLOSED_STMT
       // ASSIGNMENT
       // VARDECL
+      // WHILE_STMT
+      // FOR_STMT
       char dummy10[sizeof (ASTStmt*)];
 
       // "STRING_LIT"
@@ -418,12 +422,14 @@ namespace ramc { namespace bison {
       // OP_ASSIGN
       char dummy12[sizeof (AssignmentType)];
 
+      // "{"
       // "let"
       // "if"
       // "then"
       // "else"
       // "while"
       // "for"
+      // "do"
       // "break"
       // "continue"
       // "return"
@@ -548,9 +554,10 @@ namespace ramc { namespace bison {
         KW_ELSE = 322,
         KW_WHILE = 323,
         KW_FOR = 324,
-        KW_BREAK = 325,
-        KW_CONTINUE = 326,
-        KW_RETURN = 327
+        KW_DO = 325,
+        KW_BREAK = 326,
+        KW_CONTINUE = 327,
+        KW_RETURN = 328
       };
     };
 
@@ -802,20 +809,20 @@ switch (yytype)
         value.template destroy< ASTDoubleLit* > ();
         break;
 
-      case 79: // EXPR
-      case 80: // EXPR1
-      case 81: // EXPR2
-      case 82: // EXPR3
-      case 83: // EXPR4
-      case 84: // EXPR5
-      case 85: // EXPR6
-      case 86: // EXPR7
-      case 87: // EXPR8
-      case 88: // EXPR9
-      case 89: // EXPR10
-      case 90: // EXPR11
-      case 91: // EXPR12
-      case 92: // ATOM
+      case 83: // EXPR
+      case 84: // EXPR1
+      case 85: // EXPR2
+      case 86: // EXPR3
+      case 87: // EXPR4
+      case 88: // EXPR5
+      case 89: // EXPR6
+      case 90: // EXPR7
+      case 91: // EXPR8
+      case 92: // EXPR9
+      case 93: // EXPR10
+      case 94: // EXPR11
+      case 95: // EXPR12
+      case 96: // ATOM
         value.template destroy< ASTExpr* > ();
         break;
 
@@ -835,13 +842,17 @@ switch (yytype)
         value.template destroy< ASTLongLit* > ();
         break;
 
-      case 74: // PROGRAM
+      case 75: // PROGRAM
         value.template destroy< ASTProgram* > ();
         break;
 
-      case 75: // STMT
-      case 76: // ASSIGNMENT
-      case 77: // VARDECL
+      case 76: // STMT
+      case 77: // OPEN_STMT
+      case 78: // CLOSED_STMT
+      case 79: // ASSIGNMENT
+      case 80: // VARDECL
+      case 81: // WHILE_STMT
+      case 82: // FOR_STMT
         value.template destroy< ASTStmt* > ();
         break;
 
@@ -849,19 +860,21 @@ switch (yytype)
         value.template destroy< ASTStringLit* > ();
         break;
 
-      case 94: // OP_ASSIGN
+      case 98: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
+      case 38: // "{"
       case 64: // "let"
       case 65: // "if"
       case 66: // "then"
       case 67: // "else"
       case 68: // "while"
       case 69: // "for"
-      case 70: // "break"
-      case 71: // "continue"
-      case 72: // "return"
+      case 70: // "do"
+      case 71: // "break"
+      case 72: // "continue"
+      case 73: // "return"
         value.template destroy< Position > ();
         break;
 
@@ -873,11 +886,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
-      case 78: // TYPE
+      case 99: // TYPE
         value.template destroy< TypePtr > ();
         break;
 
-      case 93: // STMTS
+      case 97: // STMTS
         value.template destroy< std::vector<ASTStmt*> > ();
         break;
 
@@ -954,13 +967,13 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::LCBRACKET || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::LCBRACKET || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1071,13 +1084,13 @@ switch (yytype)
       symbol_type (int tok, Position v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #else
       symbol_type (int tok, const Position& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1672,16 +1685,16 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_LCBRACKET ()
+      make_LCBRACKET (Position v)
       {
-        return symbol_type (token::LCBRACKET);
+        return symbol_type (token::LCBRACKET, std::move (v));
       }
 #else
       static
       symbol_type
-      make_LCBRACKET ()
+      make_LCBRACKET (const Position& v)
       {
-        return symbol_type (token::LCBRACKET);
+        return symbol_type (token::LCBRACKET, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2152,6 +2165,21 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
+      make_KW_DO (Position v)
+      {
+        return symbol_type (token::KW_DO, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_KW_DO (const Position& v)
+      {
+        return symbol_type (token::KW_DO, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
       make_KW_BREAK (Position v)
       {
         return symbol_type (token::KW_BREAK, std::move (v));
@@ -2213,7 +2241,7 @@ switch (yytype)
     void yy_lac_discard_ (const char* event);
 
     /// Stored state numbers (used for stacks).
-    typedef signed char state_type;
+    typedef unsigned char state_type;
 
     /// Generate an error message.
     /// \param yystate   the state where the error occurred.
@@ -2245,7 +2273,7 @@ switch (yytype)
     // Tables.
     // YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
     // STATE-NUM.
-    static const signed char yypact_[];
+    static const short yypact_[];
 
     // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
     // Performed when YYTABLE does not specify something else to do.  Zero
@@ -2253,7 +2281,7 @@ switch (yytype)
     static const signed char yydefact_[];
 
     // YYPGOTO[NTERM-NUM].
-    static const signed char yypgoto_[];
+    static const short yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
     static const signed char yydefgoto_[];
@@ -2261,9 +2289,9 @@ switch (yytype)
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
     // number is the opposite.  If YYTABLE_NINF, syntax error.
-    static const signed char yytable_[];
+    static const unsigned char yytable_[];
 
-    static const signed char yycheck_[];
+    static const short yycheck_[];
 
     // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
     // symbol of state STATE-NUM.
@@ -2520,10 +2548,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 120,     ///< Last index in yytable_.
-      yynnts_ = 22,  ///< Number of nonterminal symbols.
+      yylast_ = 180,     ///< Last index in yytable_.
+      yynnts_ = 26,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
-      yyntokens_ = 73  ///< Number of tokens.
+      yyntokens_ = 74  ///< Number of tokens.
     };
 
 
@@ -2575,9 +2603,9 @@ switch (yytype)
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72
+      65,    66,    67,    68,    69,    70,    71,    72,    73
     };
-    const int user_token_number_max_ = 327;
+    const int user_token_number_max_ = 328;
 
     if (t <= 0)
       return yyeof_;
@@ -2609,20 +2637,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (std::move (that.value));
         break;
 
-      case 79: // EXPR
-      case 80: // EXPR1
-      case 81: // EXPR2
-      case 82: // EXPR3
-      case 83: // EXPR4
-      case 84: // EXPR5
-      case 85: // EXPR6
-      case 86: // EXPR7
-      case 87: // EXPR8
-      case 88: // EXPR9
-      case 89: // EXPR10
-      case 90: // EXPR11
-      case 91: // EXPR12
-      case 92: // ATOM
+      case 83: // EXPR
+      case 84: // EXPR1
+      case 85: // EXPR2
+      case 86: // EXPR3
+      case 87: // EXPR4
+      case 88: // EXPR5
+      case 89: // EXPR6
+      case 90: // EXPR7
+      case 91: // EXPR8
+      case 92: // EXPR9
+      case 93: // EXPR10
+      case 94: // EXPR11
+      case 95: // EXPR12
+      case 96: // ATOM
         value.move< ASTExpr* > (std::move (that.value));
         break;
 
@@ -2642,13 +2670,17 @@ switch (yytype)
         value.move< ASTLongLit* > (std::move (that.value));
         break;
 
-      case 74: // PROGRAM
+      case 75: // PROGRAM
         value.move< ASTProgram* > (std::move (that.value));
         break;
 
-      case 75: // STMT
-      case 76: // ASSIGNMENT
-      case 77: // VARDECL
+      case 76: // STMT
+      case 77: // OPEN_STMT
+      case 78: // CLOSED_STMT
+      case 79: // ASSIGNMENT
+      case 80: // VARDECL
+      case 81: // WHILE_STMT
+      case 82: // FOR_STMT
         value.move< ASTStmt* > (std::move (that.value));
         break;
 
@@ -2656,19 +2688,21 @@ switch (yytype)
         value.move< ASTStringLit* > (std::move (that.value));
         break;
 
-      case 94: // OP_ASSIGN
+      case 98: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
+      case 38: // "{"
       case 64: // "let"
       case 65: // "if"
       case 66: // "then"
       case 67: // "else"
       case 68: // "while"
       case 69: // "for"
-      case 70: // "break"
-      case 71: // "continue"
-      case 72: // "return"
+      case 70: // "do"
+      case 71: // "break"
+      case 72: // "continue"
+      case 73: // "return"
         value.move< Position > (std::move (that.value));
         break;
 
@@ -2680,11 +2714,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
-      case 78: // TYPE
+      case 99: // TYPE
         value.move< TypePtr > (std::move (that.value));
         break;
 
-      case 93: // STMTS
+      case 97: // STMTS
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
         break;
 
@@ -2715,20 +2749,20 @@ switch (yytype)
         value.copy< ASTDoubleLit* > (YY_MOVE (that.value));
         break;
 
-      case 79: // EXPR
-      case 80: // EXPR1
-      case 81: // EXPR2
-      case 82: // EXPR3
-      case 83: // EXPR4
-      case 84: // EXPR5
-      case 85: // EXPR6
-      case 86: // EXPR7
-      case 87: // EXPR8
-      case 88: // EXPR9
-      case 89: // EXPR10
-      case 90: // EXPR11
-      case 91: // EXPR12
-      case 92: // ATOM
+      case 83: // EXPR
+      case 84: // EXPR1
+      case 85: // EXPR2
+      case 86: // EXPR3
+      case 87: // EXPR4
+      case 88: // EXPR5
+      case 89: // EXPR6
+      case 90: // EXPR7
+      case 91: // EXPR8
+      case 92: // EXPR9
+      case 93: // EXPR10
+      case 94: // EXPR11
+      case 95: // EXPR12
+      case 96: // ATOM
         value.copy< ASTExpr* > (YY_MOVE (that.value));
         break;
 
@@ -2748,13 +2782,17 @@ switch (yytype)
         value.copy< ASTLongLit* > (YY_MOVE (that.value));
         break;
 
-      case 74: // PROGRAM
+      case 75: // PROGRAM
         value.copy< ASTProgram* > (YY_MOVE (that.value));
         break;
 
-      case 75: // STMT
-      case 76: // ASSIGNMENT
-      case 77: // VARDECL
+      case 76: // STMT
+      case 77: // OPEN_STMT
+      case 78: // CLOSED_STMT
+      case 79: // ASSIGNMENT
+      case 80: // VARDECL
+      case 81: // WHILE_STMT
+      case 82: // FOR_STMT
         value.copy< ASTStmt* > (YY_MOVE (that.value));
         break;
 
@@ -2762,19 +2800,21 @@ switch (yytype)
         value.copy< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
-      case 94: // OP_ASSIGN
+      case 98: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
+      case 38: // "{"
       case 64: // "let"
       case 65: // "if"
       case 66: // "then"
       case 67: // "else"
       case 68: // "while"
       case 69: // "for"
-      case 70: // "break"
-      case 71: // "continue"
-      case 72: // "return"
+      case 70: // "do"
+      case 71: // "break"
+      case 72: // "continue"
+      case 73: // "return"
         value.copy< Position > (YY_MOVE (that.value));
         break;
 
@@ -2786,11 +2826,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
-      case 78: // TYPE
+      case 99: // TYPE
         value.copy< TypePtr > (YY_MOVE (that.value));
         break;
 
-      case 93: // STMTS
+      case 97: // STMTS
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
@@ -2829,20 +2869,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (YY_MOVE (s.value));
         break;
 
-      case 79: // EXPR
-      case 80: // EXPR1
-      case 81: // EXPR2
-      case 82: // EXPR3
-      case 83: // EXPR4
-      case 84: // EXPR5
-      case 85: // EXPR6
-      case 86: // EXPR7
-      case 87: // EXPR8
-      case 88: // EXPR9
-      case 89: // EXPR10
-      case 90: // EXPR11
-      case 91: // EXPR12
-      case 92: // ATOM
+      case 83: // EXPR
+      case 84: // EXPR1
+      case 85: // EXPR2
+      case 86: // EXPR3
+      case 87: // EXPR4
+      case 88: // EXPR5
+      case 89: // EXPR6
+      case 90: // EXPR7
+      case 91: // EXPR8
+      case 92: // EXPR9
+      case 93: // EXPR10
+      case 94: // EXPR11
+      case 95: // EXPR12
+      case 96: // ATOM
         value.move< ASTExpr* > (YY_MOVE (s.value));
         break;
 
@@ -2862,13 +2902,17 @@ switch (yytype)
         value.move< ASTLongLit* > (YY_MOVE (s.value));
         break;
 
-      case 74: // PROGRAM
+      case 75: // PROGRAM
         value.move< ASTProgram* > (YY_MOVE (s.value));
         break;
 
-      case 75: // STMT
-      case 76: // ASSIGNMENT
-      case 77: // VARDECL
+      case 76: // STMT
+      case 77: // OPEN_STMT
+      case 78: // CLOSED_STMT
+      case 79: // ASSIGNMENT
+      case 80: // VARDECL
+      case 81: // WHILE_STMT
+      case 82: // FOR_STMT
         value.move< ASTStmt* > (YY_MOVE (s.value));
         break;
 
@@ -2876,19 +2920,21 @@ switch (yytype)
         value.move< ASTStringLit* > (YY_MOVE (s.value));
         break;
 
-      case 94: // OP_ASSIGN
+      case 98: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
+      case 38: // "{"
       case 64: // "let"
       case 65: // "if"
       case 66: // "then"
       case 67: // "else"
       case 68: // "while"
       case 69: // "for"
-      case 70: // "break"
-      case 71: // "continue"
-      case 72: // "return"
+      case 70: // "do"
+      case 71: // "break"
+      case 72: // "continue"
+      case 73: // "return"
         value.move< Position > (YY_MOVE (s.value));
         break;
 
@@ -2900,11 +2946,11 @@ switch (yytype)
       case 61: // "long"
       case 62: // "string"
       case 63: // "void"
-      case 78: // TYPE
+      case 99: // TYPE
         value.move< TypePtr > (YY_MOVE (s.value));
         break;
 
-      case 93: // STMTS
+      case 97: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
         break;
 
@@ -2963,7 +3009,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 2967 "ramc_bison_parser.hpp"
+#line 3013 "ramc_bison_parser.hpp"
 
 
 

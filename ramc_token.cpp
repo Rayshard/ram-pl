@@ -29,6 +29,7 @@ namespace ramc {
 			case TokenType::KW_ELSE: str += "Keyword: else"; break;
 			case TokenType::KW_WHILE: str += "Keyword: while"; break;
 			case TokenType::KW_FOR: str += "Keyword: for"; break;
+			case TokenType::KW_DO: str += "Keyword: do"; break;
 
 			case TokenType::KW_CONTINUE: str += "Keyword: continue"; break;
 			case TokenType::KW_BREAK: str += "Keyword: break"; break;
@@ -87,9 +88,6 @@ namespace ramc {
 			case TokenType::LOG_OR: str += "LogicalOr"; break;
 			case TokenType::LOG_NOT: str += "LogicalNot"; break;
 			case TokenType::BIN_NOT: str += "BinaryNot"; break;
-
-			case TokenType::INC: str += "Increment"; break;
-			case TokenType::DEC: str += "Decrement"; break;
 
 			case TokenType::LPAREN: str += "LeftParenthesis"; break;
 			case TokenType::RPAREN: str += "RightParenthesis"; break;

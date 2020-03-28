@@ -35,7 +35,8 @@ namespace ramvm {
             case ramvm::TokenType::KW_POP: str += "POP" + value; break;
             case ramvm::TokenType::KW_PRINT: str += "PRINT"; break;
             case ramvm::TokenType::KW_JUMP: str += "JUMP"; break;
-            case ramvm::TokenType::KW_CJUMP: str += "CJUMP"; break;
+            case ramvm::TokenType::KW_JUMPT: str += "JUMPT"; break;
+            case ramvm::TokenType::KW_JUMPF: str += "JUMPF"; break;
             case ramvm::TokenType::KW_CALL: str += "CALL"; break;
             case ramvm::TokenType::KW_ADD: str += "ADD"; break;
             case ramvm::TokenType::KW_SUB: str += "SUB"; break;
