@@ -30,6 +30,7 @@ namespace ramvm {
 			switch (curInstr->GetType())
 			{
 				case InstructionType::HALT: return ResultType::SUCCESS;
+				case InstructionType::NOOP: break;
 				case InstructionType::MOVE: {
 					InstrMove* instr = (InstrMove*)curInstr;
 					ResultType resType = ResultType::SUCCESS;

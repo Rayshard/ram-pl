@@ -2,7 +2,7 @@
 
 namespace ramvm {
 	enum class InstructionType {
-		HALT, MOVE, BINOP, UNOP, JUMP,
+		HALT, NOOP, MOVE, BINOP, UNOP, JUMP,
 		CJUMP, CALL, RETURN, PRINT, MALLOC,
 		PUSH, POP, FREE, STORE, COMPARE
 	};
@@ -66,6 +66,14 @@ namespace ramvm {
 		InstrHalt() : Instruction(InstructionType::HALT) { }
 
 		std::string ToString() override { return "HALT"; }
+	};
+#pragma endregion
+
+#pragma region NoOp
+	struct InstrNoOp : Instruction {
+		InstrNoOp() : Instruction(InstructionType::NOOP) { }
+
+		std::string ToString() override { return "NOOP"; }
 	};
 #pragma endregion
 

@@ -4,6 +4,7 @@
 #include "ramvm_instruction.h"
 #include "ramvm_parser.h"
 
+using ramvm::Instruction;
 using ramvm::InstructionSet;
 using ramvm::Argument;
 
@@ -13,7 +14,7 @@ namespace ramc {
 	class ASTBinopEpxr;
 
 	enum class ASTNodeType { PROGAM, STMT, EXPR };
-	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FOR };
+	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FOR, BREAK_CONTINUE };
 	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL };
 
 	enum class BinopType {
@@ -52,13 +53,30 @@ namespace ramc {
 #pragma endregion
 
 #pragma region Program
-	struct ProgramInfo
+	class ProgramInfo
 	{
+		int numLoopLabels = 0;
+	public:
+		struct LabeledLoop { bool isForLoop; };
+		struct LabeledWhileLoop { std::string begin, pop, end; };
+		struct LabeledForLoop { std::string begin, pop, then, end; };
+		struct LabeledIf { std::string begin, thenClause, elseClause, end; };
+
+		std::map<std::string, Instruction*> labels;
+		std::vector<LabeledLoop*> curLoopLabels;
+
 		InstructionSet offsetedCtrlInstrs;
-		InstructionSet labeledCtrlInstrs;
+		std::unordered_map<std::string, InstructionSet> labeledCtrlInstrs;
+		
+
+		LabeledWhileLoop GenWhileLoopLabels();
+		LabeledForLoop GenForLoopLabels();
+		LabeledIf GenIfLabels(bool _hasElse);
+		void SetLabelInstr(std::string _label , Instruction* _instr);
 	};
 
 	class ASTProgram : public ASTNode {
+		ProgramInfo info;
 		std::string fileName;
 		std::vector<ASTStmt*> stmts;
 	public:
@@ -68,6 +86,8 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode();
+
+		ProgramInfo GetInfo() { return info; }
 	};
 #pragma endregion
 
@@ -184,13 +204,21 @@ namespace ramc {
 		ASTStmt* body;
 		ASTStmt* thenStmt;
 
-		//Holds the elements so that I just have to call its
-		//GenerateCode function instead of copying the code; I will delete
-		//this rather than the elements
-		ASTBlock* blockHolder;
 	public:
 		ASTForStmt(ASTVarDecl* _initStmt, ASTExpr* _condExpr, ASTStmt* _body, ASTStmt* _thenStmt, Position _pos);
 		~ASTForStmt();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
+#pragma region Break/Continue Statement
+	class ASTBreakContinueStmt : public ASTStmt {
+		bool isBreak;
+	public:
+		ASTBreakContinueStmt(bool _isBreak, Position _pos);
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;

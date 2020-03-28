@@ -133,8 +133,22 @@ int CompilerMain()
 
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
+		ProgramInfo progInfo = prog->GetInfo();
+		
+		std::unordered_multimap<Instruction*, std::string> instrLabels;
+		for (auto it : progInfo.labels)
+			instrLabels.insert(std::make_pair(it.second, it.first));
+
 		for (int i = 0; i < (int)instrs.size(); i++)
-			std::cout << i << "     " << instrs[i]->ToString() << std::endl;
+		{
+			Instruction* instr = instrs[i];
+
+			auto labelSearch = instrLabels.equal_range(instr);
+			for (auto it = labelSearch.first; it != labelSearch.second; ++it)
+				std::cout << it->second << std::endl;
+			
+			std::cout << i << "\t" << instr->ToString() << std::endl;
+		}
 
 		while (OptimizeInstructionSet(instrs)) //Loop till no change
 		{

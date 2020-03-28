@@ -1,16 +1,4 @@
-if false then {
-	let x = 9;
-	let y = 10;
-	let z = 11;
-}
-else {
-	let x = 3;
-	let y = 4;
-	let z = 5;
-
-	for i = 0: while i < 5 do {
-		x += 1;
-		y -= i;
-	} then i += 1;
-}
-
+for i = 0: while i < 5 do {
+	if (i == 2) then continue;
+	else i += 1;
+} then i += 1;

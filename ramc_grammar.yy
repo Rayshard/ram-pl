@@ -23,6 +23,8 @@
 %code {
     namespace ramc {
       namespace bison {
+		bool IsInLoop;
+
       // Return the next token.
 		auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
 		{
@@ -245,12 +247,14 @@ CLOSED_STMT: ASSIGNMENT ";"										{ $$ = $1; }
 		   | "{" STMTS "}"										{ $$ = new ASTBlock($2, $1);}
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
+		   | "break" ";"										{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
+		   | "continue" ";"										{ IsInLoop ? $$ = new ASTBreakContinueStmt(false, $1) : throw std::runtime_error("Cannot have 'continue' outside of a loop!"); }
 ;
 
-WHILE_STMT: "while" EXPR1 "do" STMT	{ $$ = new ASTWhileStmt($2, $4, $1); }
+WHILE_STMT: "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; $$ = new ASTWhileStmt($2, $5, $1); }
 
-FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" STMT "then" CLOSED_STMT	{ $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $11, $13, $1); }
-		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" STMT "then" CLOSED_STMT			{ $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $9, $11, $1); }
+FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $12, $15, $1); }
+		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $10, $13, $1); }
 
 VARDECL:
     "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }

@@ -16,6 +16,7 @@ using ramvm::InstrPop;
 using ramvm::InstrPush;
 using ramvm::InstrCJump;
 using ramvm::InstrJump;
+using ramvm::InstrNoOp;
 using ramvm::InstructionType;
 #pragma endregion
 
@@ -76,7 +77,6 @@ namespace ramc {
 
 	InstructionSet ASTProgram::GenerateCode()
 	{
-		ProgramInfo info;
 		InstructionSet instrs;
 
 		for (int i = 0; i < (int)stmts.size(); i++)
@@ -92,6 +92,17 @@ namespace ramc {
 
 			if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx += idx; }
 			else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx += idx; }
+		}
+
+		for (auto it = info.labeledCtrlInstrs.begin(); it != info.labeledCtrlInstrs.end(); it++)
+		{
+			int labelInstrIdx = std::find(instrs.begin(), instrs.end(), info.labels[it->first]) - instrs.begin();
+
+			for (auto instr : it->second)
+			{
+				if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx = labelInstrIdx; }
+				else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx = labelInstrIdx; }
+			}
 		}
 
 		return instrs;
@@ -1331,17 +1342,11 @@ namespace ramc {
 
 #pragma region Literal
 	InstructionSet ASTIntLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, GetValue()), _dest) }; }
-
 	InstructionSet ASTFloatLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::FLOAT, Argument(ArgType::VALUE, GetValue()), _dest) }; }
-
 	InstructionSet ASTStringLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::INT, Argument(ArgType::VALUE, 0), _dest) }; }
-
 	InstructionSet ASTBoolLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, (byte)(GetValue() ? 1 : 0)), _dest) }; }
-
 	InstructionSet ASTByteLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
-
 	InstructionSet ASTDoubleLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::DOUBLE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
-
 	InstructionSet ASTLongLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), _dest) }; }
 #pragma endregion
 
@@ -1401,31 +1406,43 @@ namespace ramc {
 
 	InstructionSet ASTIfStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
+		auto ifLabels = _progInfo.GenIfLabels(elseStmt); //Gen Labels
+
 		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
 		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 		InstructionSet thenInstrs = thenStmt->GenerateCode(_progInfo);
+
+		_progInfo.SetLabelInstr(ifLabels.begin, instrs.front()); //Set If Begin
 
 		if (elseStmt)
 		{
 			InstructionSet elseInstrs = elseStmt->GenerateCode(_progInfo);
 
-			instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), false));
-			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+			instrs.push_back(new InstrCJump(-1, Argument(ArgType::SP_OFFSET, 0), false)); //Jump to then clause if cond = true
+			_progInfo.labeledCtrlInstrs[ifLabels.thenClause].push_back(instrs.back());
 
 			//False
 			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+			_progInfo.SetLabelInstr(ifLabels.elseClause, instrs.back()); //Set Else Begin
 			instrs.insert(instrs.end(), elseInstrs.begin(), elseInstrs.end());
-			instrs.push_back(new InstrJump(thenInstrs.size() + 2)); //Jump past true instructions
-			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+			instrs.push_back(new InstrJump(-1)); //Jump to If End
+			_progInfo.labeledCtrlInstrs[ifLabels.end].push_back(instrs.back());
 		}
 		else
 		{
-			instrs.push_back(new InstrCJump(thenInstrs.size() + 2, Argument(ArgType::SP_OFFSET, 0), true));
-			_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+			instrs.push_back(new InstrCJump(-1, Argument(ArgType::SP_OFFSET, 0), true)); //Jump to end if cond = false
+			_progInfo.labeledCtrlInstrs[ifLabels.end].push_back(instrs.back());
 		}
 
 		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		_progInfo.SetLabelInstr(ifLabels.thenClause, instrs.back()); //Set Then Begin
 		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end());
+
+		//To Set the End Label to the right spot
+		if (elseStmt) { instrs.push_back(new InstrNoOp()); }
+		else { instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); } //Pop off condition
+
+		_progInfo.SetLabelInstr(ifLabels.end, instrs.back()); //Set If End
 		return instrs;
 	}
 #pragma endregion
@@ -1478,6 +1495,8 @@ namespace ramc {
 
 	InstructionSet ASTIfExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
 	{
+		auto ifLabels = _progInfo.GenIfLabels(true); //Gen Labels
+
 		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
 		int resultByteSize = this->GetTypeSysType()->GetByteSize();
 
@@ -1485,18 +1504,24 @@ namespace ramc {
 		InstructionSet elseInstrs = elseExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 
-		instrs.push_back(new InstrCJump(elseInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), false));
-		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		_progInfo.SetLabelInstr(ifLabels.begin, instrs.front()); //Set If Begin
+
+		instrs.push_back(new InstrCJump(-1, Argument(ArgType::SP_OFFSET, 0), false)); //Jump to then clause if cond = true
+		_progInfo.labeledCtrlInstrs[ifLabels.thenClause].push_back(instrs.back());
 
 		//False
 		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		_progInfo.SetLabelInstr(ifLabels.elseClause, instrs.back()); //Set Else Begin
 		instrs.insert(instrs.end(), elseInstrs.begin(), elseInstrs.end());
-		instrs.push_back(new InstrJump(thenInstrs.size() + 2)); //Jump past true instructions
-		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		instrs.push_back(new InstrJump(-1)); //Jump to If End
+		_progInfo.labeledCtrlInstrs[ifLabels.end].push_back(instrs.back());
 
 		//True
 		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition
+		_progInfo.SetLabelInstr(ifLabels.thenClause, instrs.back()); //Set Then Begin
 		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end());
+		instrs.push_back(new InstrNoOp());
+		_progInfo.SetLabelInstr(ifLabels.end, instrs.back()); //Set If End
 
 		//Move value to destination
 		if (!_dest.IsStackTop())
@@ -1547,22 +1572,30 @@ namespace ramc {
 
 	InstructionSet ASTWhileStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
-		int condByteSize = condExpr->GetTypeSysType()->GetByteSize();
-		InstructionSet condInstrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);;
+		auto loopLabels = _progInfo.GenWhileLoopLabels(); //Gen Labels
+		_progInfo.curLoopLabels.push_back((ProgramInfo::LabeledLoop*) & loopLabels); //Begin Loop Section
+
+		InstructionSet instrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
 		InstructionSet bodyInstrs = body->GenerateCode(_progInfo);
-		InstructionSet instrs = condInstrs;
 
-		instrs.push_back(new InstrCJump(bodyInstrs.size() + 3, Argument(ArgType::SP_OFFSET, 0), true));
-		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		_progInfo.SetLabelInstr(loopLabels.begin, instrs.front()); //Set Loop Begin
 
-		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition if do
+		instrs.push_back(new InstrCJump(-1, Argument(ArgType::SP_OFFSET, 0), true)); //JUMPF to Loop End
+		_progInfo.labeledCtrlInstrs[loopLabels.pop].push_back(instrs.back());
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, BYTE_SIZE))); //Pop off condition if do
 		instrs.insert(instrs.end(), bodyInstrs.begin(), bodyInstrs.end());
 
-		instrs.push_back(new InstrJump(-int(bodyInstrs.size() + condInstrs.size() + 2))); //Jump back to condition instructions
-		_progInfo.offsetedCtrlInstrs.push_back(instrs.back());
+		instrs.push_back(new InstrJump(-1)); //Jump back to condition instructions
+		_progInfo.labeledCtrlInstrs[loopLabels.begin].push_back(instrs.back());
 
-		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, condByteSize))); //Pop off condition if not do
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, BYTE_SIZE))); //Pop off condition if not do
+		_progInfo.SetLabelInstr(loopLabels.pop, instrs.back()); //Set Loop Pop
 
+		instrs.push_back(new InstrNoOp());
+		_progInfo.SetLabelInstr(loopLabels.end, instrs.back()); //Set Loop End
+
+		_progInfo.curLoopLabels.pop_back(); //End Loop Section 
 		return instrs;
 	}
 #pragma endregion
@@ -1575,10 +1608,15 @@ namespace ramc {
 		condExpr = _condExpr;
 		body = _body;
 		thenStmt = _thenStmt;
-		blockHolder = new ASTBlock({ initStmt, new ASTWhileStmt(condExpr, new ASTBlock({ body, thenStmt }, _pos), _pos) }, _pos);
 	}
 
-	ASTForStmt::~ASTForStmt() { delete blockHolder; }
+	ASTForStmt::~ASTForStmt()
+	{
+		delete initStmt;
+		delete condExpr;
+		delete body;
+		delete thenStmt;
+	}
 
 	std::string ASTForStmt::ToString(int _indentLvl, std::string _prefix)
 	{
@@ -1611,7 +1649,40 @@ namespace ramc {
 		return thenStmt->TypeCheck(&subEnv);
 	}
 
-	InstructionSet ASTForStmt::GenerateCode(ProgramInfo& _progInfo) { return blockHolder->GenerateCode(_progInfo); }
+	InstructionSet ASTForStmt::GenerateCode(ProgramInfo& _progInfo)
+	{
+		auto loopLabels = _progInfo.GenForLoopLabels(); //Gen Labels
+		_progInfo.curLoopLabels.push_back((ProgramInfo::LabeledLoop*)&loopLabels); //Begin Loop Section
+
+		InstructionSet instrs = initStmt->GenerateCode(_progInfo);
+		InstructionSet condInstrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+		InstructionSet bodyInstrs = body->GenerateCode(_progInfo);
+		InstructionSet thenInstrs = thenStmt->GenerateCode(_progInfo);
+
+		instrs.insert(instrs.end(), condInstrs.begin(), condInstrs.end());
+		_progInfo.SetLabelInstr(loopLabels.begin, condInstrs.front()); //Set Loop Begin
+
+		instrs.push_back(new InstrCJump(-1, Argument(ArgType::SP_OFFSET, 0), true)); //JUMPF to Loop End
+		_progInfo.labeledCtrlInstrs[loopLabels.pop].push_back(instrs.back());
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, BYTE_SIZE))); //Pop off condition if do
+		instrs.insert(instrs.end(), bodyInstrs.begin(), bodyInstrs.end());
+
+		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end());
+		_progInfo.SetLabelInstr(loopLabels.then, thenInstrs.front()); //Set Loop Then
+
+		instrs.push_back(new InstrJump(-1)); //Jump back to condition instructions
+		_progInfo.labeledCtrlInstrs[loopLabels.begin].push_back(instrs.back());
+
+		instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, BYTE_SIZE))); //Pop off condition if not do
+		_progInfo.SetLabelInstr(loopLabels.pop, instrs.back()); //Set Loop Pop
+
+		instrs.push_back(new InstrNoOp());
+		_progInfo.SetLabelInstr(loopLabels.end, instrs.back()); //Set Loop End
+
+		_progInfo.curLoopLabels.pop_back(); //End Loop Section 
+		return instrs;
+	}
 #pragma endregion
 
 #pragma region Block
@@ -1661,4 +1732,103 @@ namespace ramc {
 		return instrs;
 	}
 #pragma endregion
+
+#pragma region Break/Continue
+	ASTBreakContinueStmt::ASTBreakContinueStmt(bool _isBreak, Position _pos)
+		: ASTStmt(ASTStmtType::BREAK_CONTINUE, _pos), isBreak(_isBreak) { }
+
+	std::string ASTBreakContinueStmt::ToString(int _indentLvl, std::string _prefix) { return CreateIndent(_indentLvl) + _prefix + (isBreak ? "Break" : "Continue"); }
+
+	TypeResult ASTBreakContinueStmt::_TypeCheck(Environment* _env) { return TypeResult::GenSuccess(Type::VOID); }
+
+	InstructionSet ASTBreakContinueStmt::GenerateCode(ProgramInfo& _progInfo)
+	{
+		ProgramInfo::LabeledLoop* curLoopLabel = _progInfo.curLoopLabels.back();
+		InstructionSet instrs = { new InstrJump(-1) };
+
+		std::string label;
+		if (curLoopLabel->isForLoop) { label = isBreak ? ((ProgramInfo::LabeledForLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledForLoop*)curLoopLabel)->then; }
+		else { label = isBreak ? ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->begin; }
+
+		_progInfo.labeledCtrlInstrs[label].push_back(instrs.back());
+
+		return instrs;
+	}
+#pragma endregion
+
+	ProgramInfo::LabeledWhileLoop ProgramInfo::GenWhileLoopLabels()
+	{
+		std::string beginLabel = "LoopBegin" + std::to_string(numLoopLabels);
+		std::string popLabel = "LoopPop" + std::to_string(numLoopLabels);
+		std::string endLabel = "LoopEnd" + std::to_string(numLoopLabels);
+
+		labeledCtrlInstrs.insert_or_assign(beginLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(popLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(endLabel, InstructionSet());
+
+		labels.insert_or_assign(beginLabel, nullptr);
+		labels.insert_or_assign(popLabel, nullptr);
+		labels.insert_or_assign(endLabel, nullptr);
+		numLoopLabels++;
+
+		return { beginLabel, popLabel, endLabel };
+	}
+
+	ProgramInfo::LabeledForLoop ProgramInfo::GenForLoopLabels()
+	{
+		static int numLoopLabels = 0;
+
+		std::string beginLabel = "LoopBegin" + std::to_string(numLoopLabels);
+		std::string popLabel = "LoopPop" + std::to_string(numLoopLabels);
+		std::string thenLabel = "LoopThen" + std::to_string(numLoopLabels);
+		std::string endLabel = "LoopEnd" + std::to_string(numLoopLabels);
+
+		labeledCtrlInstrs.insert_or_assign(beginLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(popLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(thenLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(endLabel, InstructionSet());
+
+		labels.insert_or_assign(beginLabel, nullptr);
+		labels.insert_or_assign(popLabel, nullptr);
+		labels.insert_or_assign(endLabel, nullptr);
+		labels.insert_or_assign(thenLabel, nullptr);
+
+		numLoopLabels++;
+		return { beginLabel, popLabel, thenLabel, endLabel };
+	}
+
+	ProgramInfo::LabeledIf ProgramInfo::GenIfLabels(bool _hasElse)
+	{
+		static int numIfLabels = 0;
+
+		std::string beginLabel = "IfBegin" + std::to_string(numIfLabels);
+		std::string thenLabel = "IfThen" + std::to_string(numIfLabels);
+		std::string elseLabel = "IfElse" + std::to_string(numIfLabels);
+		std::string endLabel = "IfEnd" + std::to_string(numIfLabels);
+
+		//No Need to add being label since no instructions will jump to it
+		labeledCtrlInstrs.insert_or_assign(thenLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(elseLabel, InstructionSet());
+		labeledCtrlInstrs.insert_or_assign(endLabel, InstructionSet());
+		labels.insert_or_assign(beginLabel, nullptr); //Add it here so we can print it out
+		labels.insert_or_assign(thenLabel, nullptr);
+		labels.insert_or_assign(elseLabel, nullptr);
+		labels.insert_or_assign(endLabel, nullptr);
+
+		if (_hasElse)
+		{
+			labeledCtrlInstrs.insert_or_assign(elseLabel, InstructionSet());
+			labels.insert_or_assign(elseLabel, nullptr);
+		}
+
+		numIfLabels++;
+		return { beginLabel, thenLabel, elseLabel, endLabel };
+	}
+
+	void ProgramInfo::SetLabelInstr(std::string _label, Instruction* _instr)
+	{
+		if (labels.find(_label) == labels.end()) { throw std::runtime_error("ProgramInfo::SetLabelInstr() - Label does not exist!"); }
+		else if (labels[_label]) { throw std::runtime_error("ProgramInfo::SetLabelInstr() - Loop label already set!"); }
+		else { labels[_label] = _instr; }
+	}
 }

@@ -2284,14 +2284,14 @@ switch (yytype)
     static const short yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
-    static const signed char yydefgoto_[];
+    static const short yydefgoto_[];
 
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
     // number is the opposite.  If YYTABLE_NINF, syntax error.
     static const unsigned char yytable_[];
 
-    static const short yycheck_[];
+    static const unsigned char yycheck_[];
 
     // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
     // symbol of state STATE-NUM.
@@ -2548,8 +2548,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 180,     ///< Last index in yytable_.
-      yynnts_ = 26,  ///< Number of nonterminal symbols.
+      yylast_ = 185,     ///< Last index in yytable_.
+      yynnts_ = 31,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 74  ///< Number of tokens.
     };
