@@ -19,6 +19,7 @@ using ramvm::InstrJump;
 using ramvm::InstrNoOp;
 using ramvm::InstructionType;
 using ramvm::InstrHalt;
+using ramvm::InstrReturn;
 #pragma endregion
 
 namespace ramc {
@@ -91,18 +92,16 @@ namespace ramc {
 
 	TypeResult ASTProgram::_TypeCheck(Environment* _env)
 	{
-		Environment subEnv(_env, false);
-
 		for (auto const& varDecl : varDecls)
 		{
-			TypeResult declTypeRes = varDecl->TypeCheck(&subEnv);
+			TypeResult declTypeRes = varDecl->TypeCheck(_env);
 			if (!declTypeRes.IsSuccess())
 				return declTypeRes;
 		}
 
 		for (auto const& funcDecl : funcDecls)
 		{
-			TypeResult declTypeRes = funcDecl->TypeCheck(&subEnv);
+			TypeResult declTypeRes = funcDecl->TypeCheck(_env);
 			if (!declTypeRes.IsSuccess())
 				return declTypeRes;
 		}
@@ -110,7 +109,7 @@ namespace ramc {
 		return TypeResult::GenSuccess(Type::UNIT);
 	}
 
-	InstructionSet ASTProgram::GenerateCode()
+	InstructionSet ASTProgram::GenerateCode(Environment* _env)
 	{
 		InstructionSet instrs;
 
@@ -122,9 +121,9 @@ namespace ramc {
 
 		instrs.push_back(new InstrHalt());
 
-		for (auto const& funcDecl : varDecls)
+		for (auto const& funcDecl : funcDecls)
 		{
-			auto declInstrs = funcDecl->GenerateCode(info);
+			auto declInstrs = funcDecl->GenerateCode(_env, info);
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
@@ -151,7 +150,8 @@ namespace ramc {
 		}
 
 		TypePtr retType;
-		if (params.size() == 1) { retType = _retTypes[0]; }
+		if (_retTypes.size() == 0) { retType = Type::UNIT; }
+		else if (_retTypes.size() == 1) { retType = _retTypes[0]; }
 		else { retType = TypePtr(new TupleType(_retTypes)); }
 
 		funcType = new FuncType(paramType, retType);
@@ -166,28 +166,36 @@ namespace ramc {
 
 		ss << CreateIndent(_indentLvl) << _prefix << "Func Declaration:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Type: " << funcType->ToString(0) << std::endl;
-		ss << CreateIndent(_indentLvl + 1) << "Body: " << body->ToString(0) << std::endl;
+		ss << CreateIndent(_indentLvl + 1) << "Body: " << std::endl << body->ToString(_indentLvl + 2) << std::endl;
 
 		return ss.str();
 	}
 
 	TypeResult ASTFuncDecl::_TypeCheck(Environment* _env)
 	{
-		Environment subEnv(_env, false);
+		TypePtr typePtr = TypePtr(funcType);
 
+		//Add Function to environment
+		TypeResult declTypeRes = _env->AddFunction(name, typePtr, GetPosition());
+		if (!declTypeRes.IsSuccess())
+			return declTypeRes;
+
+		Environment subEnv(_env, false); //Local function environment
+
+		//Type check parameters in local environment
 		for (auto const& it : params)
 		{
-			if (!subEnv.AddVariable(it.name, it.type))
+			if (!subEnv.AddVariable(it.name, it.type, ArgType::STACK_REG))
 				return TypeResult::GenRedefinition(it.name, it.position);
 		}
 
+		//Type check body in local environment
 		TypeResult bodyTypeRes = body->TypeCheck(&subEnv);
 		if (!bodyTypeRes.IsSuccess())
 			return bodyTypeRes;
 
 		std::set<ASTStmt*> terminalStmts = body->GetCodePath()->GetTerminalStmts();
-
-		bool needsReturn = funcType->GetRetType()->GetType() != TypeSystemType::UNIT;
+		bool needsReturn = !funcType->IsProcedure();
 
 		for (auto const& stmt : terminalStmts)
 		{
@@ -195,12 +203,33 @@ namespace ramc {
 			else if (!Type::Matches(funcType->GetRetType(), stmt->GetTypeSysType())) { return TypeResult::GenExpectation(funcType->GetRetType()->ToString(0), stmt->GetTypeSysType()->ToString(0), stmt->GetPosition()); }
 		}
 
-		return TypeResult::GenSuccess(TypePtr(funcType));
+		return TypeResult::GenSuccess(typePtr);
 	}
 
-	InstructionSet ASTFuncDecl::GenerateCode(ProgramInfo& _progInfo)
+	InstructionSet ASTFuncDecl::GenerateCode(Environment* _env, ProgramInfo& _progInfo)
 	{
-		return InstructionSet();
+		InstructionSet instrs;
+
+		int paramsTotalByteSize = 0;
+		for (int i = 0, offset = 0; i < params.size(); i++)
+		{
+			Argument offsetArg = Argument(ArgType::VALUE, offset);
+			Argument destReg = Argument(ArgType::REGISTER, i);
+			instrs.push_back(new InstrMove(DataType::INT, offsetArg, destReg));
+
+			int byteSize = params[i].type->GetByteSize();
+			offset -= byteSize;
+			paramsTotalByteSize += byteSize;
+		}
+
+		InstructionSet bodyInstrs = body->GenerateCode(_progInfo);
+		instrs.insert(instrs.end(), bodyInstrs.begin(), bodyInstrs.end());
+
+		if (funcType->IsProcedure())
+			instrs.push_back(new InstrReturn(Argument(ArgType::VALUE, 0)));
+
+		_progInfo.AddFuncDecl(_env->GetFunctionLabel(name, funcType->GetParamsType()), instrs.front());
+		return instrs;
 	}
 #pragma endregion
 
@@ -261,7 +290,7 @@ namespace ramc {
 		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
 		else
 		{
-			_env->AddVariable(id->GetID(), exprTypeRes.GetValue());
+			_env->AddVariable(id->GetID(), exprTypeRes.GetValue(), ArgType::REGISTER);
 			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
 			return TypeResult::GenSuccess(Type::UNIT);
 		}
@@ -1431,7 +1460,7 @@ namespace ramc {
 
 	TypeResult ASTIdentifier::_TypeCheck(Environment* _env)
 	{
-		source = _env->GetVarRegister(id);
+		source = _env->GetVarSource(id);
 		return _env->GetVariableType(id, GetPosition());
 	}
 
@@ -1931,7 +1960,21 @@ namespace ramc {
 
 	InstructionSet ASTReturnStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
-		throw std::runtime_error("Not implemented");
+		InstructionSet instrs;
+		int retByteAmt = 0;
+
+		for (int i = exprs.size() - 1; i >= 0; i--)
+		{
+			ASTExpr* expr = exprs[i];
+			auto exprInstrs = expr->GenerateCode(Argument::CreateStackTop(), _progInfo);
+
+			instrs.insert(instrs.end(), exprInstrs.begin(), exprInstrs.end());
+			retByteAmt += expr->GetTypeSysType()->GetByteSize();
+		}
+
+		instrs.push_back(new InstrReturn(Argument(ArgType::VALUE, retByteAmt)));
+
+		return instrs;
 	}
 
 	CodePathNode* ASTReturnStmt::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, false); }
@@ -2005,6 +2048,11 @@ namespace ramc {
 
 		numIfLabels++;
 		return { beginLabel, thenLabel, elseLabel, endLabel };
+	}
+
+	void ProgramInfo::AddFuncDecl(std::string _label, Instruction* _instr)
+	{
+		labels.insert_or_assign(_label, _instr);
 	}
 
 	void ProgramInfo::SetLabelInstr(std::string _label, Instruction* _instr)

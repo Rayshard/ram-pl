@@ -62,6 +62,9 @@ namespace ramc {
 			case TypeResultType::MISMATCH: return prefix + "Mismatch of " + errString;
 			case TypeResultType::EXPECTATION: return prefix + errString;
 			case TypeResultType::REDEFINITION: return prefix + "Redefinition of \"" + errString + "\"";
+			case TypeResultType::CODE_PATH_LACKS_RET: return prefix + "Not all code paths return a value : \"" + errString + "\"";
+			case TypeResultType::AMBIGUOUS_FUNC_DECL: return prefix + "Ambiguous Function Declaration : \"" + errString + "\"";
+			case TypeResultType::FUNC_ID_PARAMS_TYPE_PAIR_NOT_FOUND: return prefix + "Function " + errString + " was not found!";
 			default: return prefix + "TypeResult::ToString - TypeResultType not handled!";
 		}
 	}
@@ -76,8 +79,8 @@ namespace ramc {
 		std::stringstream ss(CreateIndent(_indentLvl));
 
 		ss << "(" << types[0]->ToString(0);
-		for (auto const& it : types)
-			ss << "," << it->ToString(0);
+		for (auto it = types.begin() + 1; it != types.end(); it++)
+			ss << "," << (*it)->ToString(0);
 		ss << ")";
 
 		return ss.str();
@@ -113,9 +116,9 @@ namespace ramc {
 
 #pragma region FuncType
 	FuncType::FuncType(TypePtr _params, TypePtr _ret)
-		: Type(TypeSystemType::FUNC), params(params), ret(_ret) { }
+		: Type(TypeSystemType::FUNC), params(_params), ret(_ret) { }
 
-	std::string FuncType::ToString(int _indentLvl) { return params->ToString(0) + ret->ToString(0); }
+	std::string FuncType::ToString(int _indentLvl) { return params->ToString(0) + " -> "+ ret->ToString(0); }
 
 	int FuncType::GetByteSize() { return ret->GetByteSize(); }
 
@@ -133,8 +136,8 @@ namespace ramc {
 #pragma region Environment
 	void Environment::SetMaxNumVarRegNeeded(int _val)
 	{
-		if (_val > numVarRegNeeded)
-			numVarRegNeeded = _val;
+		if (_val > numRegNeeded)
+			numRegNeeded = _val;
 
 		if (parent)
 		{
@@ -150,27 +153,27 @@ namespace ramc {
 
 		if (parent != 0)
 		{
-			numVarRegNeeded = _parent->numVarRegNeeded;
+			numRegNeeded = _parent->numRegNeeded;
 
 			if (_incrParentRegCnt)
 			{
-				nextVarRegIdx = parent->nextVarRegIdx;
+				nextRegIdx = parent->nextRegIdx;
 				parent->subEnvs.insert_or_assign(this, true);
 			}
 			else
 			{
-				nextVarRegIdx = 0;
+				nextRegIdx = 0;
 				parent->subEnvs.insert_or_assign(this, false);
 			}
 		}
 		else
 		{
-			nextVarRegIdx = 0;
-			numVarRegNeeded = 0;
+			nextRegIdx = 0;
+			numRegNeeded = 0;
 		}
 	}
 
-	bool Environment::AddVariable(std::string _id, TypePtr _type)
+	bool Environment::AddVariable(std::string _id, TypePtr _type, ArgType _argType)
 	{
 		auto search = variables.find(_id);
 		if (search != variables.end()) { return false; }
@@ -178,9 +181,9 @@ namespace ramc {
 		{
 			VarInfo info;
 			info.type = _type;
-			info.regIdx = nextVarRegIdx++;
+			info.source = Argument(_argType, Argument::IsRegisterArgType(_argType) ? nextRegIdx++ : 0);
 
-			SetMaxNumVarRegNeeded(nextVarRegIdx);
+			SetMaxNumVarRegNeeded(nextRegIdx);
 
 			variables.insert_or_assign(_id, info);
 			return true;
@@ -206,11 +209,93 @@ namespace ramc {
 		else { return TypeResult::GenSuccess(search->second.type); }
 	}
 
-	Argument Environment::GetVarRegister(std::string _id)
+	Argument Environment::GetVarSource(std::string _id)
 	{
 		auto search = variables.find(_id);
-		if (search == variables.end()) { return parent ? parent->GetVarRegister(_id) : Argument(ArgType::INVALID, 0); }
-		else { return Argument(ArgType::REGISTER, search->second.regIdx); }
+		if (search == variables.end()) { return parent ? parent->GetVarSource(_id) : Argument(ArgType::INVALID, 0); }
+		else { return search->second.source; }
+	}
+
+	TypeResult Environment::AddFunction(std::string _id, TypePtr _type, Position _execPos)
+	{
+		auto search = functions.find(_id);
+		if (search != functions.end()) //Check that this is a valid function to add based on params type
+		{
+			auto range = functions.equal_range(_id);
+			for (auto it = range.first; it != range.second; it++)
+			{
+				auto itParamsType = ((FuncType*)it->second.type.get())->GetParamsType();
+				auto addType = ((FuncType*)_type.get())->GetParamsType();
+
+				if (itParamsType->Matches(addType))
+					return TypeResult::GenAmbiguousFuncDecl(_id, _type, _execPos);
+			}
+		}
+
+		//We can add it safely
+		FuncInfo info;
+		info.type = _type;
+		info.label = "%FUNC_" + _id + std::to_string(functions.count(_id));
+
+		functions.insert(std::make_pair(_id, info));
+		return TypeResult::GenSuccess(Type::UNIT);
+	}
+
+	bool Environment::HasFunction(std::string _id, bool _localCheck)
+	{
+		return functions.find(_id) != functions.end() || (!_localCheck && (parent ? parent->HasFunction(_id, false) : false));
+	}
+
+	bool Environment::HasFunctionWithParams(std::string _id, TypePtr _paramsType, bool _localCheck)
+	{
+		auto search = functions.find(_id);
+		if (search == functions.end()) { return !_localCheck && (parent ? parent->HasFunctionWithParams(_id, _paramsType, false) : false); }
+		else
+		{
+			auto range = functions.equal_range(_id);
+			for (auto it = range.first; it != range.second; it++)
+			{
+				if (((FuncType*)it->second.type.get())->GetParamsType()->Matches(_paramsType))
+					return true;
+			}
+
+			return false;
+		}
+	}
+	
+	TypeResult Environment::GetFunctionRetType(std::string _id, TypePtr _paramsType, Position _execPos)
+	{
+		auto search = functions.find(_id);
+		if (search == functions.end()) { return TypeResult::GenIDNotFound(_id, _execPos); }
+		else
+		{
+			auto range = functions.equal_range(_id);
+			for (auto it = range.first; it != range.second; it++)
+			{
+				auto itType = (FuncType*)it->second.type.get();
+				if (itType->GetParamsType()->Matches(_paramsType))
+					return TypeResult::GenSuccess(itType->GetRetType());
+			}
+
+			return TypeResult::GenFuncIDParamsTypePairNotFound(_id, _paramsType, _execPos);
+		}
+	}
+	
+	std::string Environment::GetFunctionLabel(std::string _id, TypePtr _paramsType)
+	{
+		auto search = functions.find(_id);
+		if (search != functions.end())
+		{
+			auto range = functions.equal_range(_id);
+			for (auto it = range.first; it != range.second; it++)
+			{
+				auto itType = (FuncType*)it->second.type.get();
+				if (itType->GetParamsType()->Matches(_paramsType))
+					return it->second.label;
+			}
+		}
+
+		return "Function not found: \"" + _id + "\" taking " + _paramsType->ToString(0);
 	}
 #pragma endregion
 }

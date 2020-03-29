@@ -1,3 +1,4 @@
+-put top level variables in Global registers
 -functions
 -structs
 -arrays/strings

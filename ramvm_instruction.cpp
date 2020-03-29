@@ -776,26 +776,10 @@ namespace ramvm {
 		return ss.str();
 	}
 
-	InstrReturn::InstrReturn(const std::vector<TypedArgument>& _srcs)
+	InstrReturn::InstrReturn(Argument _amt)
 		: Instruction(InstructionType::RETURN)
 	{
-		srcs = _srcs;
-	}
-
-	std::string InstrReturn::ToString()
-	{
-		std::stringstream ss;
-		ss << "RET<";
-
-		std::string srcsStr;
-		for (auto src : srcs)
-		{
-			ss << DataTypeToChar(src.dataType);
-			srcsStr += " " + src.ToString();
-		}
-
-		ss << ">" << srcsStr;
-		return ss.str();
+		amt = _amt;
 	}
 
 	InstrJump::InstrJump(int _labelIdx)

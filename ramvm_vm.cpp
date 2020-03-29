@@ -126,26 +126,26 @@ namespace ramvm {
 						ExecutionFrame& parentExecFrame = execFrames.size() == 1 ? topLevelExecFrame : execFrames[execFrames.size() - 2];
 						ResultType resType = ResultType::SUCCESS;
 
-						//Push return values to the stack in reverse so that the 
-						//first return value is on the top of the stack when the caller
-						//starts reading
-						std::vector<byte> retBuffer;
-						for (int i = 0; i < (int)instr->srcs.size(); i++)
-						{
-							TypedArgument src = instr->srcs[i];
-							DataVariant retVal(src.dataType);
+						//Read return values from the stack so that when the
+						//stack pointer is reset, we can push this onto the
+						//top of the stack
+						DataVariant amtVal(DataType::INT);
+						resType = ReadFromSrcArg(execFrame, instr->amt, amtVal, _info);
+						if (IsErrorResult(resType))
+							return resType;
 
-							//Read from current exec frame
-							resType = ReadFromSrcArg(execFrame, src, retVal, _info);
-							if (IsErrorResult(resType)) { return resType; }
-							else { retBuffer.insert(retBuffer.begin(), retVal.Bytes(), retVal.Bytes() + retVal.GetSize()); }
-						}
+						int retBufferSize = amtVal.I();
+						byte* retBuffer = new byte[retBufferSize];
+						resType = ReadStack(GetSP() - retBufferSize + 1, retBufferSize, retBuffer);
+						if (IsErrorResult(resType))
+							return resType;
 
 						//Revert Stack back to position before this frame was created
 						stack.erase(stack.begin() + execFrame.GetRetSP(), stack.end());
 
 						//Push Return Buffer to Stack
-						stack.insert(stack.end(), retBuffer.begin(), retBuffer.end());
+						stack.insert(stack.end(), retBuffer, retBuffer + retBufferSize);
+						delete[] retBuffer;
 
 						//Restore old frame
 						execFrames.pop_back();
@@ -285,7 +285,7 @@ namespace ramvm {
 					delete[] src2Bytes;
 					delete[] src1Bytes;
 					if (IsErrorResult(resType))
-						return resType;					
+						return resType;
 				} break;
 				case InstructionType::PUSH: {
 					InstrPush* instr = (InstrPush*)curInstr;

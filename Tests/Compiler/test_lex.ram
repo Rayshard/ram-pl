@@ -1,14 +1,5 @@
-`func Factorial: (i: int, f: float) -> int, float = {
-	 
-}`
+let k = 5;
 
-{
-	for i = 0: while i < 5 do {
-		if(true) then break
-		else let d = 5;
-		let c = 3;
-		return 5;
-	} then i += 1;
-
-	let d = 6;
-};
+func Factorial: (i: int, f: float) -> int, float = {
+	return k, 3.76;
+}

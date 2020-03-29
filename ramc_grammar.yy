@@ -235,6 +235,9 @@
 %nterm <AssignmentType> OP_ASSIGN;
 %nterm <std::vector<TypePtr>> TYPE_PLUS;
 %nterm <TypePtr> TYPE;
+%nterm <std::vector<Param>> PARAM_STAR;
+%nterm <std::vector<Param>> PARAM_PLUS;
+%nterm <Param> PARAM;
 
 %%
 %start PROGRAM;
@@ -249,8 +252,18 @@ TL_FUNCDECLS: %empty				{ $$ = { }; }
 		    | TL_FUNCDECLS FUNCDECL	{ $1.push_back($2); $$ = $1; }
 ;
 
-FUNCDECL: "func" "ID" ":" "(" EXPR_STAR ")" "->" TYPE_PLUS "=" STMT { $$ = nullptr; }
-		| "func" "ID" ":" "(" EXPR_STAR ")" "=" STMT				{ $$ = nullptr; }
+FUNCDECL: "func" "ID" ":" "(" PARAM_STAR ")" "->" TYPE_PLUS "=" STMT { $$ = new ASTFuncDecl($2.first, $5, $8, $10, $1); }
+		| "func" "ID" ":" "(" PARAM_STAR ")" "=" STMT				 { $$ = new ASTFuncDecl($2.first, $5, { }, $8, $1); }
+
+PARAM_STAR: %empty	   { $$ = { }; }
+		  | PARAM_PLUS { $$ = $1; }
+;
+
+PARAM_PLUS: PARAM			     { $$ = { $1 }; }
+		  | PARAM_PLUS "," PARAM { $1.push_back($3); $$ = $1; }
+;
+
+PARAM: "ID" ":" TYPE { $$ = { $1.first, $3, $1.second }; }
 
 STMTS: %empty		  { $$ = { }; }
 	 | STMTS STMT ";" { $1.push_back($2); $$ = $1; }

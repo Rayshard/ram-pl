@@ -62,7 +62,7 @@
 					case TokenType::KW_HALT: return Parser::make_TOK_HALT();
 					case TokenType::KW_COMPARE: return Parser::make_TOK_COMPARE();
 					case TokenType::KW_MOV: return Parser::make_TOK_MOV(CharToDataType(value[0]));
-					case TokenType::KW_RET: return Parser::make_TOK_RET(CharsToDataTypes(value));
+					case TokenType::KW_RET: return Parser::make_TOK_RET();
 					case TokenType::KW_MALLOC: return Parser::make_TOK_MALLOC();
 					case TokenType::KW_FREE: return Parser::make_TOK_FREE();
 					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH(CharsToDataTypes(value));
@@ -120,6 +120,7 @@
 %token TOK_HALT "HALT"
 %token TOK_MALLOC "MALLOC"
 %token TOK_FREE "FREE"
+%token TOK_RET "RET"
 %token TOK_COMPARE "COMPARE"
 %token TOK_PRINT "PRINT"
 %token TOK_JUMP "JUMP"
@@ -129,7 +130,6 @@
 %token <DataType> TOK_POP "POP"
 %token <std::vector<DataType>> TOK_STORE "STORE"
 %token <std::vector<DataType>> TOK_PUSH "PUSH"
-%token <std::vector<DataType>> TOK_RET "RET"
 %token <std::vector<DataType>> TOK_CALL "CALL"
 %token <DataTypeTriple> TOK_ADD "ADD"
 %token <DataTypeTriple> TOK_SUB "SUB"
@@ -175,7 +175,7 @@ STMTS:
 
 STMT:
 		"HALT"											{ $$ = new InstrHalt(); }
-	|	"RET" ARGUMENTS									{ $$ = new InstrReturn(BindArgDataTypes($1, $2)); }
+	|	"RET" ARGUMENT									{ $$ = new InstrReturn($2); }
 	|	"MOV" ARGUMENT DEST_ARG							{ $$ = new InstrMove($1, $2, $3); }
 	|	"MALLOC" ARGUMENT DEST_ARG						{ $$ = new InstrMalloc($2, $3); }
 	|	"FREE" ARGUMENT									{ $$ = new InstrFree($2); }

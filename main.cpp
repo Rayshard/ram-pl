@@ -128,9 +128,8 @@ int CompilerMain()
 			return 0;
 		}
 		
-		auto instrs = prog->GenerateCode();
-		instrs.push_back(new ramvm::InstrHalt());
-
+		
+		auto instrs = prog->GenerateCode(&env);
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
 		ProgramInfo progInfo = prog->GetInfo();
@@ -150,6 +149,8 @@ int CompilerMain()
 			std::cout << i << "\t" << instr->ToString() << std::endl;
 		}
 
+		return 0;
+
 		while (OptimizeInstructionSet(instrs)) //Loop till no change
 		{
 			std::cout << "Program Instructions (Optimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
@@ -163,7 +164,7 @@ int CompilerMain()
 
 		try
 		{
-			VM vm = VM(env.GetNumVarRegNeeded(), 1024, instrs);
+			VM vm = VM(env.GetNumRegNeeded(), 1024, instrs);
 
 			ResultInfo resInfo;
 			ResultType result = vm.Run(resInfo);

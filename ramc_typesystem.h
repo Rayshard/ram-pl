@@ -53,6 +53,7 @@ namespace ramc {
 
 		TypePtr GetParamsType() { return params; }
 		TypePtr GetRetType() { return ret; }
+		bool IsProcedure() { return ret->GetType() == TypeSystemType::UNIT;  }
 
 		std::string ToString(int _indentLvl) override;
 		int GetByteSize() override;
@@ -67,7 +68,9 @@ namespace ramc {
 		MISMATCH,
 		REDEFINITION,
 		EXPECTATION,
-		CODE_PATH_LACKS_RET
+		CODE_PATH_LACKS_RET,
+		AMBIGUOUS_FUNC_DECL,
+		FUNC_ID_PARAMS_TYPE_PAIR_NOT_FOUND
 	};
 
 	class TypeResult : public Result<TypeResultType, TypePtr> {
@@ -82,33 +85,39 @@ namespace ramc {
 		static TypeResult GenExpectation(std::string _expected, std::string _found, Position _pos) { return TypeResult(TypeResultType::EXPECTATION, nullptr, "Expected " + _expected + " but found " + _found, _pos); }
 		static TypeResult GenMismatch(std::string _mistach, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mistach, _pos); }
 		static TypeResult GenRedefinition(std::string _id, Position _pos) { return TypeResult(TypeResultType::REDEFINITION, nullptr, _id, _pos); }
-		static TypeResult GenCodePathLacksReturn(std::string _funcName, Position _pos) { return TypeResult(TypeResultType::CODE_PATH_LACKS_RET, nullptr, "Not all code paths return a value: " + _funcName, _pos); }
+		static TypeResult GenCodePathLacksReturn(std::string _funcName, Position _pos) { return TypeResult(TypeResultType::CODE_PATH_LACKS_RET, nullptr, _funcName, _pos); }
+		static TypeResult GenAmbiguousFuncDecl(std::string _funcName, TypePtr _type, Position _pos) { return TypeResult(TypeResultType::AMBIGUOUS_FUNC_DECL, nullptr, _funcName + ": " + _type->ToString(0), _pos); }
+		static TypeResult GenFuncIDParamsTypePairNotFound(std::string _funcName, TypePtr _paramsType, Position _pos) { return TypeResult(TypeResultType::FUNC_ID_PARAMS_TYPE_PAIR_NOT_FOUND, nullptr, "\"" + _funcName + "\"" + " with param(s) " + _paramsType->ToString(0), _pos); }
 	};
 #pragma endregion
 
 	class Environment {
-		struct VarInfo
-		{
-			TypePtr type;
-			int regIdx;
-		};
+		struct VarInfo { TypePtr type; Argument source; };
+		struct FuncInfo { std::string label; TypePtr type; };
 
 		Environment* parent;
+		std::unordered_multimap<std::string, FuncInfo> functions;
 		std::unordered_map<std::string, VarInfo> variables;
 		std::unordered_map<Environment*, bool> subEnvs;
-		int nextVarRegIdx, numVarRegNeeded;
+		int nextRegIdx, numRegNeeded;
 
 		void SetMaxNumVarRegNeeded(int _val);
 	public:
 		Environment(Environment* _parent, bool _incrParentRegCnt);
 
-		bool AddVariable(std::string _id, TypePtr _type);
+		bool AddVariable(std::string _id, TypePtr _type, ArgType _argType);
 		bool HasVariable(std::string _id, bool _localCheck);
 		bool HasVariable(std::string _id, TypePtr _type, bool _localCheck);
 		TypeResult GetVariableType(std::string _id, Position _execPos);
-		Argument GetVarRegister(std::string _id);
+		Argument GetVarSource(std::string _id);
 
-		int GetNumVarRegNeeded() { return numVarRegNeeded; }
+		TypeResult AddFunction(std::string _id, TypePtr _type, Position _execPos);
+		bool HasFunction(std::string _id, bool _localCheck);
+		bool HasFunctionWithParams(std::string _id, TypePtr _paramsType, bool _localCheck);
+		TypeResult GetFunctionRetType(std::string _id, TypePtr _paramsType, Position _execPos);
+		std::string GetFunctionLabel(std::string _id, TypePtr _paramsType);
+
+		int GetNumRegNeeded() { return numRegNeeded; }
 	};
 
 	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)

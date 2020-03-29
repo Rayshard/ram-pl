@@ -17,8 +17,8 @@ namespace ramc {
 	struct CodePathNode;
 
 	enum class ASTNodeType { PROGRAM, FUNCDECL, STMT, EXPR };
-	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FORLOOP, BREAK, CONTINUE, RETURN };
-	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL };
+	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FORLOOP, BREAK, CONTINUE, RETURN, FUNC_CALL };
+	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL, FUNC_CALL };
 
 	enum class BinopType {
 		ADD, SUB, MUL, DIV, MOD, POW,
@@ -80,6 +80,7 @@ namespace ramc {
 		LabeledWhileLoop GenWhileLoopLabels();
 		LabeledForLoop GenForLoopLabels();
 		LabeledIf GenIfLabels(bool _hasElse);
+		void AddFuncDecl(std::string _label, Instruction* _instr);
 		void SetLabelInstr(std::string _label, Instruction* _instr);
 	};
 
@@ -94,7 +95,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode();
+		InstructionSet GenerateCode(Environment* _env);
 
 		ProgramInfo GetInfo() { return info; }
 	};
@@ -113,7 +114,7 @@ namespace ramc {
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(ProgramInfo& _progInfo);
+		InstructionSet GenerateCode(Environment* _env, ProgramInfo& _progInfo);
 	};
 #pragma endregion
 
@@ -430,6 +431,7 @@ namespace ramc {
 	};
 #pragma endregion
 
+#pragma region CodePathNode
 	struct CodePathNode
 	{
 		CodePathNode* left, * right;
@@ -446,5 +448,6 @@ namespace ramc {
 
 		void Print();
 	};
+#pragma endregion
 }
 

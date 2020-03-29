@@ -429,6 +429,9 @@ namespace ramc { namespace bison {
       // OP_ASSIGN
       char dummy15[sizeof (AssignmentType)];
 
+      // PARAM
+      char dummy16[sizeof (Param)];
+
       // "{"
       // "let"
       // "if"
@@ -441,7 +444,7 @@ namespace ramc { namespace bison {
       // "break"
       // "continue"
       // "return"
-      char dummy16[sizeof (Position)];
+      char dummy17[sizeof (Position)];
 
       // "byte"
       // "bool"
@@ -452,26 +455,30 @@ namespace ramc { namespace bison {
       // "string"
       // "void"
       // TYPE
-      char dummy17[sizeof (TypePtr)];
+      char dummy18[sizeof (TypePtr)];
 
       // "ID"
-      char dummy18[sizeof (std::pair<std::string, Position>)];
+      char dummy19[sizeof (std::pair<std::string, Position>)];
 
       // EXPR_STAR
       // EXPR_PLUS
-      char dummy19[sizeof (std::vector<ASTExpr*>)];
+      char dummy20[sizeof (std::vector<ASTExpr*>)];
 
       // TL_FUNCDECLS
-      char dummy20[sizeof (std::vector<ASTFuncDecl*>)];
+      char dummy21[sizeof (std::vector<ASTFuncDecl*>)];
 
       // STMTS
-      char dummy21[sizeof (std::vector<ASTStmt*>)];
+      char dummy22[sizeof (std::vector<ASTStmt*>)];
 
       // TL_VARDECLS
-      char dummy22[sizeof (std::vector<ASTVarDecl*>)];
+      char dummy23[sizeof (std::vector<ASTVarDecl*>)];
+
+      // PARAM_STAR
+      // PARAM_PLUS
+      char dummy24[sizeof (std::vector<Param>)];
 
       // TYPE_PLUS
-      char dummy23[sizeof (std::vector<TypePtr>)];
+      char dummy25[sizeof (std::vector<TypePtr>)];
     };
 
     /// The size of the largest semantic type.
@@ -800,6 +807,17 @@ namespace ramc { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, Param&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const Param& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
       basic_symbol (typename Base::kind_type t, Position&& v)
         : Base (t)
         , value (std::move (v))
@@ -872,6 +890,17 @@ namespace ramc { namespace bison {
       {}
 #else
       basic_symbol (typename Base::kind_type t, const std::vector<ASTVarDecl*>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::vector<Param>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::vector<Param>& v)
         : Base (t)
         , value (v)
       {}
@@ -988,6 +1017,10 @@ switch (yytype)
         value.template destroy< AssignmentType > ();
         break;
 
+      case 111: // PARAM
+        value.template destroy< Param > ();
+        break;
+
       case 38: // "{"
       case 65: // "let"
       case 66: // "if"
@@ -1034,6 +1067,11 @@ switch (yytype)
 
       case 101: // TL_VARDECLS
         value.template destroy< std::vector<ASTVarDecl*> > ();
+        break;
+
+      case 109: // PARAM_STAR
+      case 110: // PARAM_PLUS
+        value.template destroy< std::vector<Param> > ();
         break;
 
       case 107: // TYPE_PLUS
@@ -2457,7 +2495,7 @@ switch (yytype)
     static const signed char yydefact_[];
 
     // YYPGOTO[NTERM-NUM].
-    static const signed char yypgoto_[];
+    static const short yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
     static const short yydefgoto_[];
@@ -2724,8 +2762,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 255,     ///< Last index in yytable_.
-      yynnts_ = 38,  ///< Number of nonterminal symbols.
+      yylast_ = 239,     ///< Last index in yytable_.
+      yynnts_ = 41,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 76  ///< Number of tokens.
     };
@@ -2879,6 +2917,10 @@ switch (yytype)
         value.move< AssignmentType > (std::move (that.value));
         break;
 
+      case 111: // PARAM
+        value.move< Param > (std::move (that.value));
+        break;
+
       case 38: // "{"
       case 65: // "let"
       case 66: // "if"
@@ -2925,6 +2967,11 @@ switch (yytype)
 
       case 101: // TL_VARDECLS
         value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
+        break;
+
+      case 109: // PARAM_STAR
+      case 110: // PARAM_PLUS
+        value.move< std::vector<Param> > (std::move (that.value));
         break;
 
       case 107: // TYPE_PLUS
@@ -3023,6 +3070,10 @@ switch (yytype)
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
+      case 111: // PARAM
+        value.copy< Param > (YY_MOVE (that.value));
+        break;
+
       case 38: // "{"
       case 65: // "let"
       case 66: // "if"
@@ -3069,6 +3120,11 @@ switch (yytype)
 
       case 101: // TL_VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
+        break;
+
+      case 109: // PARAM_STAR
+      case 110: // PARAM_PLUS
+        value.copy< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
       case 107: // TYPE_PLUS
@@ -3175,6 +3231,10 @@ switch (yytype)
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
+      case 111: // PARAM
+        value.move< Param > (YY_MOVE (s.value));
+        break;
+
       case 38: // "{"
       case 65: // "let"
       case 66: // "if"
@@ -3221,6 +3281,11 @@ switch (yytype)
 
       case 101: // TL_VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
+        break;
+
+      case 109: // PARAM_STAR
+      case 110: // PARAM_PLUS
+        value.move< std::vector<Param> > (YY_MOVE (s.value));
         break;
 
       case 107: // TYPE_PLUS
@@ -3282,7 +3347,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 3286 "ramc_bison_parser.hpp"
+#line 3351 "ramc_bison_parser.hpp"
 
 
 

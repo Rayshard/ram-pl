@@ -26,6 +26,7 @@ namespace ramvm {
 		bool IsStackPrev() { return type == ArgType::SP_OFFSET && value.i == -1; }
 
 		static Argument CreateStackTop() { return Argument(ArgType::SP_OFFSET, 1); }
+		static bool IsRegisterArgType(ArgType _type) { return _type == ArgType::REGISTER || _type == ArgType::MEM_REG || _type == ArgType::STACK_REG; }
 	};
 
 	struct TypedArgument : Argument {
@@ -144,11 +145,11 @@ namespace ramvm {
 
 #pragma region Return
 	struct InstrReturn : Instruction {
-		std::vector<TypedArgument> srcs;
+		Argument amt; //The amount of byte from the stack to return
 
-		InstrReturn(const std::vector<TypedArgument>& _srcs);
+		InstrReturn(Argument _amt);
 
-		std::string ToString() override;
+		std::string ToString() override { return "RET " + amt.ToString(); }
 	};
 #pragma endregion
 
