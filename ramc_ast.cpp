@@ -18,9 +18,27 @@ using ramvm::InstrCJump;
 using ramvm::InstrJump;
 using ramvm::InstrNoOp;
 using ramvm::InstructionType;
+using ramvm::InstrHalt;
 #pragma endregion
 
 namespace ramc {
+	std::string ASTStmtTypeToString(ASTStmtType _type)
+	{
+		switch (_type)
+		{
+			case ASTStmtType::ASSIGNMENT: return "ASSIGNMENT";
+			case ASTStmtType::VARDECL: return "VARDECL";
+			case ASTStmtType::BLOCK: return "BLOCK";
+			case ASTStmtType::IF: return "IF";
+			case ASTStmtType::WHILE: return "WHILE";
+			case ASTStmtType::FORLOOP: return "FORLOOP";
+			case ASTStmtType::BREAK: return "BREAK";
+			case ASTStmtType::CONTINUE: return "CONTINUE";
+			case ASTStmtType::RETURN: return "RETURN";
+			default: return "ASTStmtTypeToString() - ASTStmtType not handled!";
+		}
+	}
+
 	ASTNode::ASTNode(ASTNodeType _type, Position _pos)
 	{
 		type = _type;
@@ -36,17 +54,21 @@ namespace ramc {
 	}
 
 #pragma region Program
-	ASTProgram::ASTProgram(std::string _fileName, std::vector<ASTStmt*> _stmts)
-		: ASTNode(ASTNodeType::PROGAM, Position(0, 0))
+	ASTProgram::ASTProgram(std::string _fileName, std::vector<ASTVarDecl*> _varDecls, std::vector<ASTFuncDecl*> _funcDecls)
+		: ASTNode(ASTNodeType::PROGRAM, Position(0, 0))
 	{
 		fileName = _fileName;
-		stmts = _stmts;
+		varDecls = _varDecls;
+		funcDecls = _funcDecls;
 	}
 
 	ASTProgram::~ASTProgram()
 	{
-		for (auto it = stmts.begin(); it != stmts.end(); it++)
-			delete (*it);
+		for (auto const& varDecl : varDecls)
+			delete varDecl;
+
+		for (auto const& funcDecl : funcDecls)
+			delete funcDecl;
 	}
 
 	std::string ASTProgram::ToString(int _indentLvl, std::string _prefix)
@@ -55,57 +77,130 @@ namespace ramc {
 
 		ss << CreateIndent(_indentLvl) << _prefix << "Start:" << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Filename: " << fileName << std::endl;
-		ss << CreateIndent(_indentLvl + 1) << "Statements: " << std::endl;
 
-		for (auto it = stmts.begin(); it != stmts.end(); it++)
-			ss << (*it)->ToString(_indentLvl + 2) << std::endl;
+		ss << CreateIndent(_indentLvl + 1) << "Top Level Variables: " << std::endl;
+		for (auto const& varDecl : varDecls)
+			ss << varDecl->ToString(_indentLvl + 2) << std::endl;
+
+		ss << CreateIndent(_indentLvl + 1) << "Function Declarations: " << std::endl;
+		for (auto const& funcDecl : funcDecls)
+			ss << funcDecl->ToString(_indentLvl + 2) << std::endl;
 
 		return ss.str();
 	}
 
 	TypeResult ASTProgram::_TypeCheck(Environment* _env)
 	{
-		for (auto const& stmt : stmts)
+		Environment subEnv(_env, false);
+
+		for (auto const& varDecl : varDecls)
 		{
-			TypeResult stmtTypeRes = stmt->TypeCheck(_env);
-			if (!stmtTypeRes.IsSuccess())
-				return stmtTypeRes;
+			TypeResult declTypeRes = varDecl->TypeCheck(&subEnv);
+			if (!declTypeRes.IsSuccess())
+				return declTypeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::VOID);
+		for (auto const& funcDecl : funcDecls)
+		{
+			TypeResult declTypeRes = funcDecl->TypeCheck(&subEnv);
+			if (!declTypeRes.IsSuccess())
+				return declTypeRes;
+		}
+
+		return TypeResult::GenSuccess(Type::UNIT);
 	}
 
 	InstructionSet ASTProgram::GenerateCode()
 	{
 		InstructionSet instrs;
 
-		for (int i = 0; i < (int)stmts.size(); i++)
+		for (auto const& varDecl : varDecls)
 		{
-			auto stmtInstrs = stmts[i]->GenerateCode(info);
-			instrs.insert(instrs.end(), stmtInstrs.begin(), stmtInstrs.end());
+			auto declInstrs = varDecl->GenerateCode(info);
+			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
-		for (int i = 0; i < (int)info.offsetedCtrlInstrs.size(); i++)
+		instrs.push_back(new InstrHalt());
+
+		for (auto const& funcDecl : varDecls)
 		{
-			auto instr = info.offsetedCtrlInstrs[i];
-			int idx = std::find(instrs.begin(), instrs.end(), instr) - instrs.begin();
-
-			if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx += idx; }
-			else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx += idx; }
-		}
-
-		for (auto it = info.labeledCtrlInstrs.begin(); it != info.labeledCtrlInstrs.end(); it++)
-		{
-			int labelInstrIdx = std::find(instrs.begin(), instrs.end(), info.labels[it->first]) - instrs.begin();
-
-			for (auto instr : it->second)
-			{
-				if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx = labelInstrIdx; }
-				else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx = labelInstrIdx; }
-			}
+			auto declInstrs = funcDecl->GenerateCode(info);
+			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
 		return instrs;
+	}
+#pragma endregion
+
+#pragma region FuncDecl
+	ASTFuncDecl::ASTFuncDecl(std::string _name, ParamList _params, TypeList _retTypes, ASTStmt* _body, Position _pos)
+		:ASTNode(ASTNodeType::FUNCDECL, _pos)
+	{
+		name = _name;
+		params = _params;
+
+		TypePtr paramType;
+		if (params.size() == 1) { paramType = params[0].type; }
+		else
+		{
+			TypeList paramTypes;
+			for (auto const& it : params)
+				paramTypes.push_back(it.type);
+
+			paramType = TypePtr(new TupleType(paramTypes));
+		}
+
+		TypePtr retType;
+		if (params.size() == 1) { retType = _retTypes[0]; }
+		else { retType = TypePtr(new TupleType(_retTypes)); }
+
+		funcType = new FuncType(paramType, retType);
+		body = _body;
+	}
+
+	ASTFuncDecl::~ASTFuncDecl() { delete body; }
+
+	std::string ASTFuncDecl::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "Func Declaration:" << std::endl;
+		ss << CreateIndent(_indentLvl + 1) << "Type: " << funcType->ToString(0) << std::endl;
+		ss << CreateIndent(_indentLvl + 1) << "Body: " << body->ToString(0) << std::endl;
+
+		return ss.str();
+	}
+
+	TypeResult ASTFuncDecl::_TypeCheck(Environment* _env)
+	{
+		Environment subEnv(_env, false);
+
+		for (auto const& it : params)
+		{
+			if (!subEnv.AddVariable(it.name, it.type))
+				return TypeResult::GenRedefinition(it.name, it.position);
+		}
+
+		TypeResult bodyTypeRes = body->TypeCheck(&subEnv);
+		if (!bodyTypeRes.IsSuccess())
+			return bodyTypeRes;
+
+		std::set<ASTStmt*> terminalStmts = body->GetCodePath()->GetTerminalStmts();
+
+		bool needsReturn = funcType->GetRetType()->GetType() != TypeSystemType::UNIT;
+
+		for (auto const& stmt : terminalStmts)
+		{
+			if (needsReturn && stmt->GetStmtType() != ASTStmtType::RETURN) { return TypeResult::GenCodePathLacksReturn(name, GetPosition()); }
+			else if (!Type::Matches(funcType->GetRetType(), stmt->GetTypeSysType())) { return TypeResult::GenExpectation(funcType->GetRetType()->ToString(0), stmt->GetTypeSysType()->ToString(0), stmt->GetPosition()); }
+		}
+
+		return TypeResult::GenSuccess(TypePtr(funcType));
+	}
+
+	InstructionSet ASTFuncDecl::GenerateCode(ProgramInfo& _progInfo)
+	{
+		return InstructionSet();
 	}
 #pragma endregion
 
@@ -159,8 +254,8 @@ namespace ramc {
 	{
 		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
-		if (isUnderscore) { return TypeResult::GenSuccess(Type::VOID); }
-		else if (_env->HasVariable(id->GetID(), true)) { return TypeResult::GenRedecalartion(id->GetID(), GetPosition()); }
+		if (isUnderscore) { return TypeResult::GenSuccess(Type::UNIT); }
+		else if (_env->HasVariable(id->GetID(), true)) { return TypeResult::GenRedefinition(id->GetID(), GetPosition()); }
 
 		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
 		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
@@ -168,7 +263,7 @@ namespace ramc {
 		{
 			_env->AddVariable(id->GetID(), exprTypeRes.GetValue());
 			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
-			return TypeResult::GenSuccess(Type::VOID);
+			return TypeResult::GenSuccess(Type::UNIT);
 		}
 	}
 
@@ -182,6 +277,8 @@ namespace ramc {
 		}
 		else { return expr->GenerateCode(id->GetSource(), _progInfo); }
 	}
+
+	CodePathNode* ASTVarDecl::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, true); }
 #pragma endregion
 
 #pragma region Assignment
@@ -261,11 +358,12 @@ namespace ramc {
 		if (!idTypeRes.IsSuccess())
 			return idTypeRes;
 
-		if (Type::Matches(idTypeRes.GetValue(), exprTypeRes.GetValue())) { return TypeResult::GenSuccess(Type::VOID); }
+		if (Type::Matches(idTypeRes.GetValue(), exprTypeRes.GetValue())) { return TypeResult::GenSuccess(Type::UNIT); }
 		else { return TypeResult::GenMismatch("Cannot assign " + exprTypeRes.GetValue()->ToString(false) + " to " + idTypeRes.GetValue()->ToString(false), GetPosition()); }
 	}
 
 	InstructionSet ASTAssignment::GenerateCode(ProgramInfo& _progInfo) { return expr->GenerateCode(id->GetSource(), _progInfo); }
+	CodePathNode* ASTAssignment::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, true); }
 #pragma endregion
 
 #pragma region BinopExpr
@@ -1401,7 +1499,7 @@ namespace ramc {
 				return elseTypeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::VOID);
+		return TypeResult::GenSuccess(Type::UNIT);
 	}
 
 	InstructionSet ASTIfStmt::GenerateCode(ProgramInfo& _progInfo)
@@ -1445,6 +1543,8 @@ namespace ramc {
 		_progInfo.SetLabelInstr(ifLabels.end, instrs.back()); //Set If End
 		return instrs;
 	}
+
+	CodePathNode* ASTIfStmt::GetCodePath() { return new CodePathNode(thenStmt->GetCodePath(), elseStmt ? elseStmt->GetCodePath() : nullptr, this, true); }
 #pragma endregion
 
 #pragma region IfExpr
@@ -1598,11 +1698,18 @@ namespace ramc {
 		_progInfo.curLoopLabels.pop_back(); //End Loop Section 
 		return instrs;
 	}
+
+	CodePathNode* ASTWhileStmt::GetCodePath()
+	{
+		CodePathNode* codePath = new CodePathNode(body->GetCodePath(), nullptr, this, true);
+		codePath->SetAppendable({ ASTStmtType::BREAK, ASTStmtType::CONTINUE });
+		return codePath;
+	}
 #pragma endregion
 
 #pragma region ForStmt
 	ASTForStmt::ASTForStmt(ASTVarDecl* _initStmt, ASTExpr* _condExpr, ASTStmt* _body, ASTStmt* _thenStmt, Position _pos)
-		: ASTStmt(ASTStmtType::FOR, _pos)
+		: ASTStmt(ASTStmtType::FORLOOP, _pos)
 	{
 		initStmt = _initStmt;
 		condExpr = _condExpr;
@@ -1652,7 +1759,7 @@ namespace ramc {
 	InstructionSet ASTForStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
 		auto loopLabels = _progInfo.GenForLoopLabels(); //Gen Labels
-		_progInfo.curLoopLabels.push_back((ProgramInfo::LabeledLoop*)&loopLabels); //Begin Loop Section
+		_progInfo.curLoopLabels.push_back((ProgramInfo::LabeledLoop*) & loopLabels); //Begin Loop Section
 
 		InstructionSet instrs = initStmt->GenerateCode(_progInfo);
 		InstructionSet condInstrs = condExpr->GenerateCode(Argument::CreateStackTop(), _progInfo);
@@ -1682,6 +1789,14 @@ namespace ramc {
 
 		_progInfo.curLoopLabels.pop_back(); //End Loop Section 
 		return instrs;
+	}
+
+	CodePathNode* ASTForStmt::GetCodePath()
+	{
+		CodePathNode* codePath = new CodePathNode(body->GetCodePath(), nullptr, this, true);
+		codePath->Append(thenStmt, { ASTStmtType::CONTINUE });
+		codePath->SetAppendable({ ASTStmtType::BREAK });
+		return codePath;
 	}
 #pragma endregion
 
@@ -1716,7 +1831,7 @@ namespace ramc {
 				return typeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::VOID);
+		return TypeResult::GenSuccess(Type::UNIT);
 	}
 
 	InstructionSet ASTBlock::GenerateCode(ProgramInfo& _progInfo)
@@ -1731,15 +1846,33 @@ namespace ramc {
 
 		return instrs;
 	}
+
+	CodePathNode* ASTBlock::GetCodePath()
+	{
+		CodePathNode* codePath = new CodePathNode(nullptr, nullptr, this, true);
+
+		for (auto const& stmt : stmts)
+		{
+			auto terminalNodes = codePath->GetTerminalNodes();
+			for (auto const& terminal : terminalNodes)
+				terminal->Append(stmt, { });
+
+			ASTStmtType stmtASTType = stmt->GetStmtType();
+			if (stmtASTType == ASTStmtType::RETURN || stmtASTType == ASTStmtType::BREAK || stmtASTType == ASTStmtType::CONTINUE)
+				break;
+		}
+
+		return codePath;
+	}
 #pragma endregion
 
 #pragma region Break/Continue
 	ASTBreakContinueStmt::ASTBreakContinueStmt(bool _isBreak, Position _pos)
-		: ASTStmt(ASTStmtType::BREAK_CONTINUE, _pos), isBreak(_isBreak) { }
+		: ASTStmt(_isBreak ? ASTStmtType::BREAK : ASTStmtType::CONTINUE, _pos) { }
 
-	std::string ASTBreakContinueStmt::ToString(int _indentLvl, std::string _prefix) { return CreateIndent(_indentLvl) + _prefix + (isBreak ? "Break" : "Continue"); }
+	std::string ASTBreakContinueStmt::ToString(int _indentLvl, std::string _prefix) { return CreateIndent(_indentLvl) + _prefix + (IsBreak() ? "Break" : "Continue"); }
 
-	TypeResult ASTBreakContinueStmt::_TypeCheck(Environment* _env) { return TypeResult::GenSuccess(Type::VOID); }
+	TypeResult ASTBreakContinueStmt::_TypeCheck(Environment* _env) { return TypeResult::GenSuccess(Type::UNIT); }
 
 	InstructionSet ASTBreakContinueStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
@@ -1747,15 +1880,64 @@ namespace ramc {
 		InstructionSet instrs = { new InstrJump(-1) };
 
 		std::string label;
-		if (curLoopLabel->isForLoop) { label = isBreak ? ((ProgramInfo::LabeledForLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledForLoop*)curLoopLabel)->then; }
-		else { label = isBreak ? ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->begin; }
+		if (curLoopLabel->isForLoop) { label = IsBreak() ? ((ProgramInfo::LabeledForLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledForLoop*)curLoopLabel)->then; }
+		else { label = IsBreak() ? ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->end : ((ProgramInfo::LabeledWhileLoop*)curLoopLabel)->begin; }
 
 		_progInfo.labeledCtrlInstrs[label].push_back(instrs.back());
 
 		return instrs;
 	}
+
+	CodePathNode* ASTBreakContinueStmt::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, false); }
 #pragma endregion
 
+#pragma region ReturnStmt
+	ASTReturnStmt::ASTReturnStmt(std::vector<ASTExpr*> _exprs, Position _pos)
+		: ASTStmt(ASTStmtType::RETURN, _pos), exprs(_exprs) { }
+
+	ASTReturnStmt::~ASTReturnStmt()
+	{
+		for (auto const& it : exprs)
+			delete it;
+	}
+
+	std::string ASTReturnStmt::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+		ss << CreateIndent(_indentLvl) + _prefix;
+		ss << "Return" << (exprs.size() == 0 ? "" : ": ");
+
+		for (auto const& it : exprs)
+			ss << std::endl << it->ToString(_indentLvl + 1);
+
+		return ss.str();
+	}
+
+	TypeResult ASTReturnStmt::_TypeCheck(Environment* _env)
+	{
+		TypeList exprTypes;
+		for (auto const& it : exprs)
+		{
+			TypeResult exprTypeRes = it->TypeCheck(_env);
+			if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
+			else { exprTypes.push_back(exprTypeRes.GetValue()); }
+		}
+
+		int numExprs = exprTypes.size();
+		if (numExprs == 0) { return TypeResult::GenSuccess(Type::UNIT); }
+		else if (numExprs == 1) { return TypeResult::GenSuccess(exprTypes[0]); }
+		else { return TypeResult::GenSuccess(TypePtr(new TupleType(exprTypes))); }
+	}
+
+	InstructionSet ASTReturnStmt::GenerateCode(ProgramInfo& _progInfo)
+	{
+		throw std::runtime_error("Not implemented");
+	}
+
+	CodePathNode* ASTReturnStmt::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, false); }
+#pragma endregion
+
+#pragma region Program Info
 	ProgramInfo::LabeledWhileLoop ProgramInfo::GenWhileLoopLabels()
 	{
 		std::string beginLabel = "LoopBegin" + std::to_string(numLoopLabels);
@@ -1831,4 +2013,121 @@ namespace ramc {
 		else if (labels[_label]) { throw std::runtime_error("ProgramInfo::SetLabelInstr() - Loop label already set!"); }
 		else { labels[_label] = _instr; }
 	}
+#pragma endregion
+
+#pragma region Code Path
+	CodePathNode::CodePathNode(CodePathNode* _left, CodePathNode* _right, ASTStmt* _stmt, bool _appendable)
+	{
+		left = _left;
+		right = _right;
+		statement = _stmt;
+		appendable = _appendable;
+	}
+
+	CodePathNode::~CodePathNode()
+	{
+		delete left;
+		delete right;
+	}
+
+	void CodePathNode::Append(ASTStmt* _stmt, const std::set<ASTStmtType>& _overrides)
+	{
+		if (!left && !right)
+		{
+			if (!appendable && _overrides.find(statement->GetStmtType()) == _overrides.end())
+				return;
+
+			left = _stmt->GetCodePath();
+			return;
+		}
+
+		if (left)
+			left->Append(_stmt, _overrides);
+
+		if (right)
+			right->Append(_stmt, _overrides);
+	}
+
+	void CodePathNode::SetAppendable(const std::set<ASTStmtType>& _types)
+	{
+		if (!left && !right)
+		{
+			if (_types.find(statement->GetStmtType()) != _types.end())
+				appendable = true;
+
+			return;
+		}
+
+		if (left) { left->SetAppendable(_types); }
+		if (right) { right->SetAppendable(_types); }
+	}
+
+	std::vector<CodePathNode*> CodePathNode::GetTerminalNodes()
+	{
+		if (!left && !right)
+			return { this };
+
+		std::vector<CodePathNode*> result;
+
+		if (left)
+		{
+			result = left->GetTerminalNodes();
+
+			if (right)
+			{
+				auto rightTerms = right->GetTerminalNodes();
+				result.insert(result.end(), rightTerms.begin(), rightTerms.end());
+			}
+		}
+		else { result = right->GetTerminalNodes(); }
+
+		return result;
+	}
+
+	std::set<ASTStmt*> CodePathNode::GetTerminalStmts()
+	{
+		if (!left && !right)
+			return { statement };
+
+		std::set<ASTStmt*> result;
+
+		if (left)
+			result = left->GetTerminalStmts();
+
+		if (right)
+		{
+			auto rightTerms = right->GetTerminalStmts();
+			result.insert(rightTerms.begin(), rightTerms.end());
+		}
+
+		return result;
+	}
+
+	void PrintCodePath(CodePathNode* _root, int _space)
+	{
+		const int spaceLen = 10;
+
+		if (!_root)
+			return;
+
+		// Increase distance between levels  
+		_space += spaceLen;
+
+		// Process right child first  
+		PrintCodePath(_root->right, _space);
+
+		// Print current node after space  
+		// count  
+		std::cout << std::endl;
+		for (int i = spaceLen; i < _space; i++)
+			std::cout << " ";
+
+		std::cout << ASTStmtTypeToString(_root->statement->GetStmtType()) << "\n";
+
+		// Process left child  
+		PrintCodePath(_root->left, _space);
+	}
+
+	void CodePathNode::Print() { PrintCodePath(this, 0); }
+#pragma endregion
 }

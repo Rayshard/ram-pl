@@ -30,6 +30,7 @@ namespace ramc {
 			case TokenType::KW_WHILE: str += "Keyword: while"; break;
 			case TokenType::KW_FOR: str += "Keyword: for"; break;
 			case TokenType::KW_DO: str += "Keyword: do"; break;
+			case TokenType::KW_FUNC: str += "Keyword: func"; break;
 
 			case TokenType::KW_CONTINUE: str += "Keyword: continue"; break;
 			case TokenType::KW_BREAK: str += "Keyword: break"; break;
@@ -52,6 +53,7 @@ namespace ramc {
 			case TokenType::PERIOD: str += "Period"; break;
 			case TokenType::COLON: str += "Colon"; break;
 			case TokenType::COMMA: str += "Comma"; break;
+			case TokenType::GOES_TO: str += "Goes To"; break;
 
 			case TokenType::PLUS: str += "Plus"; break;
 			case TokenType::MINUS: str += "Minus"; break;

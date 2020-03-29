@@ -1,6 +1,3 @@
--generate for loop instrs
--if/while/for and breaks for them
--register must propaate up
 -functions
 -structs
 -arrays/strings

@@ -366,15 +366,18 @@ namespace ramc { namespace bison {
     /// An auxiliary type to compute the largest semantic type.
     union union_type
     {
+      // ASSIGNMENT
+      char dummy1[sizeof (ASTAssignment*)];
+
       // "true"
       // "false"
-      char dummy1[sizeof (ASTBoolLit*)];
+      char dummy2[sizeof (ASTBoolLit*)];
 
       // "BYTE_LIT"
-      char dummy2[sizeof (ASTByteLit*)];
+      char dummy3[sizeof (ASTByteLit*)];
 
       // "DOUBLE_LIT"
-      char dummy3[sizeof (ASTDoubleLit*)];
+      char dummy4[sizeof (ASTDoubleLit*)];
 
       // EXPR
       // EXPR1
@@ -390,37 +393,41 @@ namespace ramc { namespace bison {
       // EXPR11
       // EXPR12
       // ATOM
-      char dummy4[sizeof (ASTExpr*)];
+      char dummy5[sizeof (ASTExpr*)];
 
       // "FLOAT_LIT"
-      char dummy5[sizeof (ASTFloatLit*)];
+      char dummy6[sizeof (ASTFloatLit*)];
 
-      // "ID"
-      char dummy6[sizeof (ASTIdentifier*)];
+      // FUNCDECL
+      char dummy7[sizeof (ASTFuncDecl*)];
+
+      // IDENTIFIER
+      char dummy8[sizeof (ASTIdentifier*)];
 
       // "INT_LIT"
-      char dummy7[sizeof (ASTIntLit*)];
+      char dummy9[sizeof (ASTIntLit*)];
 
       // "LONG_LIT"
-      char dummy8[sizeof (ASTLongLit*)];
+      char dummy10[sizeof (ASTLongLit*)];
 
       // PROGRAM
-      char dummy9[sizeof (ASTProgram*)];
+      char dummy11[sizeof (ASTProgram*)];
 
       // STMT
       // OPEN_STMT
       // CLOSED_STMT
-      // ASSIGNMENT
-      // VARDECL
       // WHILE_STMT
       // FOR_STMT
-      char dummy10[sizeof (ASTStmt*)];
+      char dummy12[sizeof (ASTStmt*)];
 
       // "STRING_LIT"
-      char dummy11[sizeof (ASTStringLit*)];
+      char dummy13[sizeof (ASTStringLit*)];
+
+      // VARDECL
+      char dummy14[sizeof (ASTVarDecl*)];
 
       // OP_ASSIGN
-      char dummy12[sizeof (AssignmentType)];
+      char dummy15[sizeof (AssignmentType)];
 
       // "{"
       // "let"
@@ -430,10 +437,11 @@ namespace ramc { namespace bison {
       // "while"
       // "for"
       // "do"
+      // "func"
       // "break"
       // "continue"
       // "return"
-      char dummy13[sizeof (Position)];
+      char dummy16[sizeof (Position)];
 
       // "byte"
       // "bool"
@@ -444,10 +452,26 @@ namespace ramc { namespace bison {
       // "string"
       // "void"
       // TYPE
-      char dummy14[sizeof (TypePtr)];
+      char dummy17[sizeof (TypePtr)];
+
+      // "ID"
+      char dummy18[sizeof (std::pair<std::string, Position>)];
+
+      // EXPR_STAR
+      // EXPR_PLUS
+      char dummy19[sizeof (std::vector<ASTExpr*>)];
+
+      // TL_FUNCDECLS
+      char dummy20[sizeof (std::vector<ASTFuncDecl*>)];
 
       // STMTS
-      char dummy15[sizeof (std::vector<ASTStmt*>)];
+      char dummy21[sizeof (std::vector<ASTStmt*>)];
+
+      // TL_VARDECLS
+      char dummy22[sizeof (std::vector<ASTVarDecl*>)];
+
+      // TYPE_PLUS
+      char dummy23[sizeof (std::vector<TypePtr>)];
     };
 
     /// The size of the largest semantic type.
@@ -526,38 +550,40 @@ namespace ramc { namespace bison {
         RCBRACKET = 294,
         LSBRACKET = 295,
         RSBRACKET = 296,
-        SEMICOLON = 297,
-        PERIOD = 298,
-        COLON = 299,
-        COMMA = 300,
-        UNDERSCORE = 301,
-        IDENTIFIER = 302,
-        INT_LIT = 303,
-        STRING_LIT = 304,
-        FLOAT_LIT = 305,
-        BYTE_LIT = 306,
-        DOUBLE_LIT = 307,
-        LONG_LIT = 308,
-        KW_TRUE = 309,
-        KW_FALSE = 310,
-        KW_BYTE = 311,
-        KW_BOOL = 312,
-        KW_INT = 313,
-        KW_FLOAT = 314,
-        KW_DOUBLE = 315,
-        KW_LONG = 316,
-        KW_STRING = 317,
-        KW_VOID = 318,
-        KW_LET = 319,
-        KW_IF = 320,
-        KW_THEN = 321,
-        KW_ELSE = 322,
-        KW_WHILE = 323,
-        KW_FOR = 324,
-        KW_DO = 325,
-        KW_BREAK = 326,
-        KW_CONTINUE = 327,
-        KW_RETURN = 328
+        GOES_TO = 297,
+        SEMICOLON = 298,
+        PERIOD = 299,
+        COLON = 300,
+        COMMA = 301,
+        UNDERSCORE = 302,
+        ID = 303,
+        INT_LIT = 304,
+        STRING_LIT = 305,
+        FLOAT_LIT = 306,
+        BYTE_LIT = 307,
+        DOUBLE_LIT = 308,
+        LONG_LIT = 309,
+        KW_TRUE = 310,
+        KW_FALSE = 311,
+        KW_BYTE = 312,
+        KW_BOOL = 313,
+        KW_INT = 314,
+        KW_FLOAT = 315,
+        KW_DOUBLE = 316,
+        KW_LONG = 317,
+        KW_STRING = 318,
+        KW_VOID = 319,
+        KW_LET = 320,
+        KW_IF = 321,
+        KW_THEN = 322,
+        KW_ELSE = 323,
+        KW_WHILE = 324,
+        KW_FOR = 325,
+        KW_DO = 326,
+        KW_FUNC = 327,
+        KW_BREAK = 328,
+        KW_CONTINUE = 329,
+        KW_RETURN = 330
       };
     };
 
@@ -606,6 +632,17 @@ namespace ramc { namespace bison {
 #else
       basic_symbol (typename Base::kind_type t)
         : Base (t)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, ASTAssignment*&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const ASTAssignment*& v)
+        : Base (t)
+        , value (v)
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -659,6 +696,17 @@ namespace ramc { namespace bison {
       {}
 #else
       basic_symbol (typename Base::kind_type t, const ASTFloatLit*& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, ASTFuncDecl*&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const ASTFuncDecl*& v)
         : Base (t)
         , value (v)
       {}
@@ -730,6 +778,17 @@ namespace ramc { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, ASTVarDecl*&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const ASTVarDecl*& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
       basic_symbol (typename Base::kind_type t, AssignmentType&& v)
         : Base (t)
         , value (std::move (v))
@@ -763,12 +822,67 @@ namespace ramc { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::pair<std::string, Position>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::pair<std::string, Position>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::vector<ASTExpr*>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::vector<ASTExpr*>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::vector<ASTFuncDecl*>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::vector<ASTFuncDecl*>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
       basic_symbol (typename Base::kind_type t, std::vector<ASTStmt*>&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
       basic_symbol (typename Base::kind_type t, const std::vector<ASTStmt*>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::vector<ASTVarDecl*>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::vector<ASTVarDecl*>& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, std::vector<TypePtr>&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const std::vector<TypePtr>& v)
         : Base (t)
         , value (v)
       {}
@@ -796,102 +910,134 @@ namespace ramc { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 54: // "true"
-      case 55: // "false"
+      case 81: // ASSIGNMENT
+        value.template destroy< ASTAssignment* > ();
+        break;
+
+      case 55: // "true"
+      case 56: // "false"
         value.template destroy< ASTBoolLit* > ();
         break;
 
-      case 51: // "BYTE_LIT"
+      case 52: // "BYTE_LIT"
         value.template destroy< ASTByteLit* > ();
         break;
 
-      case 52: // "DOUBLE_LIT"
+      case 53: // "DOUBLE_LIT"
         value.template destroy< ASTDoubleLit* > ();
         break;
 
-      case 83: // EXPR
-      case 84: // EXPR1
-      case 85: // EXPR2
-      case 86: // EXPR3
-      case 87: // EXPR4
-      case 88: // EXPR5
-      case 89: // EXPR6
-      case 90: // EXPR7
-      case 91: // EXPR8
-      case 92: // EXPR9
-      case 93: // EXPR10
-      case 94: // EXPR11
-      case 95: // EXPR12
-      case 96: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.template destroy< ASTExpr* > ();
         break;
 
-      case 50: // "FLOAT_LIT"
+      case 51: // "FLOAT_LIT"
         value.template destroy< ASTFloatLit* > ();
         break;
 
-      case 47: // "ID"
+      case 83: // FUNCDECL
+        value.template destroy< ASTFuncDecl* > ();
+        break;
+
+      case 100: // IDENTIFIER
         value.template destroy< ASTIdentifier* > ();
         break;
 
-      case 48: // "INT_LIT"
+      case 49: // "INT_LIT"
         value.template destroy< ASTIntLit* > ();
         break;
 
-      case 53: // "LONG_LIT"
+      case 54: // "LONG_LIT"
         value.template destroy< ASTLongLit* > ();
         break;
 
-      case 75: // PROGRAM
+      case 77: // PROGRAM
         value.template destroy< ASTProgram* > ();
         break;
 
-      case 76: // STMT
-      case 77: // OPEN_STMT
-      case 78: // CLOSED_STMT
-      case 79: // ASSIGNMENT
-      case 80: // VARDECL
-      case 81: // WHILE_STMT
-      case 82: // FOR_STMT
+      case 78: // STMT
+      case 79: // OPEN_STMT
+      case 80: // CLOSED_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.template destroy< ASTStmt* > ();
         break;
 
-      case 49: // "STRING_LIT"
+      case 50: // "STRING_LIT"
         value.template destroy< ASTStringLit* > ();
         break;
 
-      case 98: // OP_ASSIGN
+      case 82: // VARDECL
+        value.template destroy< ASTVarDecl* > ();
+        break;
+
+      case 106: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
       case 38: // "{"
-      case 64: // "let"
-      case 65: // "if"
-      case 66: // "then"
-      case 67: // "else"
-      case 68: // "while"
-      case 69: // "for"
-      case 70: // "do"
-      case 71: // "break"
-      case 72: // "continue"
-      case 73: // "return"
+      case 65: // "let"
+      case 66: // "if"
+      case 67: // "then"
+      case 68: // "else"
+      case 69: // "while"
+      case 70: // "for"
+      case 71: // "do"
+      case 72: // "func"
+      case 73: // "break"
+      case 74: // "continue"
+      case 75: // "return"
         value.template destroy< Position > ();
         break;
 
-      case 56: // "byte"
-      case 57: // "bool"
-      case 58: // "int"
-      case 59: // "float"
-      case 60: // "double"
-      case 61: // "long"
-      case 62: // "string"
-      case 63: // "void"
-      case 99: // TYPE
+      case 57: // "byte"
+      case 58: // "bool"
+      case 59: // "int"
+      case 60: // "float"
+      case 61: // "double"
+      case 62: // "long"
+      case 63: // "string"
+      case 64: // "void"
+      case 108: // TYPE
         value.template destroy< TypePtr > ();
         break;
 
-      case 97: // STMTS
+      case 48: // "ID"
+        value.template destroy< std::pair<std::string, Position> > ();
+        break;
+
+      case 104: // EXPR_STAR
+      case 105: // EXPR_PLUS
+        value.template destroy< std::vector<ASTExpr*> > ();
+        break;
+
+      case 102: // TL_FUNCDECLS
+        value.template destroy< std::vector<ASTFuncDecl*> > ();
+        break;
+
+      case 103: // STMTS
         value.template destroy< std::vector<ASTStmt*> > ();
+        break;
+
+      case 101: // TL_VARDECLS
+        value.template destroy< std::vector<ASTVarDecl*> > ();
+        break;
+
+      case 107: // TYPE_PLUS
+        value.template destroy< std::vector<TypePtr> > ();
         break;
 
       default:
@@ -967,13 +1113,13 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1029,19 +1175,6 @@ switch (yytype)
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      symbol_type (int tok, ASTIdentifier* v)
-        : super_type(token_type (tok), std::move (v))
-      {
-        YY_ASSERT (tok == token::IDENTIFIER);
-      }
-#else
-      symbol_type (int tok, const ASTIdentifier*& v)
-        : super_type(token_type (tok), v)
-      {
-        YY_ASSERT (tok == token::IDENTIFIER);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, ASTIntLit* v)
         : super_type(token_type (tok), std::move (v))
       {
@@ -1084,13 +1217,13 @@ switch (yytype)
       symbol_type (int tok, Position v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #else
       symbol_type (int tok, const Position& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1104,6 +1237,19 @@ switch (yytype)
         : super_type(token_type (tok), v)
       {
         YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING || tok == token::KW_VOID);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      symbol_type (int tok, std::pair<std::string, Position> v)
+        : super_type(token_type (tok), std::move (v))
+      {
+        YY_ASSERT (tok == token::ID);
+      }
+#else
+      symbol_type (int tok, const std::pair<std::string, Position>& v)
+        : super_type(token_type (tok), v)
+      {
+        YY_ASSERT (tok == token::ID);
       }
 #endif
     };
@@ -1745,6 +1891,21 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
+      make_GOES_TO ()
+      {
+        return symbol_type (token::GOES_TO);
+      }
+#else
+      static
+      symbol_type
+      make_GOES_TO ()
+      {
+        return symbol_type (token::GOES_TO);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
       make_SEMICOLON ()
       {
         return symbol_type (token::SEMICOLON);
@@ -1820,16 +1981,16 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_IDENTIFIER (ASTIdentifier* v)
+      make_ID (std::pair<std::string, Position> v)
       {
-        return symbol_type (token::IDENTIFIER, std::move (v));
+        return symbol_type (token::ID, std::move (v));
       }
 #else
       static
       symbol_type
-      make_IDENTIFIER (const ASTIdentifier*& v)
+      make_ID (const std::pair<std::string, Position>& v)
       {
-        return symbol_type (token::IDENTIFIER, v);
+        return symbol_type (token::ID, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2180,6 +2341,21 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
+      make_KW_FUNC (Position v)
+      {
+        return symbol_type (token::KW_FUNC, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_KW_FUNC (const Position& v)
+      {
+        return symbol_type (token::KW_FUNC, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
       make_KW_BREAK (Position v)
       {
         return symbol_type (token::KW_BREAK, std::move (v));
@@ -2281,7 +2457,7 @@ switch (yytype)
     static const signed char yydefact_[];
 
     // YYPGOTO[NTERM-NUM].
-    static const short yypgoto_[];
+    static const signed char yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
     static const short yydefgoto_[];
@@ -2291,7 +2467,7 @@ switch (yytype)
     // number is the opposite.  If YYTABLE_NINF, syntax error.
     static const unsigned char yytable_[];
 
-    static const unsigned char yycheck_[];
+    static const short yycheck_[];
 
     // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
     // symbol of state STATE-NUM.
@@ -2548,10 +2724,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 185,     ///< Last index in yytable_.
-      yynnts_ = 31,  ///< Number of nonterminal symbols.
+      yylast_ = 255,     ///< Last index in yytable_.
+      yynnts_ = 38,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
-      yyntokens_ = 74  ///< Number of tokens.
+      yyntokens_ = 76  ///< Number of tokens.
     };
 
 
@@ -2603,9 +2779,10 @@ switch (yytype)
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72,    73
+      65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
+      75
     };
-    const int user_token_number_max_ = 328;
+    const int user_token_number_max_ = 330;
 
     if (t <= 0)
       return yyeof_;
@@ -2624,102 +2801,134 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 54: // "true"
-      case 55: // "false"
+      case 81: // ASSIGNMENT
+        value.move< ASTAssignment* > (std::move (that.value));
+        break;
+
+      case 55: // "true"
+      case 56: // "false"
         value.move< ASTBoolLit* > (std::move (that.value));
         break;
 
-      case 51: // "BYTE_LIT"
+      case 52: // "BYTE_LIT"
         value.move< ASTByteLit* > (std::move (that.value));
         break;
 
-      case 52: // "DOUBLE_LIT"
+      case 53: // "DOUBLE_LIT"
         value.move< ASTDoubleLit* > (std::move (that.value));
         break;
 
-      case 83: // EXPR
-      case 84: // EXPR1
-      case 85: // EXPR2
-      case 86: // EXPR3
-      case 87: // EXPR4
-      case 88: // EXPR5
-      case 89: // EXPR6
-      case 90: // EXPR7
-      case 91: // EXPR8
-      case 92: // EXPR9
-      case 93: // EXPR10
-      case 94: // EXPR11
-      case 95: // EXPR12
-      case 96: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.move< ASTExpr* > (std::move (that.value));
         break;
 
-      case 50: // "FLOAT_LIT"
+      case 51: // "FLOAT_LIT"
         value.move< ASTFloatLit* > (std::move (that.value));
         break;
 
-      case 47: // "ID"
+      case 83: // FUNCDECL
+        value.move< ASTFuncDecl* > (std::move (that.value));
+        break;
+
+      case 100: // IDENTIFIER
         value.move< ASTIdentifier* > (std::move (that.value));
         break;
 
-      case 48: // "INT_LIT"
+      case 49: // "INT_LIT"
         value.move< ASTIntLit* > (std::move (that.value));
         break;
 
-      case 53: // "LONG_LIT"
+      case 54: // "LONG_LIT"
         value.move< ASTLongLit* > (std::move (that.value));
         break;
 
-      case 75: // PROGRAM
+      case 77: // PROGRAM
         value.move< ASTProgram* > (std::move (that.value));
         break;
 
-      case 76: // STMT
-      case 77: // OPEN_STMT
-      case 78: // CLOSED_STMT
-      case 79: // ASSIGNMENT
-      case 80: // VARDECL
-      case 81: // WHILE_STMT
-      case 82: // FOR_STMT
+      case 78: // STMT
+      case 79: // OPEN_STMT
+      case 80: // CLOSED_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.move< ASTStmt* > (std::move (that.value));
         break;
 
-      case 49: // "STRING_LIT"
+      case 50: // "STRING_LIT"
         value.move< ASTStringLit* > (std::move (that.value));
         break;
 
-      case 98: // OP_ASSIGN
+      case 82: // VARDECL
+        value.move< ASTVarDecl* > (std::move (that.value));
+        break;
+
+      case 106: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
       case 38: // "{"
-      case 64: // "let"
-      case 65: // "if"
-      case 66: // "then"
-      case 67: // "else"
-      case 68: // "while"
-      case 69: // "for"
-      case 70: // "do"
-      case 71: // "break"
-      case 72: // "continue"
-      case 73: // "return"
+      case 65: // "let"
+      case 66: // "if"
+      case 67: // "then"
+      case 68: // "else"
+      case 69: // "while"
+      case 70: // "for"
+      case 71: // "do"
+      case 72: // "func"
+      case 73: // "break"
+      case 74: // "continue"
+      case 75: // "return"
         value.move< Position > (std::move (that.value));
         break;
 
-      case 56: // "byte"
-      case 57: // "bool"
-      case 58: // "int"
-      case 59: // "float"
-      case 60: // "double"
-      case 61: // "long"
-      case 62: // "string"
-      case 63: // "void"
-      case 99: // TYPE
+      case 57: // "byte"
+      case 58: // "bool"
+      case 59: // "int"
+      case 60: // "float"
+      case 61: // "double"
+      case 62: // "long"
+      case 63: // "string"
+      case 64: // "void"
+      case 108: // TYPE
         value.move< TypePtr > (std::move (that.value));
         break;
 
-      case 97: // STMTS
+      case 48: // "ID"
+        value.move< std::pair<std::string, Position> > (std::move (that.value));
+        break;
+
+      case 104: // EXPR_STAR
+      case 105: // EXPR_PLUS
+        value.move< std::vector<ASTExpr*> > (std::move (that.value));
+        break;
+
+      case 102: // TL_FUNCDECLS
+        value.move< std::vector<ASTFuncDecl*> > (std::move (that.value));
+        break;
+
+      case 103: // STMTS
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
+        break;
+
+      case 101: // TL_VARDECLS
+        value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
+        break;
+
+      case 107: // TYPE_PLUS
+        value.move< std::vector<TypePtr> > (std::move (that.value));
         break;
 
       default:
@@ -2736,102 +2945,134 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 54: // "true"
-      case 55: // "false"
+      case 81: // ASSIGNMENT
+        value.copy< ASTAssignment* > (YY_MOVE (that.value));
+        break;
+
+      case 55: // "true"
+      case 56: // "false"
         value.copy< ASTBoolLit* > (YY_MOVE (that.value));
         break;
 
-      case 51: // "BYTE_LIT"
+      case 52: // "BYTE_LIT"
         value.copy< ASTByteLit* > (YY_MOVE (that.value));
         break;
 
-      case 52: // "DOUBLE_LIT"
+      case 53: // "DOUBLE_LIT"
         value.copy< ASTDoubleLit* > (YY_MOVE (that.value));
         break;
 
-      case 83: // EXPR
-      case 84: // EXPR1
-      case 85: // EXPR2
-      case 86: // EXPR3
-      case 87: // EXPR4
-      case 88: // EXPR5
-      case 89: // EXPR6
-      case 90: // EXPR7
-      case 91: // EXPR8
-      case 92: // EXPR9
-      case 93: // EXPR10
-      case 94: // EXPR11
-      case 95: // EXPR12
-      case 96: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.copy< ASTExpr* > (YY_MOVE (that.value));
         break;
 
-      case 50: // "FLOAT_LIT"
+      case 51: // "FLOAT_LIT"
         value.copy< ASTFloatLit* > (YY_MOVE (that.value));
         break;
 
-      case 47: // "ID"
+      case 83: // FUNCDECL
+        value.copy< ASTFuncDecl* > (YY_MOVE (that.value));
+        break;
+
+      case 100: // IDENTIFIER
         value.copy< ASTIdentifier* > (YY_MOVE (that.value));
         break;
 
-      case 48: // "INT_LIT"
+      case 49: // "INT_LIT"
         value.copy< ASTIntLit* > (YY_MOVE (that.value));
         break;
 
-      case 53: // "LONG_LIT"
+      case 54: // "LONG_LIT"
         value.copy< ASTLongLit* > (YY_MOVE (that.value));
         break;
 
-      case 75: // PROGRAM
+      case 77: // PROGRAM
         value.copy< ASTProgram* > (YY_MOVE (that.value));
         break;
 
-      case 76: // STMT
-      case 77: // OPEN_STMT
-      case 78: // CLOSED_STMT
-      case 79: // ASSIGNMENT
-      case 80: // VARDECL
-      case 81: // WHILE_STMT
-      case 82: // FOR_STMT
+      case 78: // STMT
+      case 79: // OPEN_STMT
+      case 80: // CLOSED_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.copy< ASTStmt* > (YY_MOVE (that.value));
         break;
 
-      case 49: // "STRING_LIT"
+      case 50: // "STRING_LIT"
         value.copy< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
-      case 98: // OP_ASSIGN
+      case 82: // VARDECL
+        value.copy< ASTVarDecl* > (YY_MOVE (that.value));
+        break;
+
+      case 106: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
       case 38: // "{"
-      case 64: // "let"
-      case 65: // "if"
-      case 66: // "then"
-      case 67: // "else"
-      case 68: // "while"
-      case 69: // "for"
-      case 70: // "do"
-      case 71: // "break"
-      case 72: // "continue"
-      case 73: // "return"
+      case 65: // "let"
+      case 66: // "if"
+      case 67: // "then"
+      case 68: // "else"
+      case 69: // "while"
+      case 70: // "for"
+      case 71: // "do"
+      case 72: // "func"
+      case 73: // "break"
+      case 74: // "continue"
+      case 75: // "return"
         value.copy< Position > (YY_MOVE (that.value));
         break;
 
-      case 56: // "byte"
-      case 57: // "bool"
-      case 58: // "int"
-      case 59: // "float"
-      case 60: // "double"
-      case 61: // "long"
-      case 62: // "string"
-      case 63: // "void"
-      case 99: // TYPE
+      case 57: // "byte"
+      case 58: // "bool"
+      case 59: // "int"
+      case 60: // "float"
+      case 61: // "double"
+      case 62: // "long"
+      case 63: // "string"
+      case 64: // "void"
+      case 108: // TYPE
         value.copy< TypePtr > (YY_MOVE (that.value));
         break;
 
-      case 97: // STMTS
+      case 48: // "ID"
+        value.copy< std::pair<std::string, Position> > (YY_MOVE (that.value));
+        break;
+
+      case 104: // EXPR_STAR
+      case 105: // EXPR_PLUS
+        value.copy< std::vector<ASTExpr*> > (YY_MOVE (that.value));
+        break;
+
+      case 102: // TL_FUNCDECLS
+        value.copy< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
+        break;
+
+      case 103: // STMTS
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
+        break;
+
+      case 101: // TL_VARDECLS
+        value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
+        break;
+
+      case 107: // TYPE_PLUS
+        value.copy< std::vector<TypePtr> > (YY_MOVE (that.value));
         break;
 
       default:
@@ -2856,102 +3097,134 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 54: // "true"
-      case 55: // "false"
+      case 81: // ASSIGNMENT
+        value.move< ASTAssignment* > (YY_MOVE (s.value));
+        break;
+
+      case 55: // "true"
+      case 56: // "false"
         value.move< ASTBoolLit* > (YY_MOVE (s.value));
         break;
 
-      case 51: // "BYTE_LIT"
+      case 52: // "BYTE_LIT"
         value.move< ASTByteLit* > (YY_MOVE (s.value));
         break;
 
-      case 52: // "DOUBLE_LIT"
+      case 53: // "DOUBLE_LIT"
         value.move< ASTDoubleLit* > (YY_MOVE (s.value));
         break;
 
-      case 83: // EXPR
-      case 84: // EXPR1
-      case 85: // EXPR2
-      case 86: // EXPR3
-      case 87: // EXPR4
-      case 88: // EXPR5
-      case 89: // EXPR6
-      case 90: // EXPR7
-      case 91: // EXPR8
-      case 92: // EXPR9
-      case 93: // EXPR10
-      case 94: // EXPR11
-      case 95: // EXPR12
-      case 96: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.move< ASTExpr* > (YY_MOVE (s.value));
         break;
 
-      case 50: // "FLOAT_LIT"
+      case 51: // "FLOAT_LIT"
         value.move< ASTFloatLit* > (YY_MOVE (s.value));
         break;
 
-      case 47: // "ID"
+      case 83: // FUNCDECL
+        value.move< ASTFuncDecl* > (YY_MOVE (s.value));
+        break;
+
+      case 100: // IDENTIFIER
         value.move< ASTIdentifier* > (YY_MOVE (s.value));
         break;
 
-      case 48: // "INT_LIT"
+      case 49: // "INT_LIT"
         value.move< ASTIntLit* > (YY_MOVE (s.value));
         break;
 
-      case 53: // "LONG_LIT"
+      case 54: // "LONG_LIT"
         value.move< ASTLongLit* > (YY_MOVE (s.value));
         break;
 
-      case 75: // PROGRAM
+      case 77: // PROGRAM
         value.move< ASTProgram* > (YY_MOVE (s.value));
         break;
 
-      case 76: // STMT
-      case 77: // OPEN_STMT
-      case 78: // CLOSED_STMT
-      case 79: // ASSIGNMENT
-      case 80: // VARDECL
-      case 81: // WHILE_STMT
-      case 82: // FOR_STMT
+      case 78: // STMT
+      case 79: // OPEN_STMT
+      case 80: // CLOSED_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.move< ASTStmt* > (YY_MOVE (s.value));
         break;
 
-      case 49: // "STRING_LIT"
+      case 50: // "STRING_LIT"
         value.move< ASTStringLit* > (YY_MOVE (s.value));
         break;
 
-      case 98: // OP_ASSIGN
+      case 82: // VARDECL
+        value.move< ASTVarDecl* > (YY_MOVE (s.value));
+        break;
+
+      case 106: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
       case 38: // "{"
-      case 64: // "let"
-      case 65: // "if"
-      case 66: // "then"
-      case 67: // "else"
-      case 68: // "while"
-      case 69: // "for"
-      case 70: // "do"
-      case 71: // "break"
-      case 72: // "continue"
-      case 73: // "return"
+      case 65: // "let"
+      case 66: // "if"
+      case 67: // "then"
+      case 68: // "else"
+      case 69: // "while"
+      case 70: // "for"
+      case 71: // "do"
+      case 72: // "func"
+      case 73: // "break"
+      case 74: // "continue"
+      case 75: // "return"
         value.move< Position > (YY_MOVE (s.value));
         break;
 
-      case 56: // "byte"
-      case 57: // "bool"
-      case 58: // "int"
-      case 59: // "float"
-      case 60: // "double"
-      case 61: // "long"
-      case 62: // "string"
-      case 63: // "void"
-      case 99: // TYPE
+      case 57: // "byte"
+      case 58: // "bool"
+      case 59: // "int"
+      case 60: // "float"
+      case 61: // "double"
+      case 62: // "long"
+      case 63: // "string"
+      case 64: // "void"
+      case 108: // TYPE
         value.move< TypePtr > (YY_MOVE (s.value));
         break;
 
-      case 97: // STMTS
+      case 48: // "ID"
+        value.move< std::pair<std::string, Position> > (YY_MOVE (s.value));
+        break;
+
+      case 104: // EXPR_STAR
+      case 105: // EXPR_PLUS
+        value.move< std::vector<ASTExpr*> > (YY_MOVE (s.value));
+        break;
+
+      case 102: // TL_FUNCDECLS
+        value.move< std::vector<ASTFuncDecl*> > (YY_MOVE (s.value));
+        break;
+
+      case 103: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
+        break;
+
+      case 101: // TL_VARDECLS
+        value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
+        break;
+
+      case 107: // TYPE_PLUS
+        value.move< std::vector<TypePtr> > (YY_MOVE (s.value));
         break;
 
       default:
@@ -3009,7 +3282,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 3013 "ramc_bison_parser.hpp"
+#line 3286 "ramc_bison_parser.hpp"
 
 
 

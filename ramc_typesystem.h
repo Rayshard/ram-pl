@@ -8,9 +8,11 @@ using ramvm::ArgType;
 namespace ramc {
 	class Type;
 	typedef std::shared_ptr<Type> TypePtr;
+	typedef std::vector<TypePtr> TypeList;
 
 	enum class TypeSystemType {
-		VOID, BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING
+		VOID, BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING,
+		TUPLE, FUNC, UNIT
 	};
 
 	class Type {
@@ -19,7 +21,8 @@ namespace ramc {
 	protected:
 		Type(TypeSystemType _type) : type(_type) { }
 	public:
-		static TypePtr INT, FLOAT, STRING, BOOL, VOID, DOUBLE, LONG, BYTE;
+		static TypePtr INT, FLOAT, STRING, BOOL, VOID, DOUBLE, LONG, BYTE,
+			UNIT;
 
 		virtual std::string ToString(int _indentLvl);
 		virtual int GetByteSize();
@@ -30,12 +33,41 @@ namespace ramc {
 		static bool Matches(TypePtr _t1, TypePtr _t2) { return _t1->Matches(_t2) && _t2->Matches(_t1); }
 	};
 
+#pragma region TupleType
+	class TupleType : public Type {
+		TypeList types;
+	public:
+		TupleType(TypeList _types);
+
+		std::string ToString(int _indentLvl) override;
+		int GetByteSize() override;
+		bool Matches(TypePtr _t) override;
+	};
+#pragma endregion
+
+#pragma region FuncType
+	class FuncType : public Type {
+		TypePtr params, ret;
+	public:
+		FuncType(TypePtr _params, TypePtr _ret);
+
+		TypePtr GetParamsType() { return params; }
+		TypePtr GetRetType() { return ret; }
+
+		std::string ToString(int _indentLvl) override;
+		int GetByteSize() override;
+		bool Matches(TypePtr _t) override;
+	};
+#pragma endregion
+
+#pragma region TypeResult
 	enum class TypeResultType {
 		SUCCESS,
 		ID_NOT_FOUND,
 		MISMATCH,
-		REDECLARATION,
-		EXPECTATION
+		REDEFINITION,
+		EXPECTATION,
+		CODE_PATH_LACKS_RET
 	};
 
 	class TypeResult : public Result<TypeResultType, TypePtr> {
@@ -49,8 +81,10 @@ namespace ramc {
 		static TypeResult GenIDNotFound(std::string _id, Position _pos) { return TypeResult(TypeResultType::ID_NOT_FOUND, nullptr, _id, _pos); }
 		static TypeResult GenExpectation(std::string _expected, std::string _found, Position _pos) { return TypeResult(TypeResultType::EXPECTATION, nullptr, "Expected " + _expected + " but found " + _found, _pos); }
 		static TypeResult GenMismatch(std::string _mistach, Position _pos) { return TypeResult(TypeResultType::MISMATCH, nullptr, _mistach, _pos); }
-		static TypeResult GenRedecalartion(std::string _id, Position _pos) { return TypeResult(TypeResultType::REDECLARATION, nullptr, _id, _pos); }
+		static TypeResult GenRedefinition(std::string _id, Position _pos) { return TypeResult(TypeResultType::REDEFINITION, nullptr, _id, _pos); }
+		static TypeResult GenCodePathLacksReturn(std::string _funcName, Position _pos) { return TypeResult(TypeResultType::CODE_PATH_LACKS_RET, nullptr, "Not all code paths return a value: " + _funcName, _pos); }
 	};
+#pragma endregion
 
 	class Environment {
 		struct VarInfo

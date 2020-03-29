@@ -12,9 +12,12 @@ namespace ramc {
 	class ASTStmt;
 	class ASTIdentifier;
 	class ASTBinopEpxr;
+	class ASTFuncDecl;
+	class ASTVarDecl;
+	struct CodePathNode;
 
-	enum class ASTNodeType { PROGAM, STMT, EXPR };
-	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FOR, BREAK_CONTINUE };
+	enum class ASTNodeType { PROGRAM, FUNCDECL, STMT, EXPR };
+	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FORLOOP, BREAK, CONTINUE, RETURN };
 	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL };
 
 	enum class BinopType {
@@ -30,6 +33,11 @@ namespace ramc {
 
 	enum class UnopType { NEG, LOG_NOT, BIN_NOT };
 	enum class LiteralType { INT, FLOAT, STRING, BOOL, BYTE, DOUBLE, LONG };
+
+	struct Param { std::string name; TypePtr type; Position position; };
+	typedef std::vector<Param> ParamList;
+
+	std::string ASTStmtTypeToString(ASTStmtType _type);
 
 #pragma region ASTNode
 	class ASTNode {
@@ -67,20 +75,21 @@ namespace ramc {
 
 		InstructionSet offsetedCtrlInstrs;
 		std::unordered_map<std::string, InstructionSet> labeledCtrlInstrs;
-		
+
 
 		LabeledWhileLoop GenWhileLoopLabels();
 		LabeledForLoop GenForLoopLabels();
 		LabeledIf GenIfLabels(bool _hasElse);
-		void SetLabelInstr(std::string _label , Instruction* _instr);
+		void SetLabelInstr(std::string _label, Instruction* _instr);
 	};
 
 	class ASTProgram : public ASTNode {
 		ProgramInfo info;
 		std::string fileName;
-		std::vector<ASTStmt*> stmts;
+		std::vector<ASTVarDecl*> varDecls;
+		std::vector<ASTFuncDecl*> funcDecls;
 	public:
-		ASTProgram(std::string _fileName, std::vector<ASTStmt*> _stmts);
+		ASTProgram(std::string _fileName, std::vector<ASTVarDecl*> _varDecls, std::vector<ASTFuncDecl*> _funcDecls);
 		~ASTProgram();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
@@ -88,6 +97,23 @@ namespace ramc {
 		InstructionSet GenerateCode();
 
 		ProgramInfo GetInfo() { return info; }
+	};
+#pragma endregion
+
+#pragma region ASTFuncDecl
+	class ASTFuncDecl : public ASTNode {
+		std::string name;
+		ParamList params;
+		FuncType* funcType;
+		ASTStmt* body;
+
+	public:
+		ASTFuncDecl(std::string _name, ParamList _params, TypeList _retTypes, ASTStmt* _body, Position _pos);
+		~ASTFuncDecl();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo);
 	};
 #pragma endregion
 
@@ -105,6 +131,7 @@ namespace ramc {
 
 		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
 		virtual InstructionSet GenerateCode(ProgramInfo& _progInfo) = 0;
+		virtual CodePathNode* GetCodePath() = 0;
 	};
 #pragma endregion
 
@@ -135,6 +162,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -153,6 +181,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -167,6 +196,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -194,6 +224,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -211,18 +242,21 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
 #pragma region Break/Continue Statement
 	class ASTBreakContinueStmt : public ASTStmt {
-		bool isBreak;
 	public:
 		ASTBreakContinueStmt(bool _isBreak, Position _pos);
+
+		bool IsBreak() { return GetStmtType() == ASTStmtType::BREAK; }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -240,6 +274,21 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
+	};
+#pragma endregion
+
+#pragma region ReturnStmt
+	class ASTReturnStmt : public ASTStmt {
+		std::vector<ASTExpr*> exprs;
+	public:
+		ASTReturnStmt(std::vector<ASTExpr*> _exprs, Position _pos);
+		~ASTReturnStmt();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
+		CodePathNode* GetCodePath() override;
 	};
 #pragma endregion
 
@@ -380,5 +429,22 @@ namespace ramc {
 		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
+
+	struct CodePathNode
+	{
+		CodePathNode* left, * right;
+		ASTStmt* statement;
+		bool appendable;
+
+		CodePathNode(CodePathNode* _left, CodePathNode* _right, ASTStmt* _stmt, bool _appendable);
+		~CodePathNode();
+
+		void Append(ASTStmt* _stmt, const std::set<ASTStmtType>& _overrides);
+		void SetAppendable(const std::set<ASTStmtType>& _types);
+		std::vector<CodePathNode*> GetTerminalNodes();
+		std::set<ASTStmt*> GetTerminalStmts();
+
+		void Print();
+	};
 }
 

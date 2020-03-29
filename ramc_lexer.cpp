@@ -32,7 +32,7 @@ namespace ramc {
 
 		{ "let", TokenType::KW_LET }, { "if", TokenType::KW_IF }, { "then", TokenType::KW_THEN },
 		{ "else", TokenType::KW_ELSE }, { "while", TokenType::KW_WHILE }, { "for", TokenType::KW_FOR },
-		{ "do", TokenType::KW_DO },
+		{ "do", TokenType::KW_DO }, { "func", TokenType::KW_FUNC },
 
 		{ "continue", TokenType::KW_CONTINUE }, { "break", TokenType::KW_BREAK }, { "return", TokenType::KW_RETURN },
 
@@ -239,6 +239,10 @@ namespace ramc {
 				if (isdigit(peekedChar)) {
 					ReadNextChar();
 					return LexNumericLiteral(this, firstChar, true, tokStartPos);
+				}
+				else if (peekedChar == '>') {
+					ReadNextChar();
+					return LexerResult::GenSuccess(Token(TokenType::GOES_TO, tokStartPos, ""));
 				}
 				else if (peekedChar == '=') {
 					ReadNextChar();

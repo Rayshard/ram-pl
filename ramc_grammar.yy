@@ -39,7 +39,7 @@
 			switch (token.type)
 			{
 				case TokenType::INT_LIT: { ASTIntLit const* node = new ASTIntLit(std::stoi(token.value), token.position); return Parser::make_INT_LIT(node); }
-				case TokenType::IDENTIFIER: { ASTIdentifier const* node = new ASTIdentifier(token.value, token.position); return Parser::make_IDENTIFIER(node); }
+				case TokenType::IDENTIFIER: { return Parser::make_ID(std::make_pair(token.value, token.position)); }
 				case TokenType::UNDERSCORE: return Parser::make_UNDERSCORE();
 				case TokenType::STRING_LIT: { ASTStringLit const* node = new ASTStringLit(token.value, token.position); return Parser::make_STRING_LIT(node); }
 				case TokenType::FLOAT_LIT: { ASTFloatLit const* node = new ASTFloatLit(std::stof(token.value), token.position); return Parser::make_FLOAT_LIT(node); }
@@ -60,6 +60,7 @@
 				case TokenType::KW_VOID: { TypePtr type = Type::VOID; return Parser::make_KW_VOID(type); }
 
 				case TokenType::KW_LET: return Parser::make_KW_LET(token.position);
+				case TokenType::KW_FUNC: return Parser::make_KW_FUNC(token.position);
 				case TokenType::KW_IF: return Parser::make_KW_IF(token.position);
 				case TokenType::KW_THEN: return Parser::make_KW_THEN(token.position);
 				case TokenType::KW_ELSE: return Parser::make_KW_ELSE(token.position);
@@ -113,6 +114,7 @@
 				case TokenType::PERIOD: return Parser::make_PERIOD();
 				case TokenType::COLON: return Parser::make_COLON();
 				case TokenType::COMMA: return Parser::make_COMMA();
+				case TokenType::GOES_TO: return Parser::make_GOES_TO();
 				case TokenType::END_OF_FILE: return Parser::make_END_OF_FILE();
 				default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
 			}
@@ -164,12 +166,13 @@
 %token RCBRACKET "}"
 %token LSBRACKET "["
 %token RSBRACKET "]"
+%token GOES_TO "->"
 %token SEMICOLON ";"
 %token PERIOD "."
 %token COLON ":"
 %token COMMA ","
 %token UNDERSCORE "_"
-%token <ASTIdentifier*> IDENTIFIER "ID"
+%token <std::pair<std::string, Position>> ID "ID"
 %token <ASTIntLit*> INT_LIT "INT_LIT"
 %token <ASTStringLit*> STRING_LIT "STRING_LIT"
 %token <ASTFloatLit*> FLOAT_LIT "FLOAT_LIT"
@@ -193,6 +196,7 @@
 %token <Position> KW_WHILE "while"
 %token <Position> KW_FOR "for"
 %token <Position> KW_DO "do"
+%token <Position> KW_FUNC "func"
 %token <Position> KW_BREAK "break"
 %token <Position> KW_CONTINUE "continue"
 %token <Position> KW_RETURN "return"
@@ -202,8 +206,9 @@
 %nterm <ASTStmt*> STMT;
 %nterm <ASTStmt*> OPEN_STMT;
 %nterm <ASTStmt*> CLOSED_STMT;
-%nterm <ASTStmt*> ASSIGNMENT;
-%nterm <ASTStmt*> VARDECL;
+%nterm <ASTAssignment*> ASSIGNMENT;
+%nterm <ASTVarDecl*> VARDECL;
+%nterm <ASTFuncDecl*> FUNCDECL;
 %nterm <ASTStmt*> WHILE_STMT;
 %nterm <ASTStmt*> FOR_STMT;
 %nterm <ASTExpr*> EXPR;
@@ -220,17 +225,35 @@
 %nterm <ASTExpr*> EXPR11;
 %nterm <ASTExpr*> EXPR12;
 %nterm <ASTExpr*> ATOM;
+%nterm <ASTIdentifier*> IDENTIFIER;
 
+%nterm <std::vector<ASTVarDecl*>> TL_VARDECLS;
+%nterm <std::vector<ASTFuncDecl*>> TL_FUNCDECLS;
 %nterm <std::vector<ASTStmt*>> STMTS;
+%nterm <std::vector<ASTExpr*>> EXPR_STAR;
+%nterm <std::vector<ASTExpr*>> EXPR_PLUS;
 %nterm <AssignmentType> OP_ASSIGN;
+%nterm <std::vector<TypePtr>> TYPE_PLUS;
 %nterm <TypePtr> TYPE;
 
 %%
 %start PROGRAM;
-PROGRAM: STMTS { result = new ASTProgram("Test File", $1); };
+PROGRAM: TL_VARDECLS TL_FUNCDECLS { result = new ASTProgram("Test File", $1, $2); };
 
-STMTS: %empty      { $$ = { }; }
-	 | STMTS STMT  { $1.push_back($2); $$ = $1; }
+TL_VARDECLS: %empty								                { $$ = { }; }
+		   | TL_VARDECLS "let" IDENTIFIER "=" EXPR ";"	        { $1.push_back(new ASTVarDecl($3, $5, $2)); $$ = $1; }
+		   | TL_VARDECLS "let" IDENTIFIER ":" TYPE "=" EXPR ";" { $1.push_back(new ASTVarDecl($3, $5, $7, $2)); $$ = $1; }
+;
+
+TL_FUNCDECLS: %empty				{ $$ = { }; }
+		    | TL_FUNCDECLS FUNCDECL	{ $1.push_back($2); $$ = $1; }
+;
+
+FUNCDECL: "func" "ID" ":" "(" EXPR_STAR ")" "->" TYPE_PLUS "=" STMT { $$ = nullptr; }
+		| "func" "ID" ":" "(" EXPR_STAR ")" "=" STMT				{ $$ = nullptr; }
+
+STMTS: %empty		  { $$ = { }; }
+	 | STMTS STMT ";" { $1.push_back($2); $$ = $1; }
 ;
 
 STMT: OPEN_STMT   { $$ = $1; }
@@ -242,24 +265,29 @@ OPEN_STMT: "if" EXPR1 "then" STMT					        { $$ = new ASTIfStmt($2, $4, nullp
 		 | WHILE_STMT										{ $$ = $1; }
 ;
 
-CLOSED_STMT: ASSIGNMENT ";"										{ $$ = $1; }
-		   | VARDECL ";"										{ $$ = $1; }
-		   | "{" STMTS "}"										{ $$ = new ASTBlock($2, $1);}
+CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
+		   | VARDECL											{ $$ = $1; }
+		   | "{" STMT ";" STMTS "}"								{ std::vector<ASTStmt*> instrs = { $2 }; instrs.insert(instrs.end(), $4.begin(), $4.end()); $$ = new ASTBlock(instrs, $1);}
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
-		   | "break" ";"										{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
-		   | "continue" ";"										{ IsInLoop ? $$ = new ASTBreakContinueStmt(false, $1) : throw std::runtime_error("Cannot have 'continue' outside of a loop!"); }
+		   | "break"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
+		   | "continue"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(false, $1) : throw std::runtime_error("Cannot have 'continue' outside of a loop!"); }
+		   | "return" EXPR_STAR									{ $$ = new ASTReturnStmt($2, $1); }
 ;
 
 WHILE_STMT: "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; $$ = new ASTWhileStmt($2, $5, $1); }
 
-FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $12, $15, $1); }
-		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $10, $13, $1); }
+FOR_STMT: "for" IDENTIFIER ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $12, $15, $1); }
+		| "for" IDENTIFIER "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $10, $13, $1); }
 
 VARDECL:
-    "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }
-  | "let" "ID" ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, $1); }
+    "let" IDENTIFIER "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }
+  | "let" IDENTIFIER ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, $1); }
   | "let" "_" "=" EXPR              { $$ = new ASTVarDecl($4, $1); }
+;
+
+TYPE_PLUS: TYPE			      { $$ = { $1 }; }
+		 | TYPE_PLUS "," TYPE { $1.push_back($3); $$ = $1; }
 ;
 
 TYPE:
@@ -273,7 +301,7 @@ TYPE:
   | "void"     { $$ = $1; }
 ;
 
-ASSIGNMENT: "ID" OP_ASSIGN EXPR { $$ = new ASTAssignment($1, $3, $2); };
+ASSIGNMENT: IDENTIFIER OP_ASSIGN EXPR { $$ = new ASTAssignment($1, $3, $2); };
 
 OP_ASSIGN:
     "="     { $$ = AssignmentType::EQ; }
@@ -288,6 +316,14 @@ OP_ASSIGN:
   | "^="    { $$ = AssignmentType::BIN_XOR_EQ; }
   | "<<="   { $$ = AssignmentType::LSHIFT_EQ; }
   | ">>="   { $$ = AssignmentType::RSHIFT_EQ; }
+
+EXPR_STAR: %empty		  { $$ = { }; }
+		 | EXPR_PLUS	  { $$ = $1; }
+;
+
+EXPR_PLUS: EXPR			      { $$ = { $1 }; }
+		 | EXPR_PLUS "," EXPR { $1.push_back($3); $$ = $1; }
+;
 
 EXPR:
         EXPR1                                 { $$ = $1; }
@@ -373,9 +409,11 @@ ATOM:
   | "STRING_LIT"    { $$ = $1; }
   | "true"          { $$ = $1; }
   | "false"         { $$ = $1; }
-  | "ID"            { $$ = $1; }
+  | IDENTIFIER		{ $$ = $1; }
   | "(" EXPR ")"	{ $$ = $2; }
 ;
+
+IDENTIFIER: "ID"	{ $$ = new ASTIdentifier($1.first, $1.second); }
 
 %%
 namespace ramc {
