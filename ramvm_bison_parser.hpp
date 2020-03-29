@@ -434,7 +434,6 @@ namespace ramvm { namespace bison {
 
       // "STORE"
       // "PUSH"
-      // "CALL"
       char dummy12[sizeof (std::vector<DataType>)];
     };
 
@@ -486,17 +485,17 @@ namespace ramvm { namespace bison {
         TOK_HALT = 266,
         TOK_MALLOC = 267,
         TOK_FREE = 268,
-        TOK_RET = 269,
-        TOK_COMPARE = 270,
-        TOK_PRINT = 271,
-        TOK_JUMP = 272,
-        TOK_JUMPT = 273,
-        TOK_JUMPF = 274,
-        TOK_MOV = 275,
-        TOK_POP = 276,
-        TOK_STORE = 277,
-        TOK_PUSH = 278,
-        TOK_CALL = 279,
+        TOK_CALL = 269,
+        TOK_RET = 270,
+        TOK_COMPARE = 271,
+        TOK_PRINT = 272,
+        TOK_JUMP = 273,
+        TOK_JUMPT = 274,
+        TOK_JUMPF = 275,
+        TOK_MOV = 276,
+        TOK_POP = 277,
+        TOK_STORE = 278,
+        TOK_PUSH = 279,
         TOK_ADD = 280,
         TOK_SUB = 281,
         TOK_MUL = 282,
@@ -729,8 +728,8 @@ switch (yytype)
         value.template destroy< Argument > ();
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.template destroy< DataType > ();
         break;
 
@@ -794,9 +793,8 @@ switch (yytype)
         value.template destroy< std::vector<Argument> > ();
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.template destroy< std::vector<DataType> > ();
         break;
 
@@ -873,13 +871,13 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -964,13 +962,13 @@ switch (yytype)
       symbol_type (int tok, std::vector<DataType> v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_CALL);
+        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH);
       }
 #else
       symbol_type (int tok, const std::vector<DataType>& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_CALL);
+        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH);
       }
 #endif
     };
@@ -1192,6 +1190,21 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
+      make_TOK_CALL ()
+      {
+        return symbol_type (token::TOK_CALL);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_CALL ()
+      {
+        return symbol_type (token::TOK_CALL);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
       make_TOK_RET ()
       {
         return symbol_type (token::TOK_RET);
@@ -1337,21 +1350,6 @@ switch (yytype)
       make_TOK_PUSH (const std::vector<DataType>& v)
       {
         return symbol_type (token::TOK_PUSH, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_CALL (std::vector<DataType> v)
-      {
-        return symbol_type (token::TOK_CALL, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_CALL (const std::vector<DataType>& v)
-      {
-        return symbol_type (token::TOK_CALL, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2010,7 +2008,7 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 127,     ///< Last index in yytable_.
+      yylast_ = 134,     ///< Last index in yytable_.
       yynnts_ = 9,  ///< Number of nonterminal symbols.
       yyfinal_ = 43, ///< Termination state number.
       yyntokens_ = 47  ///< Number of tokens.
@@ -2091,8 +2089,8 @@ switch (yytype)
         value.move< Argument > (std::move (that.value));
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.move< DataType > (std::move (that.value));
         break;
 
@@ -2156,9 +2154,8 @@ switch (yytype)
         value.move< std::vector<Argument> > (std::move (that.value));
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.move< std::vector<DataType> > (std::move (that.value));
         break;
 
@@ -2181,8 +2178,8 @@ switch (yytype)
         value.copy< Argument > (YY_MOVE (that.value));
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.copy< DataType > (YY_MOVE (that.value));
         break;
 
@@ -2246,9 +2243,8 @@ switch (yytype)
         value.copy< std::vector<Argument> > (YY_MOVE (that.value));
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.copy< std::vector<DataType> > (YY_MOVE (that.value));
         break;
 
@@ -2279,8 +2275,8 @@ switch (yytype)
         value.move< Argument > (YY_MOVE (s.value));
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.move< DataType > (YY_MOVE (s.value));
         break;
 
@@ -2344,9 +2340,8 @@ switch (yytype)
         value.move< std::vector<Argument> > (YY_MOVE (s.value));
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.move< std::vector<DataType> > (YY_MOVE (s.value));
         break;
 
@@ -2405,7 +2400,7 @@ switch (yytype)
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 2409 "ramvm_bison_parser.hpp"
+#line 2404 "ramvm_bison_parser.hpp"
 
 
 

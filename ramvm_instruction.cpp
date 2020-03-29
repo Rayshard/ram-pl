@@ -752,28 +752,12 @@ namespace ramvm {
 		return ss.str();
 	}
 
-	InstrCall::InstrCall(int _labelIdx, int _regCnt, const std::vector<TypedArgument>& _argSrcs)
+	InstrCall::InstrCall(int _labelIdx, int _regCnt, Argument _argsByteLen)
 		: Instruction(InstructionType::CALL)
 	{
-		labelIdx = _labelIdx;
+		instrIdx = _labelIdx;
 		regCnt = _regCnt;
-		argSrcs = _argSrcs;
-	}
-
-	std::string InstrCall::ToString()
-	{
-		std::stringstream ss;
-		ss << "CALL<";
-
-		std::string argsStr;
-		for (auto src : argSrcs)
-		{
-			ss << DataTypeToChar(src.dataType);
-			argsStr += " " + src.ToString();
-		}
-
-		ss << "> " << labelIdx << " " << regCnt << argsStr;
-		return ss.str();
+		argsByteLength = _argsByteLen;
 	}
 
 	InstrReturn::InstrReturn(Argument _amt)

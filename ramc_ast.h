@@ -14,6 +14,7 @@ namespace ramc {
 	class ASTBinopEpxr;
 	class ASTFuncDecl;
 	class ASTVarDecl;
+	class ASTExpr;
 	struct CodePathNode;
 
 	enum class ASTNodeType { PROGRAM, FUNCDECL, STMT, EXPR };
@@ -36,6 +37,7 @@ namespace ramc {
 
 	struct Param { std::string name; TypePtr type; Position position; };
 	typedef std::vector<Param> ParamList;
+	typedef std::vector<ASTExpr*> ExprList;
 
 	std::string ASTStmtTypeToString(ASTStmtType _type);
 
@@ -72,10 +74,10 @@ namespace ramc {
 
 		std::map<std::string, Instruction*> labels;
 		std::vector<LabeledLoop*> curLoopLabels;
+		std::unordered_map<std::string, int> funcRegCnts;
 
 		InstructionSet offsetedCtrlInstrs;
 		std::unordered_map<std::string, InstructionSet> labeledCtrlInstrs;
-
 
 		LabeledWhileLoop GenWhileLoopLabels();
 		LabeledForLoop GenForLoopLabels();
@@ -108,6 +110,9 @@ namespace ramc {
 		FuncType* funcType;
 		ASTStmt* body;
 
+		//These will get set during type checking
+		std::string label;
+		int regCnt;
 	public:
 		ASTFuncDecl(std::string _name, ParamList _params, TypeList _retTypes, ASTStmt* _body, Position _pos);
 		~ASTFuncDecl();
@@ -207,6 +212,24 @@ namespace ramc {
 	public:
 		ASTIfExpr(ASTExpr* _condExpr, ASTExpr* _thenExpr, ASTExpr* _elseExpr, Position _pos);
 		~ASTIfExpr();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+	};
+#pragma endregion
+
+#pragma region FuncCall Expression
+	class ASTFuncCallExpr : public ASTExpr {
+		std::string funcName;
+		ExprList args;
+
+		//Set when type checked successfully
+		std::string funcLabel;
+		int funcRegCnt;
+	public:
+		ASTFuncCallExpr(std::string _funcName, const ExprList& _args, Position _pos);
+		~ASTFuncCallExpr();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;

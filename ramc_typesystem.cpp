@@ -76,14 +76,15 @@ namespace ramc {
 
 	std::string TupleType::ToString(int _indentLvl)
 	{
-		std::stringstream ss(CreateIndent(_indentLvl));
+		std::string result = CreateIndent(_indentLvl) + "(";
 
-		ss << "(" << types[0]->ToString(0);
-		for (auto it = types.begin() + 1; it != types.end(); it++)
-			ss << "," << (*it)->ToString(0);
-		ss << ")";
+		for (auto const& type : types)
+			result += type->ToString(0) + ",";
 
-		return ss.str();
+		if (types.size() != 0)
+			result.pop_back();
+
+		return result + ")";
 	}
 
 	int TupleType::GetByteSize()
@@ -118,7 +119,7 @@ namespace ramc {
 	FuncType::FuncType(TypePtr _params, TypePtr _ret)
 		: Type(TypeSystemType::FUNC), params(_params), ret(_ret) { }
 
-	std::string FuncType::ToString(int _indentLvl) { return params->ToString(0) + " -> "+ ret->ToString(0); }
+	std::string FuncType::ToString(int _indentLvl) { return params->ToString(0) + " -> " + ret->ToString(0); }
 
 	int FuncType::GetByteSize() { return ret->GetByteSize(); }
 
@@ -173,10 +174,10 @@ namespace ramc {
 		}
 	}
 
-	bool Environment::AddVariable(std::string _id, TypePtr _type, ArgType _argType)
+	TypeResult Environment::AddVariable(std::string _id, TypePtr _type, ArgType _argType, Position _exePos)
 	{
 		auto search = variables.find(_id);
-		if (search != variables.end()) { return false; }
+		if (search != variables.end()) { return TypeResult::GenRedefinition(_id, _exePos); }
 		else
 		{
 			VarInfo info;
@@ -186,7 +187,7 @@ namespace ramc {
 			SetMaxNumVarRegNeeded(nextRegIdx);
 
 			variables.insert_or_assign(_id, info);
-			return true;
+			return TypeResult::GenSuccess(_type);
 		}
 	}
 
@@ -216,86 +217,31 @@ namespace ramc {
 		else { return search->second.source; }
 	}
 
-	TypeResult Environment::AddFunction(std::string _id, TypePtr _type, Position _execPos)
+	TypeResult Environment::AddFunction(std::string _id, TypePtr _type, std::string& _label, Position _execPos)
 	{
-		auto search = functions.find(_id);
-		if (search != functions.end()) //Check that this is a valid function to add based on params type
-		{
-			auto range = functions.equal_range(_id);
-			for (auto it = range.first; it != range.second; it++)
-			{
-				auto itParamsType = ((FuncType*)it->second.type.get())->GetParamsType();
-				auto addType = ((FuncType*)_type.get())->GetParamsType();
+		std::string label = GenFuncLabel(_id, ((FuncType*)_type.get())->GetParamsType());
 
-				if (itParamsType->Matches(addType))
-					return TypeResult::GenAmbiguousFuncDecl(_id, _type, _execPos);
-			}
-		}
-
-		//We can add it safely
-		FuncInfo info;
-		info.type = _type;
-		info.label = "%FUNC_" + _id + std::to_string(functions.count(_id));
-
-		functions.insert(std::make_pair(_id, info));
-		return TypeResult::GenSuccess(Type::UNIT);
-	}
-
-	bool Environment::HasFunction(std::string _id, bool _localCheck)
-	{
-		return functions.find(_id) != functions.end() || (!_localCheck && (parent ? parent->HasFunction(_id, false) : false));
-	}
-
-	bool Environment::HasFunctionWithParams(std::string _id, TypePtr _paramsType, bool _localCheck)
-	{
-		auto search = functions.find(_id);
-		if (search == functions.end()) { return !_localCheck && (parent ? parent->HasFunctionWithParams(_id, _paramsType, false) : false); }
+		auto search = functions.find(label);
+		if (search != functions.end()) { return TypeResult::GenAmbiguousFuncDecl(_id, _type, _execPos); }
 		else
 		{
-			auto range = functions.equal_range(_id);
-			for (auto it = range.first; it != range.second; it++)
-			{
-				if (((FuncType*)it->second.type.get())->GetParamsType()->Matches(_paramsType))
-					return true;
-			}
+			FuncInfo info;
+			info.type = _type;
+			info.label = label;
 
-			return false;
+			functions.insert_or_assign(label, info);
+			_label = label;
+			return TypeResult::GenSuccess(Type::UNIT);
 		}
 	}
-	
+
 	TypeResult Environment::GetFunctionRetType(std::string _id, TypePtr _paramsType, Position _execPos)
 	{
-		auto search = functions.find(_id);
-		if (search == functions.end()) { return TypeResult::GenIDNotFound(_id, _execPos); }
-		else
-		{
-			auto range = functions.equal_range(_id);
-			for (auto it = range.first; it != range.second; it++)
-			{
-				auto itType = (FuncType*)it->second.type.get();
-				if (itType->GetParamsType()->Matches(_paramsType))
-					return TypeResult::GenSuccess(itType->GetRetType());
-			}
+		std::string label = GenFuncLabel(_id, _paramsType);
 
-			return TypeResult::GenFuncIDParamsTypePairNotFound(_id, _paramsType, _execPos);
-		}
-	}
-	
-	std::string Environment::GetFunctionLabel(std::string _id, TypePtr _paramsType)
-	{
-		auto search = functions.find(_id);
-		if (search != functions.end())
-		{
-			auto range = functions.equal_range(_id);
-			for (auto it = range.first; it != range.second; it++)
-			{
-				auto itType = (FuncType*)it->second.type.get();
-				if (itType->GetParamsType()->Matches(_paramsType))
-					return it->second.label;
-			}
-		}
-
-		return "Function not found: \"" + _id + "\" taking " + _paramsType->ToString(0);
+		auto search = functions.find(label);
+		if (search == functions.end()) { return parent ? parent->GetFunctionRetType(_id, _paramsType, _execPos) : TypeResult::GenFuncIDParamsTypePairNotFound(_id, _paramsType, _execPos); }
+		else { return TypeResult::GenSuccess(((FuncType*)search->second.type.get())->GetRetType()); }
 	}
 #pragma endregion
 }

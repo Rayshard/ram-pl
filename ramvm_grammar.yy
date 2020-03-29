@@ -71,7 +71,7 @@
 					case TokenType::KW_JUMP: return Parser::make_TOK_JUMP();
 					case TokenType::KW_JUMPT: return Parser::make_TOK_JUMPT();
 					case TokenType::KW_JUMPF: return Parser::make_TOK_JUMPF();
-					case TokenType::KW_CALL: return Parser::make_TOK_CALL(CharsToDataTypes(value));
+					case TokenType::KW_CALL: return Parser::make_TOK_CALL();
 					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharsToDataTypes(value));
 					case TokenType::KW_ADD: return Parser::make_TOK_ADD(CharsToDataTypes(value[0], value[1], value[2]));
 					case TokenType::KW_SUB: return Parser::make_TOK_SUB(CharsToDataTypes(value[0], value[1], value[2]));
@@ -120,6 +120,7 @@
 %token TOK_HALT "HALT"
 %token TOK_MALLOC "MALLOC"
 %token TOK_FREE "FREE"
+%token TOK_CALL "CALL"
 %token TOK_RET "RET"
 %token TOK_COMPARE "COMPARE"
 %token TOK_PRINT "PRINT"
@@ -130,7 +131,6 @@
 %token <DataType> TOK_POP "POP"
 %token <std::vector<DataType>> TOK_STORE "STORE"
 %token <std::vector<DataType>> TOK_PUSH "PUSH"
-%token <std::vector<DataType>> TOK_CALL "CALL"
 %token <DataTypeTriple> TOK_ADD "ADD"
 %token <DataTypeTriple> TOK_SUB "SUB"
 %token <DataTypeTriple> TOK_MUL "MUL"
@@ -186,8 +186,8 @@ STMT:
 	|	"JUMPT" "ipOff" ARGUMENT						{ $$ = new InstrCJump(result.size() + $2, $3, false); }
 	|	"JUMPF" "LABEL" ARGUMENT						{ $$ = new InstrCJump(-1, $3, true); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
 	|	"JUMPF" "ipOff" ARGUMENT						{ $$ = new InstrCJump(result.size() + $2, $3, true); }
-	|	"CALL" "LABEL" "hex" ARGUMENTS					{ $$ = new InstrCall(-1, $3.i, BindArgDataTypes($1, $4)); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"CALL" "hex" "hex" ARGUMENTS					{ $$ = new InstrCall(result.size() + $2.i, $3.i, BindArgDataTypes($1, $4)); }
+	|	"CALL" "LABEL" "hex" ARGUMENT					{ $$ = new InstrCall(-1, $3.i, $4); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
+	|	"CALL" "hex" "hex" ARGUMENT						{ $$ = new InstrCall(result.size() + $2.i, $3.i, $4); }
 	|	"PUSH" ARGUMENTS								{ $$ = new InstrPush(BindArgDataTypes($1, $2)); }
 	|	"POP" ARGUMENT									{ $$ = new InstrPop($1, $2); }
 	|	"STORE" ARGUMENTS DEST_ARG 						{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }

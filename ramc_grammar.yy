@@ -226,6 +226,7 @@
 %nterm <ASTExpr*> EXPR12;
 %nterm <ASTExpr*> ATOM;
 %nterm <ASTIdentifier*> IDENTIFIER;
+%nterm <ASTFuncCallExpr*> FUNC_CALL;
 
 %nterm <std::vector<ASTVarDecl*>> TL_VARDECLS;
 %nterm <std::vector<ASTFuncDecl*>> TL_FUNCDECLS;
@@ -423,10 +424,12 @@ ATOM:
   | "true"          { $$ = $1; }
   | "false"         { $$ = $1; }
   | IDENTIFIER		{ $$ = $1; }
+  | FUNC_CALL		{ $$ = $1; }
   | "(" EXPR ")"	{ $$ = $2; }
 ;
 
-IDENTIFIER: "ID"	{ $$ = new ASTIdentifier($1.first, $1.second); }
+IDENTIFIER: "ID"				  { $$ = new ASTIdentifier($1.first, $1.second); }
+FUNC_CALL: "ID" "(" EXPR_STAR ")" { $$ = new ASTFuncCallExpr($1.first, $3, $1.second); }
 
 %%
 namespace ramc {

@@ -1,6 +1,7 @@
 	
 
-	CALL<I> %FACTORIAL 3 5
+	PUSH<I> 5
+	CALL %FACTORIAL 3 4
 	MOV<I> [-3] R0
 	POP<I> 1
 	

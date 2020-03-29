@@ -93,7 +93,7 @@
 					case TokenType::KW_JUMP: return Parser::make_TOK_JUMP();
 					case TokenType::KW_JUMPT: return Parser::make_TOK_JUMPT();
 					case TokenType::KW_JUMPF: return Parser::make_TOK_JUMPF();
-					case TokenType::KW_CALL: return Parser::make_TOK_CALL(CharsToDataTypes(value));
+					case TokenType::KW_CALL: return Parser::make_TOK_CALL();
 					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharsToDataTypes(value));
 					case TokenType::KW_ADD: return Parser::make_TOK_ADD(CharsToDataTypes(value[0], value[1], value[2]));
 					case TokenType::KW_SUB: return Parser::make_TOK_SUB(CharsToDataTypes(value[0], value[1], value[2]));
@@ -317,8 +317,8 @@ namespace ramvm { namespace bison {
         value.YY_MOVE_OR_COPY< Argument > (YY_MOVE (that.value));
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.YY_MOVE_OR_COPY< DataType > (YY_MOVE (that.value));
         break;
 
@@ -382,9 +382,8 @@ namespace ramvm { namespace bison {
         value.YY_MOVE_OR_COPY< std::vector<Argument> > (YY_MOVE (that.value));
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.YY_MOVE_OR_COPY< std::vector<DataType> > (YY_MOVE (that.value));
         break;
 
@@ -408,8 +407,8 @@ namespace ramvm { namespace bison {
         value.move< Argument > (YY_MOVE (that.value));
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.move< DataType > (YY_MOVE (that.value));
         break;
 
@@ -473,9 +472,8 @@ namespace ramvm { namespace bison {
         value.move< std::vector<Argument> > (YY_MOVE (that.value));
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.move< std::vector<DataType> > (YY_MOVE (that.value));
         break;
 
@@ -499,8 +497,8 @@ namespace ramvm { namespace bison {
         value.copy< Argument > (that.value);
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.copy< DataType > (that.value);
         break;
 
@@ -564,9 +562,8 @@ namespace ramvm { namespace bison {
         value.copy< std::vector<Argument> > (that.value);
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.copy< std::vector<DataType> > (that.value);
         break;
 
@@ -588,8 +585,8 @@ namespace ramvm { namespace bison {
         value.move< Argument > (that.value);
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         value.move< DataType > (that.value);
         break;
 
@@ -653,9 +650,8 @@ namespace ramvm { namespace bison {
         value.move< std::vector<Argument> > (that.value);
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         value.move< std::vector<DataType> > (that.value);
         break;
 
@@ -919,8 +915,8 @@ namespace ramvm { namespace bison {
         yylhs.value.emplace< Argument > ();
         break;
 
-      case 20: // "MOV"
-      case 21: // "POP"
+      case 21: // "MOV"
+      case 22: // "POP"
         yylhs.value.emplace< DataType > ();
         break;
 
@@ -984,9 +980,8 @@ namespace ramvm { namespace bison {
         yylhs.value.emplace< std::vector<Argument> > ();
         break;
 
-      case 22: // "STORE"
-      case 23: // "PUSH"
-      case 24: // "CALL"
+      case 23: // "STORE"
+      case 24: // "PUSH"
         yylhs.value.emplace< std::vector<DataType> > ();
         break;
 
@@ -1007,341 +1002,341 @@ namespace ramvm { namespace bison {
   case 4:
 #line 172 "ramvm_grammar.yy"
                                         { result.push_back(yystack_[0].value.as < Instruction* > ()); }
-#line 1011 "ramvm_bison_parser.cpp"
+#line 1006 "ramvm_bison_parser.cpp"
     break;
 
   case 5:
 #line 173 "ramvm_grammar.yy"
                                 { labels.find(yystack_[0].value.as < std::string > ()) == labels.end() ? labels.insert_or_assign(yystack_[0].value.as < std::string > (), result.size()) : throw std::runtime_error("Duplicate Label: " + yystack_[0].value.as < std::string > ()); }
-#line 1017 "ramvm_bison_parser.cpp"
+#line 1012 "ramvm_bison_parser.cpp"
     break;
 
   case 6:
 #line 177 "ramvm_grammar.yy"
                                                                                                         { yylhs.value.as < Instruction* > () = new InstrHalt(); }
-#line 1023 "ramvm_bison_parser.cpp"
+#line 1018 "ramvm_bison_parser.cpp"
     break;
 
   case 7:
 #line 178 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrReturn(yystack_[0].value.as < Argument > ()); }
-#line 1029 "ramvm_bison_parser.cpp"
+#line 1024 "ramvm_bison_parser.cpp"
     break;
 
   case 8:
 #line 179 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrMove(yystack_[2].value.as < DataType > (), yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 1035 "ramvm_bison_parser.cpp"
+#line 1030 "ramvm_bison_parser.cpp"
     break;
 
   case 9:
 #line 180 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrMalloc(yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 1041 "ramvm_bison_parser.cpp"
+#line 1036 "ramvm_bison_parser.cpp"
     break;
 
   case 10:
 #line 181 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrFree(yystack_[0].value.as < Argument > ()); }
-#line 1047 "ramvm_bison_parser.cpp"
+#line 1042 "ramvm_bison_parser.cpp"
     break;
 
   case 11:
 #line 182 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrPrint(yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 1053 "ramvm_bison_parser.cpp"
+#line 1048 "ramvm_bison_parser.cpp"
     break;
 
   case 12:
 #line 183 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrJump(-1); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[0].value.as < std::string > (), position)); }
-#line 1059 "ramvm_bison_parser.cpp"
+#line 1054 "ramvm_bison_parser.cpp"
     break;
 
   case 13:
 #line 184 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrJump(result.size() + yystack_[0].value.as < int > ()); }
-#line 1065 "ramvm_bison_parser.cpp"
+#line 1060 "ramvm_bison_parser.cpp"
     break;
 
   case 14:
 #line 185 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrCJump(-1, yystack_[0].value.as < Argument > (), false); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[1].value.as < std::string > (), position)); }
-#line 1071 "ramvm_bison_parser.cpp"
+#line 1066 "ramvm_bison_parser.cpp"
     break;
 
   case 15:
 #line 186 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrCJump(result.size() + yystack_[1].value.as < int > (), yystack_[0].value.as < Argument > (), false); }
-#line 1077 "ramvm_bison_parser.cpp"
+#line 1072 "ramvm_bison_parser.cpp"
     break;
 
   case 16:
 #line 187 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrCJump(-1, yystack_[0].value.as < Argument > (), true); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[1].value.as < std::string > (), position)); }
-#line 1083 "ramvm_bison_parser.cpp"
+#line 1078 "ramvm_bison_parser.cpp"
     break;
 
   case 17:
 #line 188 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrCJump(result.size() + yystack_[1].value.as < int > (), yystack_[0].value.as < Argument > (), true); }
-#line 1089 "ramvm_bison_parser.cpp"
+#line 1084 "ramvm_bison_parser.cpp"
     break;
 
   case 18:
 #line 189 "ramvm_grammar.yy"
-                                                                                { yylhs.value.as < Instruction* > () = new InstrCall(-1, yystack_[1].value.as < DataValue > ().i, BindArgDataTypes(yystack_[3].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[2].value.as < std::string > (), position)); }
-#line 1095 "ramvm_bison_parser.cpp"
+                                                                                { yylhs.value.as < Instruction* > () = new InstrCall(-1, yystack_[1].value.as < DataValue > ().i, yystack_[0].value.as < Argument > ()); ctrlInstrs.insert_or_assign(yylhs.value.as < Instruction* > (), std::make_pair(yystack_[2].value.as < std::string > (), position)); }
+#line 1090 "ramvm_bison_parser.cpp"
     break;
 
   case 19:
 #line 190 "ramvm_grammar.yy"
-                                                                                { yylhs.value.as < Instruction* > () = new InstrCall(result.size() + yystack_[2].value.as < DataValue > ().i, yystack_[1].value.as < DataValue > ().i, BindArgDataTypes(yystack_[3].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); }
-#line 1101 "ramvm_bison_parser.cpp"
+                                                                                        { yylhs.value.as < Instruction* > () = new InstrCall(result.size() + yystack_[2].value.as < DataValue > ().i, yystack_[1].value.as < DataValue > ().i, yystack_[0].value.as < Argument > ()); }
+#line 1096 "ramvm_bison_parser.cpp"
     break;
 
   case 20:
 #line 191 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrPush(BindArgDataTypes(yystack_[1].value.as < std::vector<DataType> > (), yystack_[0].value.as < std::vector<Argument> > ())); }
-#line 1107 "ramvm_bison_parser.cpp"
+#line 1102 "ramvm_bison_parser.cpp"
     break;
 
   case 21:
 #line 192 "ramvm_grammar.yy"
                                                                                                 { yylhs.value.as < Instruction* > () = new InstrPop(yystack_[1].value.as < DataType > (), yystack_[0].value.as < Argument > ()); }
-#line 1113 "ramvm_bison_parser.cpp"
+#line 1108 "ramvm_bison_parser.cpp"
     break;
 
   case 22:
 #line 193 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = yystack_[2].value.as < std::vector<DataType> > ().size() != 0 ? new InstrStore(BindArgDataTypes(yystack_[2].value.as < std::vector<DataType> > (), yystack_[1].value.as < std::vector<Argument> > ()), yystack_[0].value.as < Argument > ()) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
-#line 1119 "ramvm_bison_parser.cpp"
+#line 1114 "ramvm_bison_parser.cpp"
     break;
 
   case 23:
 #line 194 "ramvm_grammar.yy"
                                                                 { yylhs.value.as < Instruction* > () = new InstrCompare(yystack_[3].value.as < Argument > (), yystack_[2].value.as < Argument > (), yystack_[1].value.as < Argument > (), yystack_[0].value.as < Argument > ()); }
-#line 1125 "ramvm_bison_parser.cpp"
+#line 1120 "ramvm_bison_parser.cpp"
     break;
 
   case 24:
 #line 195 "ramvm_grammar.yy"
                                                                                 { yylhs.value.as < Instruction* > () = new InstrBinop(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().first, TypedArgument(std::get<0>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[2].value.as < Argument > ()), TypedArgument(std::get<1>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[1].value.as < Argument > ()), TypedArgument(std::get<2>(yystack_[3].value.as < std::pair<Binop, DataTypeTriple> > ().second), yystack_[0].value.as < Argument > ())); }
-#line 1131 "ramvm_bison_parser.cpp"
+#line 1126 "ramvm_bison_parser.cpp"
     break;
 
   case 25:
 #line 196 "ramvm_grammar.yy"
                                                                                         { yylhs.value.as < Instruction* > () = new InstrUnop(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().first, TypedArgument(std::get<0>(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second), yystack_[1].value.as < Argument > ()), TypedArgument(std::get<1>(yystack_[2].value.as < std::pair<Unop, DataTypeDouble> > ().second), yystack_[0].value.as < Argument > ())); }
-#line 1137 "ramvm_bison_parser.cpp"
+#line 1132 "ramvm_bison_parser.cpp"
     break;
 
   case 26:
 #line 200 "ramvm_grammar.yy"
                                                 { yylhs.value.as < std::vector<Argument> > () = { }; }
-#line 1143 "ramvm_bison_parser.cpp"
+#line 1138 "ramvm_bison_parser.cpp"
     break;
 
   case 27:
 #line 201 "ramvm_grammar.yy"
                                     { yystack_[1].value.as < std::vector<Argument> > ().push_back(yystack_[0].value.as < Argument > ()); yylhs.value.as < std::vector<Argument> > () = yystack_[1].value.as < std::vector<Argument> > (); }
-#line 1149 "ramvm_bison_parser.cpp"
+#line 1144 "ramvm_bison_parser.cpp"
     break;
 
   case 28:
 #line 205 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::VALUE, yystack_[0].value.as < DataValue > ()); }
-#line 1155 "ramvm_bison_parser.cpp"
+#line 1150 "ramvm_bison_parser.cpp"
     break;
 
   case 29:
 #line 206 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::REGISTER, yystack_[0].value.as < int > ()); }
-#line 1161 "ramvm_bison_parser.cpp"
+#line 1156 "ramvm_bison_parser.cpp"
     break;
 
   case 30:
 #line 207 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::MEM_REG, yystack_[0].value.as < int > ()); }
-#line 1167 "ramvm_bison_parser.cpp"
+#line 1162 "ramvm_bison_parser.cpp"
     break;
 
   case 31:
 #line 208 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_REG, yystack_[0].value.as < int > ()); }
-#line 1173 "ramvm_bison_parser.cpp"
+#line 1168 "ramvm_bison_parser.cpp"
     break;
 
   case 32:
 #line 209 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_PTR, 0); }
-#line 1179 "ramvm_bison_parser.cpp"
+#line 1174 "ramvm_bison_parser.cpp"
     break;
 
   case 33:
 #line 210 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::SP_OFFSET, yystack_[0].value.as < int > ()); }
-#line 1185 "ramvm_bison_parser.cpp"
+#line 1180 "ramvm_bison_parser.cpp"
     break;
 
   case 34:
 #line 214 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::REGISTER, yystack_[0].value.as < int > ()); }
-#line 1191 "ramvm_bison_parser.cpp"
+#line 1186 "ramvm_bison_parser.cpp"
     break;
 
   case 35:
 #line 215 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::MEM_REG, yystack_[0].value.as < int > ()); }
-#line 1197 "ramvm_bison_parser.cpp"
+#line 1192 "ramvm_bison_parser.cpp"
     break;
 
   case 36:
 #line 216 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::STACK_REG, yystack_[0].value.as < int > ()); }
-#line 1203 "ramvm_bison_parser.cpp"
+#line 1198 "ramvm_bison_parser.cpp"
     break;
 
   case 37:
 #line 217 "ramvm_grammar.yy"
                                 { yylhs.value.as < Argument > () = Argument(ArgType::SP_OFFSET, yystack_[0].value.as < int > ()); }
-#line 1209 "ramvm_bison_parser.cpp"
+#line 1204 "ramvm_bison_parser.cpp"
     break;
 
   case 38:
 #line 221 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::ADD, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1215 "ramvm_bison_parser.cpp"
+#line 1210 "ramvm_bison_parser.cpp"
     break;
 
   case 39:
 #line 222 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::SUB, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1221 "ramvm_bison_parser.cpp"
+#line 1216 "ramvm_bison_parser.cpp"
     break;
 
   case 40:
 #line 223 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::MUL, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1227 "ramvm_bison_parser.cpp"
+#line 1222 "ramvm_bison_parser.cpp"
     break;
 
   case 41:
 #line 224 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::DIV, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1233 "ramvm_bison_parser.cpp"
+#line 1228 "ramvm_bison_parser.cpp"
     break;
 
   case 42:
 #line 225 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::MOD, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1239 "ramvm_bison_parser.cpp"
+#line 1234 "ramvm_bison_parser.cpp"
     break;
 
   case 43:
 #line 226 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::POW, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1245 "ramvm_bison_parser.cpp"
+#line 1240 "ramvm_bison_parser.cpp"
     break;
 
   case 44:
 #line 227 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LSHIFT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1251 "ramvm_bison_parser.cpp"
+#line 1246 "ramvm_bison_parser.cpp"
     break;
 
   case 45:
 #line 228 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::RSHIFT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1257 "ramvm_bison_parser.cpp"
+#line 1252 "ramvm_bison_parser.cpp"
     break;
 
   case 46:
 #line 229 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_AND, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1263 "ramvm_bison_parser.cpp"
+#line 1258 "ramvm_bison_parser.cpp"
     break;
 
   case 47:
 #line 230 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_OR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1269 "ramvm_bison_parser.cpp"
+#line 1264 "ramvm_bison_parser.cpp"
     break;
 
   case 48:
 #line 231 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::BIT_XOR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1275 "ramvm_bison_parser.cpp"
+#line 1270 "ramvm_bison_parser.cpp"
     break;
 
   case 49:
 #line 232 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LOG_AND, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1281 "ramvm_bison_parser.cpp"
+#line 1276 "ramvm_bison_parser.cpp"
     break;
 
   case 50:
 #line 233 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LOG_OR, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1287 "ramvm_bison_parser.cpp"
+#line 1282 "ramvm_bison_parser.cpp"
     break;
 
   case 51:
 #line 234 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1293 "ramvm_bison_parser.cpp"
+#line 1288 "ramvm_bison_parser.cpp"
     break;
 
   case 52:
 #line 235 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::GT, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1299 "ramvm_bison_parser.cpp"
+#line 1294 "ramvm_bison_parser.cpp"
     break;
 
   case 53:
 #line 236 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::LTEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1305 "ramvm_bison_parser.cpp"
+#line 1300 "ramvm_bison_parser.cpp"
     break;
 
   case 54:
 #line 237 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::GTEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1311 "ramvm_bison_parser.cpp"
+#line 1306 "ramvm_bison_parser.cpp"
     break;
 
   case 55:
 #line 238 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::EQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1317 "ramvm_bison_parser.cpp"
+#line 1312 "ramvm_bison_parser.cpp"
     break;
 
   case 56:
 #line 239 "ramvm_grammar.yy"
                                 { yylhs.value.as < std::pair<Binop, DataTypeTriple> > () = { Binop::NEQ, yystack_[0].value.as < DataTypeTriple > () }; }
-#line 1323 "ramvm_bison_parser.cpp"
+#line 1318 "ramvm_bison_parser.cpp"
     break;
 
   case 57:
 #line 242 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::NEG, yystack_[0].value.as < DataTypeDouble > ()); }
-#line 1329 "ramvm_bison_parser.cpp"
+#line 1324 "ramvm_bison_parser.cpp"
     break;
 
   case 58:
 #line 243 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::LOG_NOT, yystack_[0].value.as < DataTypeDouble > ()); }
-#line 1335 "ramvm_bison_parser.cpp"
+#line 1330 "ramvm_bison_parser.cpp"
     break;
 
   case 59:
 #line 244 "ramvm_grammar.yy"
                         { yylhs.value.as < std::pair<Unop, DataTypeDouble> > () = std::make_pair(Unop::BIN_NOT, yystack_[0].value.as < DataTypeDouble > ()); }
-#line 1341 "ramvm_bison_parser.cpp"
+#line 1336 "ramvm_bison_parser.cpp"
     break;
 
 
-#line 1345 "ramvm_bison_parser.cpp"
+#line 1340 "ramvm_bison_parser.cpp"
 
             default:
               break;
@@ -1746,86 +1741,88 @@ namespace ramvm { namespace bison {
   }
 
 
-  const signed char Parser::yypact_ninf_ = -47;
+  const signed char Parser::yypact_ninf_ = -49;
 
   const signed char Parser::yytable_ninf_ = -34;
 
   const signed char
   Parser::yypact_[] =
   {
-     -47,    65,     6,   -47,   -47,    10,    10,    10,    18,    10,
-      27,    31,    33,    10,    10,   -47,   -47,     4,   -47,   -47,
-     -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,
-     -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,   -47,
-     -47,    10,    10,   -47,   -47,   -47,   -47,   -47,   -47,   -47,
-      18,   -47,   -47,   -47,   -47,   -47,   -47,    18,    10,   -47,
-     -47,    10,    10,    10,    10,    18,   -47,    24,    10,     5,
-      15,    10,    18,   -47,    10,   -47,   -47,   -47,   -47,   -47,
-     -47,    43,    58,   109,   117,   -47,   -47,   -47,   -47,    18,
-     -47,    18,    10,    10,   -47,   -47
+     -49,    64,     6,   -49,   -49,    10,    10,     4,    10,    58,
+      10,    14,    25,    30,    10,    10,   -49,   -49,   -49,   -49,
+     -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,
+     -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,   -49,
+     -49,    10,    10,   -49,   -49,   -49,   -49,   -49,   -49,   -49,
+      58,   -49,     1,     5,   -49,   -49,   -49,   -49,   -49,    58,
+      10,   -49,   -49,    10,    10,    10,    10,    58,   -49,    22,
+      10,    10,    58,   -49,    10,    10,    10,   -49,   -49,   -49,
+     -49,   -49,   -49,    43,   108,   116,   124,   -49,   -49,    58,
+     -49,   -49,   -49,    58,   -49,   -49
   };
 
   const signed char
   Parser::yydefact_[] =
   {
        3,     2,     0,     5,     6,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,    26,    26,     0,    38,    39,
+       0,     0,     0,     0,     0,     0,    26,    26,    38,    39,
       40,    41,    42,    43,    44,    45,    46,    47,    48,    49,
       50,    51,    52,    53,    54,    55,    56,    57,    58,    59,
        4,     0,     0,     1,    28,    29,    30,    31,    33,    32,
-       0,    10,     7,    34,    35,    36,    37,     0,     0,    12,
-      13,     0,     0,     0,     0,     0,    21,     0,    20,     0,
-       0,     0,     0,     9,     0,    11,    14,    15,    16,    17,
-       8,    34,    35,    36,    37,    27,    22,    26,    26,     0,
-      25,     0,    19,    18,    24,    23
+       0,    10,     0,     0,     7,    34,    35,    36,    37,     0,
+       0,    12,    13,     0,     0,     0,     0,     0,    21,     0,
+      20,     0,     0,     9,     0,     0,     0,    11,    14,    15,
+      16,    17,     8,    34,    35,    36,    37,    27,    22,     0,
+      25,    19,    18,     0,    24,    23
   };
 
   const signed char
   Parser::yypgoto_[] =
   {
-     -47,   -47,   -16,   -47,    -4,   -46,   -47,   -47,   -47
+     -49,   -49,    13,   -49,    -5,   -48,   -49,   -49,   -49
   };
 
   const signed char
   Parser::yydefgoto_[] =
   {
-      -1,     1,    67,    40,    85,    57,    41,    42,     2
+      -1,     1,    69,    40,    87,    59,    41,    42,     2
   };
 
   const signed char
   Parser::yytable_[] =
   {
-      68,    50,    51,    52,    73,    58,    43,    69,    87,    65,
-      66,    74,    70,    44,    45,    46,    47,    48,    88,    80,
-      49,    86,    53,    54,    55,    56,    90,    44,    81,    82,
-      83,    84,     0,     0,    49,    59,    60,    71,    72,    61,
-      62,    63,    64,    94,     0,    95,   -29,   -29,   -29,   -29,
-     -29,     0,     0,   -29,    75,     0,     0,    76,    77,    78,
-      79,   -30,   -30,   -30,   -30,   -30,     0,    89,   -30,     0,
-      91,    92,    93,     3,     0,     0,     4,     5,     6,     7,
-       8,     9,    10,    11,    12,    13,    14,    15,    16,    17,
-      18,    19,    20,    21,    22,    23,    24,    25,    26,    27,
-      28,    29,    30,    31,    32,    33,    34,    35,    36,    37,
-      38,    39,   -31,   -31,   -31,   -31,   -31,     0,     0,   -31,
-     -33,   -33,   -33,   -33,   -33,     0,     0,   -33
+      50,    51,    73,    54,    74,    60,    43,    52,    75,    67,
+      68,    76,    53,    44,    45,    46,    47,    48,     0,    82,
+      49,    88,    61,    62,    90,    44,    83,    84,    85,    86,
+      70,     0,    49,    63,    64,     0,    71,    72,    65,    66,
+       0,    94,     0,     0,     0,    95,   -29,   -29,   -29,   -29,
+     -29,     0,     0,   -29,     0,    77,     0,     0,    78,    79,
+      80,    81,    55,    56,    57,    58,    89,     0,     0,    91,
+      92,    93,     3,     0,     0,     4,     5,     6,     7,     8,
+       9,    10,    11,    12,    13,    14,    15,    16,    17,    18,
+      19,    20,    21,    22,    23,    24,    25,    26,    27,    28,
+      29,    30,    31,    32,    33,    34,    35,    36,    37,    38,
+      39,   -30,   -30,   -30,   -30,   -30,     0,     0,   -30,   -31,
+     -31,   -31,   -31,   -31,     0,     0,   -31,   -33,   -33,   -33,
+     -33,   -33,     0,     0,   -33
   };
 
   const signed char
   Parser::yycheck_[] =
   {
-      16,     5,     6,     7,    50,     9,     0,     3,     3,    13,
-      14,    57,     8,     3,     4,     5,     6,     7,     3,    65,
-      10,    67,     4,     5,     6,     7,    72,     3,     4,     5,
-       6,     7,    -1,    -1,    10,     8,     9,    41,    42,     8,
-       9,     8,     9,    89,    -1,    91,     3,     4,     5,     6,
-       7,    -1,    -1,    10,    58,    -1,    -1,    61,    62,    63,
-      64,     3,     4,     5,     6,     7,    -1,    71,    10,    -1,
-      74,    87,    88,     8,    -1,    -1,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
-      45,    46,     3,     4,     5,     6,     7,    -1,    -1,    10,
-       3,     4,     5,     6,     7,    -1,    -1,    10
+       5,     6,    50,     8,     3,    10,     0,     3,     3,    14,
+      15,    59,     8,     3,     4,     5,     6,     7,    -1,    67,
+      10,    69,     8,     9,    72,     3,     4,     5,     6,     7,
+      17,    -1,    10,     8,     9,    -1,    41,    42,     8,     9,
+      -1,    89,    -1,    -1,    -1,    93,     3,     4,     5,     6,
+       7,    -1,    -1,    10,    -1,    60,    -1,    -1,    63,    64,
+      65,    66,     4,     5,     6,     7,    71,    -1,    -1,    74,
+      75,    76,     8,    -1,    -1,    11,    12,    13,    14,    15,
+      16,    17,    18,    19,    20,    21,    22,    23,    24,    25,
+      26,    27,    28,    29,    30,    31,    32,    33,    34,    35,
+      36,    37,    38,    39,    40,    41,    42,    43,    44,    45,
+      46,     3,     4,     5,     6,     7,    -1,    -1,    10,     3,
+       4,     5,     6,     7,    -1,    -1,    10,     3,     4,     5,
+       6,     7,    -1,    -1,    10
   };
 
   const signed char
@@ -1836,11 +1833,11 @@ namespace ramvm { namespace bison {
       27,    28,    29,    30,    31,    32,    33,    34,    35,    36,
       37,    38,    39,    40,    41,    42,    43,    44,    45,    46,
       50,    53,    54,     0,     3,     4,     5,     6,     7,    10,
-      51,    51,    51,     4,     5,     6,     7,    52,    51,     8,
-       9,     8,     9,     8,     9,    51,    51,    49,    49,     3,
-       8,    51,    51,    52,    52,    51,    51,    51,    51,    51,
-      52,     4,     5,     6,     7,    51,    52,     3,     3,    51,
-      52,    51,    49,    49,    52,    52
+      51,    51,     3,     8,    51,     4,     5,     6,     7,    52,
+      51,     8,     9,     8,     9,     8,     9,    51,    51,    49,
+      49,    51,    51,    52,     3,     3,    52,    51,    51,    51,
+      51,    51,    52,     4,     5,     6,     7,    51,    52,    51,
+      52,    51,    51,    51,    52,    52
   };
 
   const signed char
@@ -1874,14 +1871,14 @@ namespace ramvm { namespace bison {
   {
   "TOK_END_OF_FILE", "error", "$undefined", "\"hex\"", "\"reg\"",
   "\"mreg\"", "\"sreg\"", "\"spoff\"", "\"LABEL\"", "\"ipOff\"", "\"SP\"",
-  "\"HALT\"", "\"MALLOC\"", "\"FREE\"", "\"RET\"", "\"COMPARE\"",
-  "\"PRINT\"", "\"JUMP\"", "\"JUMPT\"", "\"JUMPF\"", "\"MOV\"", "\"POP\"",
-  "\"STORE\"", "\"PUSH\"", "\"CALL\"", "\"ADD\"", "\"SUB\"", "\"MUL\"",
-  "\"DIV\"", "\"MOD\"", "\"POW\"", "\"LSHIFT\"", "\"RSHIFT\"", "\"BAND\"",
-  "\"BOR\"", "\"BXOR\"", "\"LAND\"", "\"LOR\"", "\"LT\"", "\"GT\"",
-  "\"LTEQ\"", "\"GTEQ\"", "\"EQ\"", "\"NEQ\"", "\"NEG\"", "\"LNOT\"",
-  "\"BNOT\"", "$accept", "STMTS", "ARGUMENTS", "STMT", "ARGUMENT",
-  "DEST_ARG", "BINOP", "UNOP", "PROGRAM", YY_NULLPTR
+  "\"HALT\"", "\"MALLOC\"", "\"FREE\"", "\"CALL\"", "\"RET\"",
+  "\"COMPARE\"", "\"PRINT\"", "\"JUMP\"", "\"JUMPT\"", "\"JUMPF\"",
+  "\"MOV\"", "\"POP\"", "\"STORE\"", "\"PUSH\"", "\"ADD\"", "\"SUB\"",
+  "\"MUL\"", "\"DIV\"", "\"MOD\"", "\"POW\"", "\"LSHIFT\"", "\"RSHIFT\"",
+  "\"BAND\"", "\"BOR\"", "\"BXOR\"", "\"LAND\"", "\"LOR\"", "\"LT\"",
+  "\"GT\"", "\"LTEQ\"", "\"GTEQ\"", "\"EQ\"", "\"NEQ\"", "\"NEG\"",
+  "\"LNOT\"", "\"BNOT\"", "$accept", "STMTS", "ARGUMENTS", "STMT",
+  "ARGUMENT", "DEST_ARG", "BINOP", "UNOP", "PROGRAM", YY_NULLPTR
   };
 
 #if YYDEBUG
@@ -1928,7 +1925,7 @@ namespace ramvm { namespace bison {
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 1932 "ramvm_bison_parser.cpp"
+#line 1929 "ramvm_bison_parser.cpp"
 
 #line 247 "ramvm_grammar.yy"
 

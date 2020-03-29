@@ -155,28 +155,18 @@ namespace ramvm {
 				} break;
 				case InstructionType::CALL: {
 					InstrCall* instr = (InstrCall*)curInstr;
-					ExecutionFrame newExecFrame = ExecutionFrame(ip + 1, GetSP(), instr->regCnt);
-					ResultType resType = ResultType::SUCCESS;
+					DataVariant argsByteLenVal(DataType::INT);
+					ResultType resType = ReadFromSrcArg(execFrame, instr->argsByteLength, argsByteLenVal, _info);
+					if (IsErrorResult(resType))
+						return resType;
 
-					//Push argument values to the stack in reverse so that the 
-					//first argument is on the top of the stack when the callee
-					//starts reading
-					for (int i = (int)instr->argSrcs.size() - 1; i >= 0; i--)
-					{
-						TypedArgument src = instr->argSrcs[i];
-						DataVariant argVal(src.dataType);
-
-						//Read from current exec frame
-						resType = ReadFromSrcArg(execFrame, src, argVal, _info);
-						if (IsErrorResult(resType))
-							return resType;
-
-						//Push Value to stack
-						stack.insert(stack.end(), argVal.Bytes(), argVal.Bytes() + argVal.GetSize());
-					}
-
+					//Create new execution frame to reset the stack pointer
+					//to right before the arguments that were pushed onto
+					//the stack (represented by the byte length value)
+					ExecutionFrame newExecFrame = ExecutionFrame(ip + 1, GetSP() - argsByteLenVal.I(), instr->regCnt);
 					execFrames.push_back(newExecFrame);
-					ip = instr->labelIdx;
+
+					ip = instr->instrIdx;
 					continue;
 				} break;
 				case InstructionType::BINOP: {

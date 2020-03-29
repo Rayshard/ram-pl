@@ -113,12 +113,12 @@ namespace ramvm {
 
 #pragma region Call
 	struct InstrCall : Instruction {
-		int labelIdx, regCnt;
-		std::vector<TypedArgument> argSrcs;
+		int instrIdx, regCnt;
+		Argument argsByteLength; //The amount of bytes to push onto the stack for the new execution frame
 
-		InstrCall(int _labelIdx, int _regCnt, const std::vector<TypedArgument>& _argSrcs);
+		InstrCall(int _labelIdx, int _regCnt, Argument _argsByteLen);
 
-		std::string ToString() override;
+		std::string ToString() override { return "CALL " + std::to_string(instrIdx) + " " + std::to_string(regCnt) + " " + argsByteLength.ToString(); }
 	};
 #pragma endregion
 
@@ -145,7 +145,7 @@ namespace ramvm {
 
 #pragma region Return
 	struct InstrReturn : Instruction {
-		Argument amt; //The amount of byte from the stack to return
+		Argument amt; //The amount of bytes from the stack to return
 
 		InstrReturn(Argument _amt);
 

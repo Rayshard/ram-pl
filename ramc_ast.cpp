@@ -20,6 +20,7 @@ using ramvm::InstrNoOp;
 using ramvm::InstructionType;
 using ramvm::InstrHalt;
 using ramvm::InstrReturn;
+using ramvm::InstrCall;
 #pragma endregion
 
 namespace ramc {
@@ -127,6 +128,29 @@ namespace ramc {
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
+		//Convert Labels
+		for (int i = 0; i < (int)info.offsetedCtrlInstrs.size(); i++)
+		{
+			auto instr = info.offsetedCtrlInstrs[i];
+			int idx = std::find(instrs.begin(), instrs.end(), instr) - instrs.begin();
+
+			if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx += idx; }
+			else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx += idx; }
+			else if (instr->GetType() == InstructionType::CALL) { ((InstrCall*)instr)->instrIdx += idx; }
+		}
+
+		for (auto it = info.labeledCtrlInstrs.begin(); it != info.labeledCtrlInstrs.end(); it++)
+		{
+			int labelInstrIdx = std::find(instrs.begin(), instrs.end(), info.labels[it->first]) - instrs.begin();
+
+			for (auto instr : it->second)
+			{
+				if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx = labelInstrIdx; }
+				else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx = labelInstrIdx; }
+				else if (instr->GetType() == InstructionType::CALL) { ((InstrCall*)instr)->instrIdx = labelInstrIdx; }
+			}
+		}
+
 		return instrs;
 	}
 #pragma endregion
@@ -138,23 +162,16 @@ namespace ramc {
 		name = _name;
 		params = _params;
 
-		TypePtr paramType;
-		if (params.size() == 1) { paramType = params[0].type; }
-		else
-		{
-			TypeList paramTypes;
-			for (auto const& it : params)
-				paramTypes.push_back(it.type);
-
-			paramType = TypePtr(new TupleType(paramTypes));
-		}
+		TypeList paramTypes;
+		for (auto const& it : params)
+			paramTypes.push_back(it.type);
 
 		TypePtr retType;
 		if (_retTypes.size() == 0) { retType = Type::UNIT; }
 		else if (_retTypes.size() == 1) { retType = _retTypes[0]; }
 		else { retType = TypePtr(new TupleType(_retTypes)); }
 
-		funcType = new FuncType(paramType, retType);
+		funcType = new FuncType(TypePtr(new TupleType(paramTypes)), retType);
 		body = _body;
 	}
 
@@ -176,7 +193,7 @@ namespace ramc {
 		TypePtr typePtr = TypePtr(funcType);
 
 		//Add Function to environment
-		TypeResult declTypeRes = _env->AddFunction(name, typePtr, GetPosition());
+		TypeResult declTypeRes = _env->AddFunction(name, typePtr, label, GetPosition());
 		if (!declTypeRes.IsSuccess())
 			return declTypeRes;
 
@@ -185,8 +202,9 @@ namespace ramc {
 		//Type check parameters in local environment
 		for (auto const& it : params)
 		{
-			if (!subEnv.AddVariable(it.name, it.type, ArgType::STACK_REG))
-				return TypeResult::GenRedefinition(it.name, it.position);
+			TypeResult paramTypeRes = subEnv.AddVariable(it.name, it.type, ArgType::STACK_REG, it.position);
+			if (!paramTypeRes.IsSuccess())
+				return paramTypeRes;
 		}
 
 		//Type check body in local environment
@@ -203,12 +221,16 @@ namespace ramc {
 			else if (!Type::Matches(funcType->GetRetType(), stmt->GetTypeSysType())) { return TypeResult::GenExpectation(funcType->GetRetType()->ToString(0), stmt->GetTypeSysType()->ToString(0), stmt->GetPosition()); }
 		}
 
+		regCnt = subEnv.GetNumRegNeeded();
 		return TypeResult::GenSuccess(typePtr);
 	}
 
 	InstructionSet ASTFuncDecl::GenerateCode(Environment* _env, ProgramInfo& _progInfo)
 	{
 		InstructionSet instrs;
+
+		//Set the needed number of registers 
+		_progInfo.funcRegCnts.insert_or_assign(label, regCnt);
 
 		int paramsTotalByteSize = 0;
 		for (int i = 0, offset = 0; i < params.size(); i++)
@@ -228,7 +250,7 @@ namespace ramc {
 		if (funcType->IsProcedure())
 			instrs.push_back(new InstrReturn(Argument(ArgType::VALUE, 0)));
 
-		_progInfo.AddFuncDecl(_env->GetFunctionLabel(name, funcType->GetParamsType()), instrs.front());
+		_progInfo.AddFuncDecl(Environment::GenFuncLabel(name, funcType->GetParamsType()), instrs.front());
 		return instrs;
 	}
 #pragma endregion
@@ -283,14 +305,15 @@ namespace ramc {
 	{
 		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
-		if (isUnderscore) { return TypeResult::GenSuccess(Type::UNIT); }
-		else if (_env->HasVariable(id->GetID(), true)) { return TypeResult::GenRedefinition(id->GetID(), GetPosition()); }
-
 		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
+		else if (isUnderscore) { return TypeResult::GenSuccess(Type::UNIT); }
 		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
 		else
 		{
-			_env->AddVariable(id->GetID(), exprTypeRes.GetValue(), ArgType::REGISTER);
+			TypeResult idRes = _env->AddVariable(id->GetID(), exprTypeRes.GetValue(), ArgType::REGISTER, GetPosition());
+			if (!idRes.IsSuccess()) 
+				return idRes;
+
 			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
 			return TypeResult::GenSuccess(Type::UNIT);
 		}
@@ -1475,6 +1498,76 @@ namespace ramc {
 	InstructionSet ASTByteLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::BYTE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
 	InstructionSet ASTDoubleLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::DOUBLE, Argument(ArgType::VALUE, GetValue()), _dest) }; }
 	InstructionSet ASTLongLit::GenerateCode(Argument _dest, ProgramInfo& _progInfo) { return { new InstrMove(DataType::LONG, Argument(ArgType::VALUE, GetValue()), _dest) }; }
+#pragma endregion
+
+#pragma region FuncCall Expression
+	ASTFuncCallExpr::ASTFuncCallExpr(std::string _funcName, const ExprList& _args, Position _pos)
+		: ASTExpr(ASTExprType::FUNC_CALL, _pos)
+	{
+		funcName = _funcName;
+		args = _args;
+	}
+
+	ASTFuncCallExpr::~ASTFuncCallExpr()
+	{
+		for (auto const& arg : args)
+			delete arg;
+	}
+
+	std::string ASTFuncCallExpr::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+
+		ss << CreateIndent(_indentLvl) << _prefix << "FuncCall Expression: " << funcName;
+
+		for (int i = 0; i < (int)args.size(); i++)
+			ss << std::endl << CreateIndent(_indentLvl + 1) << "ARG" << i << " = " << args[i]->ToString(0);
+
+		return ss.str();
+	}
+
+	TypeResult ASTFuncCallExpr::_TypeCheck(Environment* _env)
+	{
+		TypeList argTypes;
+		for (auto const& arg : args)
+		{
+			TypeResult argTypeRes = arg->TypeCheck(_env);
+			if (!argTypeRes.IsSuccess())
+				return argTypeRes;
+
+			argTypes.push_back(argTypeRes.GetValue());
+		}
+
+		TypePtr paramsType = TypePtr(new TupleType(argTypes));
+		TypeResult funcTypeRes = _env->GetFunctionRetType(funcName, paramsType, GetPosition());
+		if (!funcTypeRes.IsSuccess())
+			return funcTypeRes;
+
+		funcLabel = Environment::GenFuncLabel(funcName, paramsType);
+		return TypeResult::GenSuccess(((FuncType*)funcTypeRes.GetValue().get())->GetRetType());
+	}
+
+	InstructionSet ASTFuncCallExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
+	{
+		InstructionSet instrs;
+		int argsByteLen = 0;
+
+		//Push onto stack in reverse order to first arg is on top
+		//when the callee starts reading them
+		for (int i = args.size() - 1; i >= 0; i--)
+		{
+			ASTExpr* arg = args[i];
+			auto argInstrs = arg->GenerateCode(Argument::CreateStackTop(), _progInfo);
+
+			instrs.insert(instrs.end(), argInstrs.begin(), argInstrs.end());
+			argsByteLen += arg->GetTypeSysType()->GetByteSize();
+		}
+
+		instrs.push_back(new InstrCall(-1, funcRegCnt, Argument(ArgType::VALUE, argsByteLen)));
+		_progInfo.labeledCtrlInstrs[funcLabel].push_back(instrs.back());
+
+		return instrs;
+	}
 #pragma endregion
 
 #pragma region IfStmt

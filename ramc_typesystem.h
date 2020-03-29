@@ -53,7 +53,7 @@ namespace ramc {
 
 		TypePtr GetParamsType() { return params; }
 		TypePtr GetRetType() { return ret; }
-		bool IsProcedure() { return ret->GetType() == TypeSystemType::UNIT;  }
+		bool IsProcedure() { return ret->GetType() == TypeSystemType::UNIT; }
 
 		std::string ToString(int _indentLvl) override;
 		int GetByteSize() override;
@@ -96,7 +96,7 @@ namespace ramc {
 		struct FuncInfo { std::string label; TypePtr type; };
 
 		Environment* parent;
-		std::unordered_multimap<std::string, FuncInfo> functions;
+		std::unordered_map<std::string, FuncInfo> functions;
 		std::unordered_map<std::string, VarInfo> variables;
 		std::unordered_map<Environment*, bool> subEnvs;
 		int nextRegIdx, numRegNeeded;
@@ -105,19 +105,22 @@ namespace ramc {
 	public:
 		Environment(Environment* _parent, bool _incrParentRegCnt);
 
-		bool AddVariable(std::string _id, TypePtr _type, ArgType _argType);
+		TypeResult AddVariable(std::string _id, TypePtr _type, ArgType _argType, Position _execPos);
 		bool HasVariable(std::string _id, bool _localCheck);
 		bool HasVariable(std::string _id, TypePtr _type, bool _localCheck);
 		TypeResult GetVariableType(std::string _id, Position _execPos);
 		Argument GetVarSource(std::string _id);
 
-		TypeResult AddFunction(std::string _id, TypePtr _type, Position _execPos);
-		bool HasFunction(std::string _id, bool _localCheck);
-		bool HasFunctionWithParams(std::string _id, TypePtr _paramsType, bool _localCheck);
+		TypeResult AddFunction(std::string _id, TypePtr _type, std::string& _label, Position _execPos);
 		TypeResult GetFunctionRetType(std::string _id, TypePtr _paramsType, Position _execPos);
-		std::string GetFunctionLabel(std::string _id, TypePtr _paramsType);
 
 		int GetNumRegNeeded() { return numRegNeeded; }
+
+		static std::string GenFuncLabel(std::string _name, TypePtr _paramsType)
+		{
+			std::string postfix = StrReplace(_paramsType->ToString(0), "(,)", '_');
+			return "%FUNC_" + _name + "_" + postfix;
+		}
 	};
 
 	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)
