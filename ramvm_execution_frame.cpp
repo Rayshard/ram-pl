@@ -4,15 +4,12 @@
 
 namespace ramvm {
 	ExecutionFrame::ExecutionFrame()
-	{
-		retIP = -1;
-		retSP = 0;
-		registers = std::vector<DataValue>();
-	}
+		: ExecutionFrame(-1, 0, 0) { }
 
 	ExecutionFrame::ExecutionFrame(int _retIP, int _retSP, int _numRegs)
 	{
 		retIP = _retIP;
+		retSP = _retSP;
 		registers = std::vector<DataValue>(_numRegs);
 	}
 

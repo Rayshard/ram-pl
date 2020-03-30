@@ -417,6 +417,7 @@ namespace ramvm { namespace bison {
       // "mreg"
       // "sreg"
       // "spoff"
+      // "stpos"
       // "ipOff"
       char dummy7[sizeof (int)];
 
@@ -479,45 +480,46 @@ namespace ramvm { namespace bison {
         TOK_MEM_REG = 260,
         TOK_STACK_REG = 261,
         TOK_SP_OFFSET = 262,
-        TOK_LABEL = 263,
-        TOK_INSTR_OFFSET = 264,
-        TOK_SP = 265,
-        TOK_HALT = 266,
-        TOK_MALLOC = 267,
-        TOK_FREE = 268,
-        TOK_CALL = 269,
-        TOK_RET = 270,
-        TOK_COMPARE = 271,
-        TOK_PRINT = 272,
-        TOK_JUMP = 273,
-        TOK_JUMPT = 274,
-        TOK_JUMPF = 275,
-        TOK_MOV = 276,
-        TOK_POP = 277,
-        TOK_STORE = 278,
-        TOK_PUSH = 279,
-        TOK_ADD = 280,
-        TOK_SUB = 281,
-        TOK_MUL = 282,
-        TOK_DIV = 283,
-        TOK_MOD = 284,
-        TOK_POW = 285,
-        TOK_LSHIFT = 286,
-        TOK_RSHIFT = 287,
-        TOK_BAND = 288,
-        TOK_BOR = 289,
-        TOK_BXOR = 290,
-        TOK_LAND = 291,
-        TOK_LOR = 292,
-        TOK_LT = 293,
-        TOK_GT = 294,
-        TOK_LTEQ = 295,
-        TOK_GTEQ = 296,
-        TOK_EQ = 297,
-        TOK_NEQ = 298,
-        TOK_NEG = 299,
-        TOK_LNOT = 300,
-        TOK_BNOT = 301
+        TOK_STACK_POS = 263,
+        TOK_LABEL = 264,
+        TOK_INSTR_OFFSET = 265,
+        TOK_SP = 266,
+        TOK_HALT = 267,
+        TOK_MALLOC = 268,
+        TOK_FREE = 269,
+        TOK_CALL = 270,
+        TOK_RET = 271,
+        TOK_COMPARE = 272,
+        TOK_PRINT = 273,
+        TOK_JUMP = 274,
+        TOK_JUMPT = 275,
+        TOK_JUMPF = 276,
+        TOK_MOV = 277,
+        TOK_POP = 278,
+        TOK_STORE = 279,
+        TOK_PUSH = 280,
+        TOK_ADD = 281,
+        TOK_SUB = 282,
+        TOK_MUL = 283,
+        TOK_DIV = 284,
+        TOK_MOD = 285,
+        TOK_POW = 286,
+        TOK_LSHIFT = 287,
+        TOK_RSHIFT = 288,
+        TOK_BAND = 289,
+        TOK_BOR = 290,
+        TOK_BXOR = 291,
+        TOK_LAND = 292,
+        TOK_LOR = 293,
+        TOK_LT = 294,
+        TOK_GT = 295,
+        TOK_LTEQ = 296,
+        TOK_GTEQ = 297,
+        TOK_EQ = 298,
+        TOK_NEQ = 299,
+        TOK_NEG = 300,
+        TOK_LNOT = 301,
+        TOK_BNOT = 302
       };
     };
 
@@ -723,41 +725,41 @@ namespace ramvm { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 51: // ARGUMENT
-      case 52: // DEST_ARG
+      case 52: // ARGUMENT
+      case 53: // DEST_ARG
         value.template destroy< Argument > ();
         break;
 
-      case 21: // "MOV"
-      case 22: // "POP"
+      case 22: // "MOV"
+      case 23: // "POP"
         value.template destroy< DataType > ();
         break;
 
-      case 44: // "NEG"
-      case 45: // "LNOT"
-      case 46: // "BNOT"
+      case 45: // "NEG"
+      case 46: // "LNOT"
+      case 47: // "BNOT"
         value.template destroy< DataTypeDouble > ();
         break;
 
-      case 25: // "ADD"
-      case 26: // "SUB"
-      case 27: // "MUL"
-      case 28: // "DIV"
-      case 29: // "MOD"
-      case 30: // "POW"
-      case 31: // "LSHIFT"
-      case 32: // "RSHIFT"
-      case 33: // "BAND"
-      case 34: // "BOR"
-      case 35: // "BXOR"
-      case 36: // "LAND"
-      case 37: // "LOR"
-      case 38: // "LT"
-      case 39: // "GT"
-      case 40: // "LTEQ"
-      case 41: // "GTEQ"
-      case 42: // "EQ"
-      case 43: // "NEQ"
+      case 26: // "ADD"
+      case 27: // "SUB"
+      case 28: // "MUL"
+      case 29: // "DIV"
+      case 30: // "MOD"
+      case 31: // "POW"
+      case 32: // "LSHIFT"
+      case 33: // "RSHIFT"
+      case 34: // "BAND"
+      case 35: // "BOR"
+      case 36: // "BXOR"
+      case 37: // "LAND"
+      case 38: // "LOR"
+      case 39: // "LT"
+      case 40: // "GT"
+      case 41: // "LTEQ"
+      case 42: // "GTEQ"
+      case 43: // "EQ"
+      case 44: // "NEQ"
         value.template destroy< DataTypeTriple > ();
         break;
 
@@ -765,7 +767,7 @@ switch (yytype)
         value.template destroy< DataValue > ();
         break;
 
-      case 50: // STMT
+      case 51: // STMT
         value.template destroy< Instruction* > ();
         break;
 
@@ -773,28 +775,29 @@ switch (yytype)
       case 5: // "mreg"
       case 6: // "sreg"
       case 7: // "spoff"
-      case 9: // "ipOff"
+      case 8: // "stpos"
+      case 10: // "ipOff"
         value.template destroy< int > ();
         break;
 
-      case 53: // BINOP
+      case 54: // BINOP
         value.template destroy< std::pair<Binop, DataTypeTriple> > ();
         break;
 
-      case 54: // UNOP
+      case 55: // UNOP
         value.template destroy< std::pair<Unop, DataTypeDouble> > ();
         break;
 
-      case 8: // "LABEL"
+      case 9: // "LABEL"
         value.template destroy< std::string > ();
         break;
 
-      case 49: // ARGUMENTS
+      case 50: // ARGUMENTS
         value.template destroy< std::vector<Argument> > ();
         break;
 
-      case 23: // "STORE"
-      case 24: // "PUSH"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.template destroy< std::vector<DataType> > ();
         break;
 
@@ -936,13 +939,13 @@ switch (yytype)
       symbol_type (int tok, int v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_INSTR_OFFSET);
+        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_STACK_POS || tok == token::TOK_INSTR_OFFSET);
       }
 #else
       symbol_type (int tok, const int& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_INSTR_OFFSET);
+        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_STACK_POS || tok == token::TOK_INSTR_OFFSET);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1095,6 +1098,21 @@ switch (yytype)
       make_TOK_SP_OFFSET (const int& v)
       {
         return symbol_type (token::TOK_SP_OFFSET, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_STACK_POS (int v)
+      {
+        return symbol_type (token::TOK_STACK_POS, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_STACK_POS (const int& v)
+      {
+        return symbol_type (token::TOK_STACK_POS, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1733,7 +1751,7 @@ switch (yytype)
     // Tables.
     // YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
     // STATE-NUM.
-    static const signed char yypact_[];
+    static const short yypact_[];
 
     // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
     // Performed when YYTABLE does not specify something else to do.  Zero
@@ -2008,10 +2026,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 134,     ///< Last index in yytable_.
+      yylast_ = 153,     ///< Last index in yytable_.
       yynnts_ = 9,  ///< Number of nonterminal symbols.
       yyfinal_ = 43, ///< Termination state number.
-      yyntokens_ = 47  ///< Number of tokens.
+      yyntokens_ = 48  ///< Number of tokens.
     };
 
 
@@ -2063,9 +2081,9 @@ switch (yytype)
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
-      45,    46
+      45,    46,    47
     };
-    const int user_token_number_max_ = 301;
+    const int user_token_number_max_ = 302;
 
     if (t <= 0)
       return yyeof_;
@@ -2084,41 +2102,41 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 51: // ARGUMENT
-      case 52: // DEST_ARG
+      case 52: // ARGUMENT
+      case 53: // DEST_ARG
         value.move< Argument > (std::move (that.value));
         break;
 
-      case 21: // "MOV"
-      case 22: // "POP"
+      case 22: // "MOV"
+      case 23: // "POP"
         value.move< DataType > (std::move (that.value));
         break;
 
-      case 44: // "NEG"
-      case 45: // "LNOT"
-      case 46: // "BNOT"
+      case 45: // "NEG"
+      case 46: // "LNOT"
+      case 47: // "BNOT"
         value.move< DataTypeDouble > (std::move (that.value));
         break;
 
-      case 25: // "ADD"
-      case 26: // "SUB"
-      case 27: // "MUL"
-      case 28: // "DIV"
-      case 29: // "MOD"
-      case 30: // "POW"
-      case 31: // "LSHIFT"
-      case 32: // "RSHIFT"
-      case 33: // "BAND"
-      case 34: // "BOR"
-      case 35: // "BXOR"
-      case 36: // "LAND"
-      case 37: // "LOR"
-      case 38: // "LT"
-      case 39: // "GT"
-      case 40: // "LTEQ"
-      case 41: // "GTEQ"
-      case 42: // "EQ"
-      case 43: // "NEQ"
+      case 26: // "ADD"
+      case 27: // "SUB"
+      case 28: // "MUL"
+      case 29: // "DIV"
+      case 30: // "MOD"
+      case 31: // "POW"
+      case 32: // "LSHIFT"
+      case 33: // "RSHIFT"
+      case 34: // "BAND"
+      case 35: // "BOR"
+      case 36: // "BXOR"
+      case 37: // "LAND"
+      case 38: // "LOR"
+      case 39: // "LT"
+      case 40: // "GT"
+      case 41: // "LTEQ"
+      case 42: // "GTEQ"
+      case 43: // "EQ"
+      case 44: // "NEQ"
         value.move< DataTypeTriple > (std::move (that.value));
         break;
 
@@ -2126,7 +2144,7 @@ switch (yytype)
         value.move< DataValue > (std::move (that.value));
         break;
 
-      case 50: // STMT
+      case 51: // STMT
         value.move< Instruction* > (std::move (that.value));
         break;
 
@@ -2134,28 +2152,29 @@ switch (yytype)
       case 5: // "mreg"
       case 6: // "sreg"
       case 7: // "spoff"
-      case 9: // "ipOff"
+      case 8: // "stpos"
+      case 10: // "ipOff"
         value.move< int > (std::move (that.value));
         break;
 
-      case 53: // BINOP
+      case 54: // BINOP
         value.move< std::pair<Binop, DataTypeTriple> > (std::move (that.value));
         break;
 
-      case 54: // UNOP
+      case 55: // UNOP
         value.move< std::pair<Unop, DataTypeDouble> > (std::move (that.value));
         break;
 
-      case 8: // "LABEL"
+      case 9: // "LABEL"
         value.move< std::string > (std::move (that.value));
         break;
 
-      case 49: // ARGUMENTS
+      case 50: // ARGUMENTS
         value.move< std::vector<Argument> > (std::move (that.value));
         break;
 
-      case 23: // "STORE"
-      case 24: // "PUSH"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.move< std::vector<DataType> > (std::move (that.value));
         break;
 
@@ -2173,41 +2192,41 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 51: // ARGUMENT
-      case 52: // DEST_ARG
+      case 52: // ARGUMENT
+      case 53: // DEST_ARG
         value.copy< Argument > (YY_MOVE (that.value));
         break;
 
-      case 21: // "MOV"
-      case 22: // "POP"
+      case 22: // "MOV"
+      case 23: // "POP"
         value.copy< DataType > (YY_MOVE (that.value));
         break;
 
-      case 44: // "NEG"
-      case 45: // "LNOT"
-      case 46: // "BNOT"
+      case 45: // "NEG"
+      case 46: // "LNOT"
+      case 47: // "BNOT"
         value.copy< DataTypeDouble > (YY_MOVE (that.value));
         break;
 
-      case 25: // "ADD"
-      case 26: // "SUB"
-      case 27: // "MUL"
-      case 28: // "DIV"
-      case 29: // "MOD"
-      case 30: // "POW"
-      case 31: // "LSHIFT"
-      case 32: // "RSHIFT"
-      case 33: // "BAND"
-      case 34: // "BOR"
-      case 35: // "BXOR"
-      case 36: // "LAND"
-      case 37: // "LOR"
-      case 38: // "LT"
-      case 39: // "GT"
-      case 40: // "LTEQ"
-      case 41: // "GTEQ"
-      case 42: // "EQ"
-      case 43: // "NEQ"
+      case 26: // "ADD"
+      case 27: // "SUB"
+      case 28: // "MUL"
+      case 29: // "DIV"
+      case 30: // "MOD"
+      case 31: // "POW"
+      case 32: // "LSHIFT"
+      case 33: // "RSHIFT"
+      case 34: // "BAND"
+      case 35: // "BOR"
+      case 36: // "BXOR"
+      case 37: // "LAND"
+      case 38: // "LOR"
+      case 39: // "LT"
+      case 40: // "GT"
+      case 41: // "LTEQ"
+      case 42: // "GTEQ"
+      case 43: // "EQ"
+      case 44: // "NEQ"
         value.copy< DataTypeTriple > (YY_MOVE (that.value));
         break;
 
@@ -2215,7 +2234,7 @@ switch (yytype)
         value.copy< DataValue > (YY_MOVE (that.value));
         break;
 
-      case 50: // STMT
+      case 51: // STMT
         value.copy< Instruction* > (YY_MOVE (that.value));
         break;
 
@@ -2223,28 +2242,29 @@ switch (yytype)
       case 5: // "mreg"
       case 6: // "sreg"
       case 7: // "spoff"
-      case 9: // "ipOff"
+      case 8: // "stpos"
+      case 10: // "ipOff"
         value.copy< int > (YY_MOVE (that.value));
         break;
 
-      case 53: // BINOP
+      case 54: // BINOP
         value.copy< std::pair<Binop, DataTypeTriple> > (YY_MOVE (that.value));
         break;
 
-      case 54: // UNOP
+      case 55: // UNOP
         value.copy< std::pair<Unop, DataTypeDouble> > (YY_MOVE (that.value));
         break;
 
-      case 8: // "LABEL"
+      case 9: // "LABEL"
         value.copy< std::string > (YY_MOVE (that.value));
         break;
 
-      case 49: // ARGUMENTS
+      case 50: // ARGUMENTS
         value.copy< std::vector<Argument> > (YY_MOVE (that.value));
         break;
 
-      case 23: // "STORE"
-      case 24: // "PUSH"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.copy< std::vector<DataType> > (YY_MOVE (that.value));
         break;
 
@@ -2270,41 +2290,41 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 51: // ARGUMENT
-      case 52: // DEST_ARG
+      case 52: // ARGUMENT
+      case 53: // DEST_ARG
         value.move< Argument > (YY_MOVE (s.value));
         break;
 
-      case 21: // "MOV"
-      case 22: // "POP"
+      case 22: // "MOV"
+      case 23: // "POP"
         value.move< DataType > (YY_MOVE (s.value));
         break;
 
-      case 44: // "NEG"
-      case 45: // "LNOT"
-      case 46: // "BNOT"
+      case 45: // "NEG"
+      case 46: // "LNOT"
+      case 47: // "BNOT"
         value.move< DataTypeDouble > (YY_MOVE (s.value));
         break;
 
-      case 25: // "ADD"
-      case 26: // "SUB"
-      case 27: // "MUL"
-      case 28: // "DIV"
-      case 29: // "MOD"
-      case 30: // "POW"
-      case 31: // "LSHIFT"
-      case 32: // "RSHIFT"
-      case 33: // "BAND"
-      case 34: // "BOR"
-      case 35: // "BXOR"
-      case 36: // "LAND"
-      case 37: // "LOR"
-      case 38: // "LT"
-      case 39: // "GT"
-      case 40: // "LTEQ"
-      case 41: // "GTEQ"
-      case 42: // "EQ"
-      case 43: // "NEQ"
+      case 26: // "ADD"
+      case 27: // "SUB"
+      case 28: // "MUL"
+      case 29: // "DIV"
+      case 30: // "MOD"
+      case 31: // "POW"
+      case 32: // "LSHIFT"
+      case 33: // "RSHIFT"
+      case 34: // "BAND"
+      case 35: // "BOR"
+      case 36: // "BXOR"
+      case 37: // "LAND"
+      case 38: // "LOR"
+      case 39: // "LT"
+      case 40: // "GT"
+      case 41: // "LTEQ"
+      case 42: // "GTEQ"
+      case 43: // "EQ"
+      case 44: // "NEQ"
         value.move< DataTypeTriple > (YY_MOVE (s.value));
         break;
 
@@ -2312,7 +2332,7 @@ switch (yytype)
         value.move< DataValue > (YY_MOVE (s.value));
         break;
 
-      case 50: // STMT
+      case 51: // STMT
         value.move< Instruction* > (YY_MOVE (s.value));
         break;
 
@@ -2320,28 +2340,29 @@ switch (yytype)
       case 5: // "mreg"
       case 6: // "sreg"
       case 7: // "spoff"
-      case 9: // "ipOff"
+      case 8: // "stpos"
+      case 10: // "ipOff"
         value.move< int > (YY_MOVE (s.value));
         break;
 
-      case 53: // BINOP
+      case 54: // BINOP
         value.move< std::pair<Binop, DataTypeTriple> > (YY_MOVE (s.value));
         break;
 
-      case 54: // UNOP
+      case 55: // UNOP
         value.move< std::pair<Unop, DataTypeDouble> > (YY_MOVE (s.value));
         break;
 
-      case 8: // "LABEL"
+      case 9: // "LABEL"
         value.move< std::string > (YY_MOVE (s.value));
         break;
 
-      case 49: // ARGUMENTS
+      case 50: // ARGUMENTS
         value.move< std::vector<Argument> > (YY_MOVE (s.value));
         break;
 
-      case 23: // "STORE"
-      case 24: // "PUSH"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.move< std::vector<DataType> > (YY_MOVE (s.value));
         break;
 
@@ -2400,7 +2421,7 @@ switch (yytype)
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 2404 "ramvm_bison_parser.hpp"
+#line 2425 "ramvm_bison_parser.hpp"
 
 
 

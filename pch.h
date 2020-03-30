@@ -195,7 +195,7 @@ inline constexpr int ConcatDouble(byte _fst, byte _snd) { return (int(_fst) << 8
 inline bool IsInt(std::string _str) { try { IGNORE(std::stoi(_str)); return true; } catch (...) { return false; } }
 
 inline std::string StrReplace(std::string _str, std::string _chars, char _c) {
-	for (int i = 0; i < _str.length(); ++i)
+	for (int i = 0; i < (int)_str.length(); ++i)
 	{
 		for (auto const& c : _chars)
 		{

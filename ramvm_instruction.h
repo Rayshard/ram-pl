@@ -9,7 +9,7 @@ namespace ramvm {
 
 	enum class ArgType {
 		VALUE, REGISTER, MEM_REG,
-		STACK_REG, STACK_PTR, SP_OFFSET,
+		STACK_REG, STACK_PTR, SP_OFFSET, STACK_POS,
 		INVALID
 	};
 

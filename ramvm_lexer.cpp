@@ -18,6 +18,7 @@ namespace ramvm {
 			case LexerResultType::INVALID_OFFSET: return prefix + "Invalid Offset: " + GetErrorString();
 			case LexerResultType::COMMENT_CLOSE: return prefix + "Missing closing '`' for comment: " + GetErrorString();
 			case LexerResultType::MISSING_CLOSE_BRACKET: return prefix + "Missing closing bracket: " + GetErrorString();
+			case LexerResultType::INVALID_STACK_POS: return prefix + "Invalid Stack Position: " + GetErrorString();
 			case LexerResultType::INVALID: return prefix + "Invalid: " + GetErrorString();
 			case LexerResultType::UNKNOWN_TOKEN: return prefix + "Unknown Token: " + GetErrorString();
 			default: return prefix + "LexerResult::ToString - LexerResultType not handled!";
@@ -91,7 +92,8 @@ namespace ramvm {
 	const std::regex Lexer::REGEX_REG = std::regex("R(0|[1-9][0-9]*)");
 	const std::regex Lexer::REGEX_MEM_REG = std::regex("\\{R(0|[1-9][0-9]*)\\}");
 	const std::regex Lexer::REGEX_STACK_REG = std::regex("\\[R(0|[1-9][0-9]*)\\]");
-	const std::regex Lexer::REGEX_SP_OFFSET = std::regex("\\[(0|1|-[1-9][0-9]*)\\]");
+	const std::regex Lexer::REGEX_SP_OFFSET = std::regex("\\[SP([+]1|-[1-9][0-9]*)?\\]");
+	const std::regex Lexer::REGEX_STACK_POS = std::regex("\\[(0|[1-9][0-9]*)\\]");
 	const std::regex Lexer::REGEX_HEX_LIT = std::regex("0x[A-Fa-f0-9]+");
 	const std::regex Lexer::REGEX_INT_LIT = std::regex("-?(0|[1-9][0-9]*)");
 	const std::regex Lexer::REGEX_FLOAT_LIT = std::regex("-?(0|[1-9][0-9]*)\\.[0-9]+f?");
@@ -197,10 +199,17 @@ namespace ramvm {
 					}
 					else if (std::regex_match(tokenStr, REGEX_SP_OFFSET))
 					{
-						std::string idx = tokenStr.substr(1, tokenStr.length() - 2);
+						std::string idx = tokenStr == "[SP]" ? "0" : tokenStr.substr(3, tokenStr.length() - 4);
 
 						if (IsInt(idx)) { return LexerResult::GenSuccess(Token(TokenType::SP_OFFSET, tokStartPos, idx)); }
 						else { return LexerResult::GenError(LexerResultType::INVALID_OFFSET, tokenStr, position); }
+					}
+					else if (std::regex_match(tokenStr, REGEX_STACK_POS))
+					{
+						std::string idx = tokenStr.substr(1, tokenStr.length() - 2);
+
+						if (IsInt(idx)) { return LexerResult::GenSuccess(Token(TokenType::STACK_POS, tokStartPos, idx)); }
+						else { return LexerResult::GenError(LexerResultType::INVALID_STACK_POS, tokenStr, position); }
 					}
 					else { return LexerResult::GenExpectationError("register or offset", tokenStr.substr(1, tokenStr.length() - 2), position); }
 				}

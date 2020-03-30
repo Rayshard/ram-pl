@@ -1,6 +1,12 @@
-let k = 5;
+let k : long = 0l;
+let t : float = 1234.7809;
+let p : byte = 4b;
 
-func Factorial: (i: int) -> int = {
-	if i == 0 || i == 1 then {return 1;}
-	else {return Factorial(i - 1);};
+func Factorial: (i: int, acc: long) -> long = {
+	if i == 0 then return acc
+	else return Factorial(i - 1, acc * i);
+}
+
+func Main: () = {
+	k = Factorial(10, 1l);
 }

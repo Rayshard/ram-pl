@@ -28,16 +28,16 @@ namespace ramc {
 	{
 		switch (_type)
 		{
-			case ASTStmtType::ASSIGNMENT: return "ASSIGNMENT";
-			case ASTStmtType::VARDECL: return "VARDECL";
-			case ASTStmtType::BLOCK: return "BLOCK";
-			case ASTStmtType::IF: return "IF";
-			case ASTStmtType::WHILE: return "WHILE";
-			case ASTStmtType::FORLOOP: return "FORLOOP";
-			case ASTStmtType::BREAK: return "BREAK";
-			case ASTStmtType::CONTINUE: return "CONTINUE";
-			case ASTStmtType::RETURN: return "RETURN";
-			default: return "ASTStmtTypeToString() - ASTStmtType not handled!";
+		case ASTStmtType::ASSIGNMENT: return "ASSIGNMENT";
+		case ASTStmtType::VARDECL: return "VARDECL";
+		case ASTStmtType::BLOCK: return "BLOCK";
+		case ASTStmtType::IF: return "IF";
+		case ASTStmtType::WHILE: return "WHILE";
+		case ASTStmtType::FORLOOP: return "FORLOOP";
+		case ASTStmtType::BREAK: return "BREAK";
+		case ASTStmtType::CONTINUE: return "CONTINUE";
+		case ASTStmtType::RETURN: return "RETURN";
+		default: return "ASTStmtTypeToString() - ASTStmtType not handled!";
 		}
 	}
 
@@ -48,10 +48,19 @@ namespace ramc {
 		typeSysType = nullptr;
 	}
 
+	ASTNode::~ASTNode()
+	{
+		if (typeSysType)
+			delete typeSysType;
+	}
+
 	TypeResult ASTNode::TypeCheck(Environment* _env)
 	{
 		TypeResult result = _TypeCheck(_env);
-		typeSysType = result.GetValue();
+
+		if (result.IsSuccess())
+			typeSysType = (*result.GetValue())->GetCopy();
+
 		return result;
 	}
 
@@ -107,26 +116,35 @@ namespace ramc {
 				return declTypeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::UNIT);
+		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
 	InstructionSet ASTProgram::GenerateCode(Environment* _env)
 	{
 		InstructionSet instrs;
 
+		//Add Top Level Variable Declarations
 		for (auto const& varDecl : varDecls)
 		{
 			auto declInstrs = varDecl->GenerateCode(info);
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
+		Instruction* entryCall = new InstrCall(-1, 0, Argument(ArgType::VALUE, 0));
+		instrs.push_back(entryCall);
+
+		//Halt so that functions don't get run without begin called
 		instrs.push_back(new InstrHalt());
 
+		//Add Top Level Functions
 		for (auto const& funcDecl : funcDecls)
 		{
 			auto declInstrs = funcDecl->GenerateCode(_env, info);
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
+
+		//Add entry call as a labeled control instruction to the main function
+		info.labeledCtrlInstrs[ProgramInfo::MAIN_FUNC_LABEL].push_back(entryCall);
 
 		//Convert Labels
 		for (int i = 0; i < (int)info.offsetedCtrlInstrs.size(); i++)
@@ -166,16 +184,23 @@ namespace ramc {
 		for (auto const& it : params)
 			paramTypes.push_back(it.type);
 
-		TypePtr retType;
-		if (_retTypes.size() == 0) { retType = Type::UNIT; }
+		Type* retType;
+		if (_retTypes.size() == 0) { retType = Type::UNIT(); }
 		else if (_retTypes.size() == 1) { retType = _retTypes[0]; }
-		else { retType = TypePtr(new TupleType(_retTypes)); }
+		else { retType = new TupleType(_retTypes); }
 
-		funcType = new FuncType(TypePtr(new TupleType(paramTypes)), retType);
+		funcType = new FuncType(new TupleType(paramTypes), retType);
 		body = _body;
 	}
 
-	ASTFuncDecl::~ASTFuncDecl() { delete body; }
+	ASTFuncDecl::~ASTFuncDecl()
+	{
+		//The types for the params and ret
+		//are deleted with funcType
+
+		delete funcType;
+		delete body;
+	}
 
 	std::string ASTFuncDecl::ToString(int _indentLvl, std::string _prefix)
 	{
@@ -190,10 +215,8 @@ namespace ramc {
 
 	TypeResult ASTFuncDecl::_TypeCheck(Environment* _env)
 	{
-		TypePtr typePtr = TypePtr(funcType);
-
 		//Add Function to environment
-		TypeResult declTypeRes = _env->AddFunction(name, typePtr, label, GetPosition());
+		TypeResult declTypeRes = _env->AddFunction(name, funcType, label, GetPosition());
 		if (!declTypeRes.IsSuccess())
 			return declTypeRes;
 
@@ -202,7 +225,8 @@ namespace ramc {
 		//Type check parameters in local environment
 		for (auto const& it : params)
 		{
-			TypeResult paramTypeRes = subEnv.AddVariable(it.name, it.type, ArgType::STACK_REG, it.position);
+			Argument source = Argument(ArgType::REGISTER, subEnv.GetNextRegIdx());
+			TypeResult paramTypeRes = subEnv.AddVariable(it.name, it.type, source, it.position);
 			if (!paramTypeRes.IsSuccess())
 				return paramTypeRes;
 		}
@@ -222,7 +246,7 @@ namespace ramc {
 		}
 
 		regCnt = subEnv.GetNumRegNeeded();
-		return TypeResult::GenSuccess(typePtr);
+		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
 	InstructionSet ASTFuncDecl::GenerateCode(Environment* _env, ProgramInfo& _progInfo)
@@ -233,14 +257,13 @@ namespace ramc {
 		_progInfo.funcRegCnts.insert_or_assign(label, regCnt);
 
 		int paramsTotalByteSize = 0;
-		for (int i = 0, offset = 0; i < params.size(); i++)
+		for (int i = 0; i < (int)params.size(); i++)
 		{
-			Argument offsetArg = Argument(ArgType::VALUE, offset);
+			int byteSize = params[i].type->GetByteSize();
+			Argument offsetArg = Argument(ArgType::SP_OFFSET, -paramsTotalByteSize - byteSize + 1);
 			Argument destReg = Argument(ArgType::REGISTER, i);
 			instrs.push_back(new InstrMove(DataType::INT, offsetArg, destReg));
 
-			int byteSize = params[i].type->GetByteSize();
-			offset -= byteSize;
 			paramsTotalByteSize += byteSize;
 		}
 
@@ -250,43 +273,38 @@ namespace ramc {
 		if (funcType->IsProcedure())
 			instrs.push_back(new InstrReturn(Argument(ArgType::VALUE, 0)));
 
-		_progInfo.AddFuncDecl(Environment::GenFuncLabel(name, funcType->GetParamsType()), instrs.front());
+		_progInfo.AddFuncDecl(Environment::GenFuncLabel(name, funcType->GetParamsType()), regCnt, instrs.front());
 		return instrs;
 	}
 #pragma endregion
 
 #pragma region VarDecl
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, Position _pos)
-		: ASTStmt(ASTStmtType::VARDECL, _pos)
-	{
-		id = _id;
-		expr = _expr;
-		isUnderscore = false;
-		restraint = nullptr;
-	}
-
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, TypePtr _restraint, ASTExpr* _expr, Position _pos)
+	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos)
 		: ASTStmt(ASTStmtType::VARDECL, _pos)
 	{
 		id = _id;
 		expr = _expr;
 		isUnderscore = false;
 		restraint = _restraint;
+		isGlobal = _isGlobal;
 	}
 
+	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, bool _isGlobal, Position _pos)
+		: ASTVarDecl(_id, nullptr, _expr, _isGlobal, _pos) { }
+
 	ASTVarDecl::ASTVarDecl(ASTExpr* _expr, Position _pos)
-		: ASTStmt(ASTStmtType::VARDECL, _pos)
+		: ASTVarDecl(nullptr, nullptr, _expr, false, _pos)
 	{
-		id = nullptr;
-		expr = _expr;
 		isUnderscore = true;
-		restraint = nullptr;
 	}
 
 	ASTVarDecl::~ASTVarDecl()
 	{
 		delete id;
 		delete expr;
+
+		if (restraint)
+			delete restraint;
 	}
 
 	std::string ASTVarDecl::ToString(int _indentLvl, std::string _prefix)
@@ -306,16 +324,18 @@ namespace ramc {
 		TypeResult exprTypeRes = expr->TypeCheck(_env);
 
 		if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
-		else if (isUnderscore) { return TypeResult::GenSuccess(Type::UNIT); }
-		else if (restraint && !Type::Matches(exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), exprTypeRes.GetValue()->ToString(0), GetPosition()); }
+		else if (isUnderscore) { return TypeResult::GenSuccess(Type::UNIT()); }
+		else if (restraint && !Type::Matches(*exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), (*exprTypeRes.GetValue())->ToString(0), GetPosition()); }
 		else
 		{
-			TypeResult idRes = _env->AddVariable(id->GetID(), exprTypeRes.GetValue(), ArgType::REGISTER, GetPosition());
-			if (!idRes.IsSuccess()) 
+			int valByteLen = (*exprTypeRes.GetValue())->GetByteSize();
+			Argument source = isGlobal ? Argument(ArgType::STACK_POS, _env->GetNextGlobalStackPos(valByteLen)) : Argument(ArgType::REGISTER, _env->GetNextRegIdx());
+			TypeResult idRes = _env->AddVariable(id->GetID(), *exprTypeRes.GetValue(), source, GetPosition());
+			if (!idRes.IsSuccess())
 				return idRes;
 
 			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
-			return TypeResult::GenSuccess(Type::UNIT);
+			return TypeResult::GenSuccess(Type::UNIT());
 		}
 	}
 
@@ -327,7 +347,11 @@ namespace ramc {
 			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, expr->GetTypeSysType()->GetByteSize())));
 			return instrs;
 		}
-		else { return expr->GenerateCode(id->GetSource(), _progInfo); }
+		else
+		{
+			if (isGlobal) { return expr->GenerateCode(Argument::CreateStackTop(), _progInfo); }
+			else { return expr->GenerateCode(id->GetSource(), _progInfo); }
+		}
 	}
 
 	CodePathNode* ASTVarDecl::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, true); }
@@ -364,19 +388,19 @@ namespace ramc {
 
 		switch (assignType)
 		{
-			case AssignmentType::EQ: expr = _expr; break;
-			case AssignmentType::ADD_EQ: expr = new ASTBinopExpr(id, expr, BinopType::ADD); break;
-			case AssignmentType::SUB_EQ: expr = new ASTBinopExpr(id, expr, BinopType::SUB); break;
-			case AssignmentType::MUL_EQ: expr = new ASTBinopExpr(id, expr, BinopType::MUL); break;
-			case AssignmentType::DIV_EQ: expr = new ASTBinopExpr(id, expr, BinopType::DIV); break;
-			case AssignmentType::MOD_EQ: expr = new ASTBinopExpr(id, expr, BinopType::MOD); break;
-			case AssignmentType::POW_EQ: expr = new ASTBinopExpr(id, expr, BinopType::POW); break;
-			case AssignmentType::BIN_AND_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_AND); break;
-			case AssignmentType::BIN_OR_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_OR); break;
-			case AssignmentType::BIN_XOR_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_XOR); break;
-			case AssignmentType::LSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::LSHIFT); break;
-			case AssignmentType::RSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::RSHIFT); break;
-			default: throw std::runtime_error("ASTAssignment() - AssignmentType not handled!");
+		case AssignmentType::EQ: expr = _expr; break;
+		case AssignmentType::ADD_EQ: expr = new ASTBinopExpr(id, expr, BinopType::ADD); break;
+		case AssignmentType::SUB_EQ: expr = new ASTBinopExpr(id, expr, BinopType::SUB); break;
+		case AssignmentType::MUL_EQ: expr = new ASTBinopExpr(id, expr, BinopType::MUL); break;
+		case AssignmentType::DIV_EQ: expr = new ASTBinopExpr(id, expr, BinopType::DIV); break;
+		case AssignmentType::MOD_EQ: expr = new ASTBinopExpr(id, expr, BinopType::MOD); break;
+		case AssignmentType::POW_EQ: expr = new ASTBinopExpr(id, expr, BinopType::POW); break;
+		case AssignmentType::BIN_AND_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_AND); break;
+		case AssignmentType::BIN_OR_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_OR); break;
+		case AssignmentType::BIN_XOR_EQ: expr = new ASTBinopExpr(id, expr, BinopType::BIN_XOR); break;
+		case AssignmentType::LSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::LSHIFT); break;
+		case AssignmentType::RSHIFT_EQ: expr = new ASTBinopExpr(id, expr, BinopType::RSHIFT); break;
+		default: throw std::runtime_error("ASTAssignment() - AssignmentType not handled!");
 		}
 	}
 
@@ -410,8 +434,8 @@ namespace ramc {
 		if (!idTypeRes.IsSuccess())
 			return idTypeRes;
 
-		if (Type::Matches(idTypeRes.GetValue(), exprTypeRes.GetValue())) { return TypeResult::GenSuccess(Type::UNIT); }
-		else { return TypeResult::GenMismatch("Cannot assign " + exprTypeRes.GetValue()->ToString(false) + " to " + idTypeRes.GetValue()->ToString(false), GetPosition()); }
+		if (Type::Matches(*idTypeRes.GetValue(), *exprTypeRes.GetValue())) { return TypeResult::GenSuccess(Type::UNIT()); }
+		else { return TypeResult::GenMismatch("Cannot assign " + (*exprTypeRes.GetValue())->ToString(false) + " to " + (*idTypeRes.GetValue())->ToString(false), GetPosition()); }
 	}
 
 	InstructionSet ASTAssignment::GenerateCode(ProgramInfo& _progInfo) { return expr->GenerateCode(id->GetSource(), _progInfo); }
@@ -487,812 +511,812 @@ namespace ramc {
 		if (!rightTypeRes.IsSuccess())
 			return rightTypeRes;
 
-		TypePtr leftType = leftTypeRes.GetValue(), rightType = rightTypeRes.GetValue();
+		Type* leftType = *leftTypeRes.GetValue(), * rightType = *rightTypeRes.GetValue();
 
 		switch (ConcatTriple((byte)op, (byte)leftType->GetType(), (byte)rightType->GetType()))
 		{
 #pragma region ADD
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::ADD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region SUB
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::SUB, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region MUL
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MUL, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region DIV
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::DIV, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region MOD
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::MOD, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region POW
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::POW, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region BIN_AND
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region BIN_OR
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region BIN_XOR
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::BIN_XOR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region LSHIFT
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BYTE);
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BYTE());
 
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::INT);
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::INT());
 
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::LSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region RSHIFT
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BYTE);
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BYTE());
 
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::INT);
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::INT());
 
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE);
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::DOUBLE());
 
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG);
-			case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::LONG());
+		case ConcatTriple((byte)BinopType::RSHIFT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 #pragma endregion
 
 #pragma region LT
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region GT
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region LT_EQ
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region GT_EQ
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::GT_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region EQ_EQ
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::EQ_EQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region NEQ
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::NEQ, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region LOG_AND
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_AND, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
 
 #pragma region LOG_OR
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BYTE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::BOOL, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::INT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::FLOAT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::DOUBLE, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
-			default: return TypeResult::GenMismatch("Cannot perform operation on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition());
+		default: return TypeResult::GenMismatch("Cannot perform operation on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition());
 		}
 	}
 
@@ -1325,26 +1349,26 @@ namespace ramc {
 
 		switch (op)
 		{
-			case BinopType::ADD: instrs.push_back(new InstrBinop(Binop::ADD, src1, src2, stackDest)); break;
-			case BinopType::SUB: instrs.push_back(new InstrBinop(Binop::SUB, src1, src2, stackDest)); break;
-			case BinopType::MUL: instrs.push_back(new InstrBinop(Binop::MUL, src1, src2, stackDest)); break;
-			case BinopType::DIV: instrs.push_back(new InstrBinop(Binop::DIV, src1, src2, stackDest)); break;
-			case BinopType::MOD: instrs.push_back(new InstrBinop(Binop::MOD, src1, src2, stackDest)); break;
-			case BinopType::POW: instrs.push_back(new InstrBinop(Binop::POW, src1, src2, stackDest)); break;
-			case BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::BIT_AND, src1, src2, stackDest)); break;
-			case BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::BIT_OR, src1, src2, stackDest)); break;
-			case BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::BIT_XOR, src1, src2, stackDest)); break;
-			case BinopType::LSHIFT: instrs.push_back(new InstrBinop(Binop::LSHIFT, src1, src2, stackDest)); break;
-			case BinopType::RSHIFT: instrs.push_back(new InstrBinop(Binop::RSHIFT, src1, src2, stackDest)); break;
-			case BinopType::LT: instrs.push_back(new InstrBinop(Binop::LT, src1, src2, stackDest)); break;
-			case BinopType::GT: instrs.push_back(new InstrBinop(Binop::GT, src1, src2, stackDest)); break;
-			case BinopType::LT_EQ: instrs.push_back(new InstrBinop(Binop::LTEQ, src1, src2, stackDest)); break;
-			case BinopType::GT_EQ: instrs.push_back(new InstrBinop(Binop::GTEQ, src1, src2, stackDest)); break;
-			case BinopType::EQ_EQ: instrs.push_back(new InstrBinop(Binop::EQ, src1, src2, stackDest)); break;
-			case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, src1, src2, stackDest)); break;
-			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, src1, src2, stackDest)); break;
-			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, src1, src2, stackDest)); break;
-			default: throw std::runtime_error("BinopExpr::GenerateCode - BinopType not handled!");
+		case BinopType::ADD: instrs.push_back(new InstrBinop(Binop::ADD, src1, src2, stackDest)); break;
+		case BinopType::SUB: instrs.push_back(new InstrBinop(Binop::SUB, src1, src2, stackDest)); break;
+		case BinopType::MUL: instrs.push_back(new InstrBinop(Binop::MUL, src1, src2, stackDest)); break;
+		case BinopType::DIV: instrs.push_back(new InstrBinop(Binop::DIV, src1, src2, stackDest)); break;
+		case BinopType::MOD: instrs.push_back(new InstrBinop(Binop::MOD, src1, src2, stackDest)); break;
+		case BinopType::POW: instrs.push_back(new InstrBinop(Binop::POW, src1, src2, stackDest)); break;
+		case BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::BIT_AND, src1, src2, stackDest)); break;
+		case BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::BIT_OR, src1, src2, stackDest)); break;
+		case BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::BIT_XOR, src1, src2, stackDest)); break;
+		case BinopType::LSHIFT: instrs.push_back(new InstrBinop(Binop::LSHIFT, src1, src2, stackDest)); break;
+		case BinopType::RSHIFT: instrs.push_back(new InstrBinop(Binop::RSHIFT, src1, src2, stackDest)); break;
+		case BinopType::LT: instrs.push_back(new InstrBinop(Binop::LT, src1, src2, stackDest)); break;
+		case BinopType::GT: instrs.push_back(new InstrBinop(Binop::GT, src1, src2, stackDest)); break;
+		case BinopType::LT_EQ: instrs.push_back(new InstrBinop(Binop::LTEQ, src1, src2, stackDest)); break;
+		case BinopType::GT_EQ: instrs.push_back(new InstrBinop(Binop::GTEQ, src1, src2, stackDest)); break;
+		case BinopType::EQ_EQ: instrs.push_back(new InstrBinop(Binop::EQ, src1, src2, stackDest)); break;
+		case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, src1, src2, stackDest)); break;
+		case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, src1, src2, stackDest)); break;
+		case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, src1, src2, stackDest)); break;
+		default: throw std::runtime_error("BinopExpr::GenerateCode - BinopType not handled!");
 		}
 
 		//Create Pop to remove the bytes past the result
@@ -1402,32 +1426,32 @@ namespace ramc {
 		if (!typeRes.IsSuccess())
 			return typeRes;
 
-		TypePtr exprType = typeRes.GetValue();
+		Type* exprType = *typeRes.GetValue();
 
 		switch (ConcatDouble((byte)op, (byte)exprType->GetType()))
 		{
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatDouble((byte)UnopType::NEG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL);
-			case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL);
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
+		case ConcatDouble((byte)UnopType::LOG_NOT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE);
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT);
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT);
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE);
-			case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG);
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::BYTE): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::BOOL): return TypeResult::GenSuccess(Type::BYTE());
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(Type::INT());
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::FLOAT): return TypeResult::GenSuccess(Type::FLOAT());
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::DOUBLE());
+		case ConcatDouble((byte)UnopType::BIN_NOT, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::LONG());
 
-			default: return TypeResult::GenMismatch("Cannot perform operation on " + exprType->ToString(false), GetPosition());
+		default: return TypeResult::GenMismatch("Cannot perform operation on " + exprType->ToString(false), GetPosition());
 		}
 	}
 
@@ -1451,10 +1475,10 @@ namespace ramc {
 
 		switch (op)
 		{
-			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, src, stackDest)); break;
-			case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, src, stackDest)); break;
-			case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::BIN_NOT, src, stackDest)); break;
-			default: throw std::runtime_error("UnopExpr::GenerateCode - UnopType not handled!");
+		case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, src, stackDest)); break;
+		case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, src, stackDest)); break;
+		case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::BIN_NOT, src, stackDest)); break;
+		default: throw std::runtime_error("UnopExpr::GenerateCode - UnopType not handled!");
 		}
 
 		//Create Pop to remove the bytes past the result if any
@@ -1535,16 +1559,18 @@ namespace ramc {
 			if (!argTypeRes.IsSuccess())
 				return argTypeRes;
 
-			argTypes.push_back(argTypeRes.GetValue());
+			argTypes.push_back((*argTypeRes.GetValue())->GetCopy());
 		}
 
-		TypePtr paramsType = TypePtr(new TupleType(argTypes));
-		TypeResult funcTypeRes = _env->GetFunctionRetType(funcName, paramsType, GetPosition());
-		if (!funcTypeRes.IsSuccess())
-			return funcTypeRes;
+		Type* paramsType = new TupleType(argTypes);
+		TypeResult funcRetTypeRes = _env->GetFunctionRetType(funcName, paramsType, GetPosition());
+		if (!funcRetTypeRes.IsSuccess())
+			return funcRetTypeRes;
 
 		funcLabel = Environment::GenFuncLabel(funcName, paramsType);
-		return TypeResult::GenSuccess(((FuncType*)funcTypeRes.GetValue().get())->GetRetType());
+		
+		delete paramsType;
+		return funcRetTypeRes;
 	}
 
 	InstructionSet ASTFuncCallExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
@@ -1563,8 +1589,18 @@ namespace ramc {
 			argsByteLen += arg->GetTypeSysType()->GetByteSize();
 		}
 
+		int funcRegCnt = _progInfo.funcRegCnts[funcLabel];
 		instrs.push_back(new InstrCall(-1, funcRegCnt, Argument(ArgType::VALUE, argsByteLen)));
 		_progInfo.labeledCtrlInstrs[funcLabel].push_back(instrs.back());
+
+		//Move value to destination
+		if (!_dest.IsStackTop())
+		{
+			auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
+			int retByteSize = this->GetTypeSysType()->GetByteSize();
+			instrs.push_back(new InstrMove(destDataType, Argument(ArgType::SP_OFFSET, -retByteSize + 1), _dest));
+			instrs.push_back(new InstrPop(DataType::BYTE, Argument(ArgType::VALUE, retByteSize)));
+		}
 
 		return instrs;
 	}
@@ -1606,7 +1642,7 @@ namespace ramc {
 	{
 		TypeResult condTypeRes = condExpr->TypeCheck(_env);
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
-		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
 		Environment thenSubEnv(_env, true);
 		TypeResult thenTypeRes = thenStmt->TypeCheck(&thenSubEnv);
@@ -1621,7 +1657,7 @@ namespace ramc {
 				return elseTypeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::UNIT);
+		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
 	InstructionSet ASTIfStmt::GenerateCode(ProgramInfo& _progInfo)
@@ -1701,7 +1737,7 @@ namespace ramc {
 	{
 		TypeResult condTypeRes = condExpr->TypeCheck(_env);
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
-		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
 		TypeResult thenTypeRes = thenExpr->TypeCheck(_env);
 		if (!thenTypeRes.IsSuccess())
@@ -1711,8 +1747,8 @@ namespace ramc {
 		if (!elseTypeRes.IsSuccess())
 			return elseTypeRes;
 
-		if (Type::Matches(thenTypeRes.GetValue(), elseTypeRes.GetValue())) { return thenTypeRes; }
-		else { return TypeResult::GenExpectation(thenTypeRes.GetValue()->ToString(0), elseTypeRes.GetValue()->ToString(false), elseExpr->GetPosition()); }
+		if (Type::Matches(*thenTypeRes.GetValue(), *elseTypeRes.GetValue())) { return thenTypeRes; }
+		else { return TypeResult::GenExpectation((*thenTypeRes.GetValue())->ToString(0), (*elseTypeRes.GetValue())->ToString(false), elseExpr->GetPosition()); }
 	}
 
 	InstructionSet ASTIfExpr::GenerateCode(Argument _dest, ProgramInfo& _progInfo)
@@ -1786,7 +1822,7 @@ namespace ramc {
 	{
 		TypeResult condTypeRes = condExpr->TypeCheck(_env);
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
-		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
 		Environment subEnv(_env, true);
 		return body->TypeCheck(&subEnv);
@@ -1869,7 +1905,7 @@ namespace ramc {
 
 		TypeResult condTypeRes = condExpr->TypeCheck(&subEnv);
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
-		else if (!condTypeRes.GetValue()->Matches(Type::BOOL)) { return TypeResult::GenExpectation(Type::BOOL->ToString(0), condTypeRes.GetValue()->ToString(0), condExpr->GetPosition()); }
+		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
 		TypeResult bodyTypeRes = body->TypeCheck(&subEnv);
 		if (!bodyTypeRes.IsSuccess())
@@ -1953,7 +1989,7 @@ namespace ramc {
 				return typeRes;
 		}
 
-		return TypeResult::GenSuccess(Type::UNIT);
+		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
 	InstructionSet ASTBlock::GenerateCode(ProgramInfo& _progInfo)
@@ -1994,7 +2030,7 @@ namespace ramc {
 
 	std::string ASTBreakContinueStmt::ToString(int _indentLvl, std::string _prefix) { return CreateIndent(_indentLvl) + _prefix + (IsBreak() ? "Break" : "Continue"); }
 
-	TypeResult ASTBreakContinueStmt::_TypeCheck(Environment* _env) { return TypeResult::GenSuccess(Type::UNIT); }
+	TypeResult ASTBreakContinueStmt::_TypeCheck(Environment* _env) { return TypeResult::GenSuccess(Type::UNIT()); }
 
 	InstructionSet ASTBreakContinueStmt::GenerateCode(ProgramInfo& _progInfo)
 	{
@@ -2042,13 +2078,13 @@ namespace ramc {
 		{
 			TypeResult exprTypeRes = it->TypeCheck(_env);
 			if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
-			else { exprTypes.push_back(exprTypeRes.GetValue()); }
+			else { exprTypes.push_back((*exprTypeRes.GetValue())->GetCopy()); }
 		}
 
 		int numExprs = exprTypes.size();
-		if (numExprs == 0) { return TypeResult::GenSuccess(Type::UNIT); }
+		if (numExprs == 0) { return TypeResult::GenSuccess(Type::UNIT()); }
 		else if (numExprs == 1) { return TypeResult::GenSuccess(exprTypes[0]); }
-		else { return TypeResult::GenSuccess(TypePtr(new TupleType(exprTypes))); }
+		else { return TypeResult::GenSuccess(new TupleType(exprTypes)); }
 	}
 
 	InstructionSet ASTReturnStmt::GenerateCode(ProgramInfo& _progInfo)
@@ -2074,6 +2110,8 @@ namespace ramc {
 #pragma endregion
 
 #pragma region Program Info
+	std::string ProgramInfo::MAIN_FUNC_LABEL = Environment::GenFuncLabel("Main", *std::make_shared<TupleType*>(new TupleType({})));
+
 	ProgramInfo::LabeledWhileLoop ProgramInfo::GenWhileLoopLabels()
 	{
 		std::string beginLabel = "LoopBegin" + std::to_string(numLoopLabels);
@@ -2143,9 +2181,10 @@ namespace ramc {
 		return { beginLabel, thenLabel, elseLabel, endLabel };
 	}
 
-	void ProgramInfo::AddFuncDecl(std::string _label, Instruction* _instr)
+	void ProgramInfo::AddFuncDecl(std::string _label, int _regCnt, Instruction* _instr)
 	{
 		labels.insert_or_assign(_label, _instr);
+		funcRegCnts.insert_or_assign(_label, _regCnt);
 	}
 
 	void ProgramInfo::SetLabelInstr(std::string _label, Instruction* _instr)

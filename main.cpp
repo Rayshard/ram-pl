@@ -109,7 +109,6 @@ int CompilerMain()
 	using namespace ramc;
 
 	std::ifstream stream("Tests/Compiler/test_lex.ram");
-	
 	ParseResult result = ParseFile(&stream, "test_lex.ram", 4);
 
 	if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
@@ -127,12 +126,11 @@ int CompilerMain()
 			std::cout << "Type Error: " << typeRes.ToString(true) << std::endl;
 			return 0;
 		}
-		
+
 		auto instrs = prog->GenerateCode(&env);
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
 		ProgramInfo progInfo = prog->GetInfo();
-		
 		std::unordered_multimap<Instruction*, std::string> instrLabels;
 		for (auto it : progInfo.labels)
 			instrLabels.insert(std::make_pair(it.second, it.first));
@@ -144,20 +142,11 @@ int CompilerMain()
 			auto labelSearch = instrLabels.equal_range(instr);
 			for (auto it = labelSearch.first; it != labelSearch.second; ++it)
 				std::cout << it->second << std::endl;
-			
+
 			std::cout << i << "\t" << instr->ToString() << std::endl;
 		}
 
-		return 0;
-
-		while (OptimizeInstructionSet(instrs)) //Loop till no change
-		{
-			std::cout << "Program Instructions (Optimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
-
-			//for (auto instr : instrs)
-				//std::cout << "     " << instr.ToString() << std::endl;
-		}
-		//return 0;
+		
 		//Run VM
 		using namespace ramvm;
 

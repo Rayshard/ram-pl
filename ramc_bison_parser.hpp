@@ -458,7 +458,7 @@ namespace ramc { namespace bison {
       // "string"
       // "void"
       // TYPE
-      char dummy19[sizeof (TypePtr)];
+      char dummy19[sizeof (Type*)];
 
       // "ID"
       char dummy20[sizeof (std::pair<std::string, Position>)];
@@ -473,7 +473,7 @@ namespace ramc { namespace bison {
       // STMTS
       char dummy23[sizeof (std::vector<ASTStmt*>)];
 
-      // TL_VARDECLS
+      // VARDECLS
       char dummy24[sizeof (std::vector<ASTVarDecl*>)];
 
       // PARAM_STAR
@@ -481,7 +481,7 @@ namespace ramc { namespace bison {
       char dummy25[sizeof (std::vector<Param>)];
 
       // TYPE_PLUS
-      char dummy26[sizeof (std::vector<TypePtr>)];
+      char dummy26[sizeof (std::vector<Type*>)];
     };
 
     /// The size of the largest semantic type.
@@ -843,12 +843,12 @@ namespace ramc { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, TypePtr&& v)
+      basic_symbol (typename Base::kind_type t, Type*&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const TypePtr& v)
+      basic_symbol (typename Base::kind_type t, const Type*& v)
         : Base (t)
         , value (v)
       {}
@@ -920,12 +920,12 @@ namespace ramc { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::vector<TypePtr>&& v)
+      basic_symbol (typename Base::kind_type t, std::vector<Type*>&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const std::vector<TypePtr>& v)
+      basic_symbol (typename Base::kind_type t, const std::vector<Type*>& v)
         : Base (t)
         , value (v)
       {}
@@ -1063,7 +1063,7 @@ switch (yytype)
       case 63: // "string"
       case 64: // "void"
       case 109: // TYPE
-        value.template destroy< TypePtr > ();
+        value.template destroy< Type* > ();
         break;
 
       case 48: // "ID"
@@ -1083,7 +1083,7 @@ switch (yytype)
         value.template destroy< std::vector<ASTStmt*> > ();
         break;
 
-      case 102: // TL_VARDECLS
+      case 102: // VARDECLS
         value.template destroy< std::vector<ASTVarDecl*> > ();
         break;
 
@@ -1093,7 +1093,7 @@ switch (yytype)
         break;
 
       case 108: // TYPE_PLUS
-        value.template destroy< std::vector<TypePtr> > ();
+        value.template destroy< std::vector<Type*> > ();
         break;
 
       default:
@@ -1283,13 +1283,13 @@ switch (yytype)
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      symbol_type (int tok, TypePtr v)
+      symbol_type (int tok, Type* v)
         : super_type(token_type (tok), std::move (v))
       {
         YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING || tok == token::KW_VOID);
       }
 #else
-      symbol_type (int tok, const TypePtr& v)
+      symbol_type (int tok, const Type*& v)
         : super_type(token_type (tok), v)
       {
         YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING || tok == token::KW_VOID);
@@ -2172,14 +2172,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_BYTE (TypePtr v)
+      make_KW_BYTE (Type* v)
       {
         return symbol_type (token::KW_BYTE, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_BYTE (const TypePtr& v)
+      make_KW_BYTE (const Type*& v)
       {
         return symbol_type (token::KW_BYTE, v);
       }
@@ -2187,14 +2187,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_BOOL (TypePtr v)
+      make_KW_BOOL (Type* v)
       {
         return symbol_type (token::KW_BOOL, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_BOOL (const TypePtr& v)
+      make_KW_BOOL (const Type*& v)
       {
         return symbol_type (token::KW_BOOL, v);
       }
@@ -2202,14 +2202,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_INT (TypePtr v)
+      make_KW_INT (Type* v)
       {
         return symbol_type (token::KW_INT, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_INT (const TypePtr& v)
+      make_KW_INT (const Type*& v)
       {
         return symbol_type (token::KW_INT, v);
       }
@@ -2217,14 +2217,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_FLOAT (TypePtr v)
+      make_KW_FLOAT (Type* v)
       {
         return symbol_type (token::KW_FLOAT, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_FLOAT (const TypePtr& v)
+      make_KW_FLOAT (const Type*& v)
       {
         return symbol_type (token::KW_FLOAT, v);
       }
@@ -2232,14 +2232,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_DOUBLE (TypePtr v)
+      make_KW_DOUBLE (Type* v)
       {
         return symbol_type (token::KW_DOUBLE, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_DOUBLE (const TypePtr& v)
+      make_KW_DOUBLE (const Type*& v)
       {
         return symbol_type (token::KW_DOUBLE, v);
       }
@@ -2247,14 +2247,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_LONG (TypePtr v)
+      make_KW_LONG (Type* v)
       {
         return symbol_type (token::KW_LONG, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_LONG (const TypePtr& v)
+      make_KW_LONG (const Type*& v)
       {
         return symbol_type (token::KW_LONG, v);
       }
@@ -2262,14 +2262,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_STRING (TypePtr v)
+      make_KW_STRING (Type* v)
       {
         return symbol_type (token::KW_STRING, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_STRING (const TypePtr& v)
+      make_KW_STRING (const Type*& v)
       {
         return symbol_type (token::KW_STRING, v);
       }
@@ -2277,14 +2277,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_VOID (TypePtr v)
+      make_KW_VOID (Type* v)
       {
         return symbol_type (token::KW_VOID, std::move (v));
       }
 #else
       static
       symbol_type
-      make_KW_VOID (const TypePtr& v)
+      make_KW_VOID (const Type*& v)
       {
         return symbol_type (token::KW_VOID, v);
       }
@@ -2494,7 +2494,7 @@ switch (yytype)
     /// \param yyvalue   the value to check
     static bool yy_table_value_is_error_ (int yyvalue);
 
-    static const short yypact_ninf_;
+    static const signed char yypact_ninf_;
     static const signed char yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
@@ -2780,8 +2780,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 245,     ///< Last index in yytable_.
-      yynnts_ = 42,  ///< Number of nonterminal symbols.
+      yylast_ = 243,     ///< Last index in yytable_.
+      yynnts_ = 44,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 76  ///< Number of tokens.
     };
@@ -2967,7 +2967,7 @@ switch (yytype)
       case 63: // "string"
       case 64: // "void"
       case 109: // TYPE
-        value.move< TypePtr > (std::move (that.value));
+        value.move< Type* > (std::move (that.value));
         break;
 
       case 48: // "ID"
@@ -2987,7 +2987,7 @@ switch (yytype)
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
         break;
 
-      case 102: // TL_VARDECLS
+      case 102: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
         break;
 
@@ -2997,7 +2997,7 @@ switch (yytype)
         break;
 
       case 108: // TYPE_PLUS
-        value.move< std::vector<TypePtr> > (std::move (that.value));
+        value.move< std::vector<Type*> > (std::move (that.value));
         break;
 
       default:
@@ -3124,7 +3124,7 @@ switch (yytype)
       case 63: // "string"
       case 64: // "void"
       case 109: // TYPE
-        value.copy< TypePtr > (YY_MOVE (that.value));
+        value.copy< Type* > (YY_MOVE (that.value));
         break;
 
       case 48: // "ID"
@@ -3144,7 +3144,7 @@ switch (yytype)
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 102: // TL_VARDECLS
+      case 102: // VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
@@ -3154,7 +3154,7 @@ switch (yytype)
         break;
 
       case 108: // TYPE_PLUS
-        value.copy< std::vector<TypePtr> > (YY_MOVE (that.value));
+        value.copy< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
       default:
@@ -3289,7 +3289,7 @@ switch (yytype)
       case 63: // "string"
       case 64: // "void"
       case 109: // TYPE
-        value.move< TypePtr > (YY_MOVE (s.value));
+        value.move< Type* > (YY_MOVE (s.value));
         break;
 
       case 48: // "ID"
@@ -3309,7 +3309,7 @@ switch (yytype)
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
         break;
 
-      case 102: // TL_VARDECLS
+      case 102: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
         break;
 
@@ -3319,7 +3319,7 @@ switch (yytype)
         break;
 
       case 108: // TYPE_PLUS
-        value.move< std::vector<TypePtr> > (YY_MOVE (s.value));
+        value.move< std::vector<Type*> > (YY_MOVE (s.value));
         break;
 
       default:

@@ -702,7 +702,12 @@ namespace ramvm {
 			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.i) + "}";
 			case ramvm::ArgType::STACK_PTR: return "SP";
 			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value.i) + "]";
-			case ramvm::ArgType::SP_OFFSET: return "[" + std::to_string(value.i) + "]";
+			case ramvm::ArgType::SP_OFFSET: {
+				if (value.i == 0) { return "[SP]"; }
+				else if (value.i > 0) { return "[SP+"+ std::to_string(value.i) + "]"; }
+				else { return "[SP" + std::to_string(value.i) + "]"; }
+			}
+			case ramvm::ArgType::STACK_POS: return "[" + std::to_string(value.i) + "]";
 			case ramvm::ArgType::INVALID: return "INVAILD";
 			default: return "Argument::ToString() - ArgType not handled!";
 		}

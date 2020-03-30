@@ -39,7 +39,7 @@ namespace ramc {
 		{ "_", TokenType::UNDERSCORE },
 	};
 
-	LexerResult LexNumericLiteral(Lexer* _lexer, char _firstChar, bool _isNeg, Position _tokStartPos)
+	LexerResult LexNumericLiteral(Lexer* _lexer, char _firstChar, Position _tokStartPos)
 	{
 		std::string tokenStr = std::string(1, _firstChar);
 		bool hasDecimal = false;
@@ -58,9 +58,6 @@ namespace ramc {
 			}
 			else
 			{
-				if (_isNeg)
-					tokenStr = '-' + tokenStr;
-
 				if (hasDecimal)
 				{
 					if (peekedChar == 'd' || peekedChar == 'D')
@@ -236,11 +233,7 @@ namespace ramc {
 			case '-': {
 				char peekedChar = (char)stream->peek();
 
-				if (isdigit(peekedChar)) {
-					ReadNextChar();
-					return LexNumericLiteral(this, firstChar, true, tokStartPos);
-				}
-				else if (peekedChar == '>') {
+				if (peekedChar == '>') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::GOES_TO, tokStartPos, ""));
 				}
@@ -372,7 +365,7 @@ namespace ramc {
 			case '`': return LexComment(this, tokStartPos);
 		}
 
-		if (isdigit(firstChar)) { return LexNumericLiteral(this, firstChar, false, tokStartPos); }
+		if (isdigit(firstChar)) { return LexNumericLiteral(this, firstChar, tokStartPos); }
 		else if (isalpha(firstChar) || firstChar == '_') { return LexIdentifier(this, firstChar, tokStartPos); }
 		else { return LexerResult::GenError(LexerResultType::UNKNOWN_SYMBOL, std::string(1, firstChar), position); }
 	}

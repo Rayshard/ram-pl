@@ -23,7 +23,7 @@
 %code {
     namespace ramc {
       namespace bison {
-		bool IsInLoop;
+		bool IsInLoop, InTopLvl;
 
       // Return the next token.
 		auto yylex(Lexer& _lexer, ASTNode*& _result, Position& _pos) -> Parser::symbol_type
@@ -50,14 +50,14 @@
 				case TokenType::KW_TRUE: { ASTBoolLit const* node = new ASTBoolLit(true, token.position); return Parser::make_KW_TRUE(node); }
 				case TokenType::KW_FALSE: { ASTBoolLit const* node = new ASTBoolLit(false, token.position); return Parser::make_KW_FALSE(node); }
 
-				case TokenType::KW_BYTE: { TypePtr type = Type::BYTE; return Parser::make_KW_BYTE(type); }
-				case TokenType::KW_BOOL: { TypePtr type = Type::BOOL; return Parser::make_KW_BOOL(type); }
-				case TokenType::KW_INT: { TypePtr type = Type::INT; return Parser::make_KW_INT(type); }
-				case TokenType::KW_FLOAT: { TypePtr type = Type::FLOAT; return Parser::make_KW_FLOAT(type); }
-				case TokenType::KW_DOUBLE: { TypePtr type = Type::DOUBLE; return Parser::make_KW_DOUBLE(type); }
-				case TokenType::KW_LONG: { TypePtr type = Type::LONG; return Parser::make_KW_LONG(type); }
-				case TokenType::KW_STRING: { TypePtr type = Type::STRING; return Parser::make_KW_STRING(type); }
-				case TokenType::KW_VOID: { TypePtr type = Type::VOID; return Parser::make_KW_VOID(type); }
+				case TokenType::KW_BYTE: { const Type* type = Type::BYTE(); return Parser::make_KW_BYTE(type); }
+				case TokenType::KW_BOOL: { const Type* type = Type::BOOL(); return Parser::make_KW_BOOL(type); }
+				case TokenType::KW_INT: { const Type* type = Type::INT(); return Parser::make_KW_INT(type); }
+				case TokenType::KW_FLOAT: { const Type* type = Type::FLOAT(); return Parser::make_KW_FLOAT(type); }
+				case TokenType::KW_DOUBLE: {const  Type* type = Type::DOUBLE(); return Parser::make_KW_DOUBLE(type); }
+				case TokenType::KW_LONG: { const Type* type = Type::LONG(); return Parser::make_KW_LONG(type); }
+				case TokenType::KW_STRING: { const Type* type = Type::STRING(); return Parser::make_KW_STRING(type); }
+				case TokenType::KW_VOID: { const Type* type = Type::VOID(); return Parser::make_KW_VOID(type); }
 
 				case TokenType::KW_LET: return Parser::make_KW_LET(token.position);
 				case TokenType::KW_FUNC: return Parser::make_KW_FUNC(token.position);
@@ -181,14 +181,14 @@
 %token <ASTLongLit*> LONG_LIT "LONG_LIT"
 %token <ASTBoolLit*> KW_TRUE "true"
 %token <ASTBoolLit*> KW_FALSE "false"
-%token <TypePtr> KW_BYTE "byte"
-%token <TypePtr> KW_BOOL "bool"
-%token <TypePtr> KW_INT "int"
-%token <TypePtr> KW_FLOAT "float"
-%token <TypePtr> KW_DOUBLE "double"
-%token <TypePtr> KW_LONG "long"
-%token <TypePtr> KW_STRING "string"
-%token <TypePtr> KW_VOID "void"
+%token <Type*> KW_BYTE "byte"
+%token <Type*> KW_BOOL "bool"
+%token <Type*> KW_INT "int"
+%token <Type*> KW_FLOAT "float"
+%token <Type*> KW_DOUBLE "double"
+%token <Type*> KW_LONG "long"
+%token <Type*> KW_STRING "string"
+%token <Type*> KW_VOID "void"
 %token <Position> KW_LET "let"
 %token <Position> KW_IF "if"
 %token <Position> KW_THEN "then"
@@ -228,29 +228,28 @@
 %nterm <ASTIdentifier*> IDENTIFIER;
 %nterm <ASTFuncCallExpr*> FUNC_CALL;
 
-%nterm <std::vector<ASTVarDecl*>> TL_VARDECLS;
+%nterm <std::vector<ASTVarDecl*>> VARDECLS;
 %nterm <std::vector<ASTFuncDecl*>> TL_FUNCDECLS;
 %nterm <std::vector<ASTStmt*>> STMTS;
 %nterm <std::vector<ASTExpr*>> EXPR_STAR;
 %nterm <std::vector<ASTExpr*>> EXPR_PLUS;
 %nterm <AssignmentType> OP_ASSIGN;
-%nterm <std::vector<TypePtr>> TYPE_PLUS;
-%nterm <TypePtr> TYPE;
+%nterm <std::vector<Type*>> TYPE_PLUS;
+%nterm <Type*> TYPE;
 %nterm <std::vector<Param>> PARAM_STAR;
 %nterm <std::vector<Param>> PARAM_PLUS;
 %nterm <Param> PARAM;
 
 %%
 %start PROGRAM;
-PROGRAM: TL_VARDECLS TL_FUNCDECLS { result = new ASTProgram("Test File", $1, $2); };
+PROGRAM: { InTopLvl = true; } VARDECLS { InTopLvl = false; } TL_FUNCDECLS { result = new ASTProgram("Test File", $2, $4); };
 
-TL_VARDECLS: %empty								                { $$ = { }; }
-		   | TL_VARDECLS "let" IDENTIFIER "=" EXPR ";"	        { $1.push_back(new ASTVarDecl($3, $5, $2)); $$ = $1; }
-		   | TL_VARDECLS "let" IDENTIFIER ":" TYPE "=" EXPR ";" { $1.push_back(new ASTVarDecl($3, $5, $7, $2)); $$ = $1; }
+VARDECLS: %empty			   { $$ = { }; }
+		| VARDECL ";" VARDECLS { $3.insert($3.begin(), $1); $$ = $3; }
 ;
 
 TL_FUNCDECLS: %empty				{ $$ = { }; }
-		    | TL_FUNCDECLS FUNCDECL	{ $1.push_back($2); $$ = $1; }
+		    | FUNCDECL TL_FUNCDECLS	{ $2.insert($2.begin(), $1); $$ = $2; }
 ;
 
 FUNCDECL: "func" "ID" ":" "(" PARAM_STAR ")" "->" TYPE_PLUS "=" STMT { $$ = new ASTFuncDecl($2.first, $5, $8, $10, $1); }
@@ -261,13 +260,13 @@ PARAM_STAR: %empty	   { $$ = { }; }
 ;
 
 PARAM_PLUS: PARAM			     { $$ = { $1 }; }
-		  | PARAM_PLUS "," PARAM { $1.push_back($3); $$ = $1; }
+		  | PARAM "," PARAM_PLUS { $3.insert($3.begin(), $1); $$ = $3; }
 ;
 
 PARAM: "ID" ":" TYPE { $$ = { $1.first, $3, $1.second }; }
 
 STMTS: %empty		  { $$ = { }; }
-	 | STMTS STMT ";" { $1.push_back($2); $$ = $1; }
+	 | STMT ";" STMTS { $3.insert($3.begin(), $1); $$ = $3; }
 ;
 
 STMT: OPEN_STMT   { $$ = $1; }
@@ -281,7 +280,7 @@ OPEN_STMT: "if" EXPR1 "then" STMT					        { $$ = new ASTIfStmt($2, $4, nullp
 
 CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 		   | VARDECL											{ $$ = $1; }
-		   | "{" STMT ";" STMTS "}"								{ std::vector<ASTStmt*> instrs = { $2 }; instrs.insert(instrs.end(), $4.begin(), $4.end()); $$ = new ASTBlock(instrs, $1);}
+		   | "{" STMT ";" STMTS "}"								{ $4.insert($4.begin(), $2); $$ = new ASTBlock($4, $1);}
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
 		   | "break"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
@@ -291,17 +290,17 @@ CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 
 WHILE_STMT: "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; $$ = new ASTWhileStmt($2, $5, $1); }
 
-FOR_STMT: "for" IDENTIFIER ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, $1), $9, $12, $15, $1); }
-		| "for" IDENTIFIER "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $1), $7, $10, $13, $1); }
+FOR_STMT: "for" IDENTIFIER ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, false, $1), $9, $12, $15, $1); }
+		| "for" IDENTIFIER "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, false, $1), $7, $10, $13, $1); }
 
 VARDECL:
-    "let" IDENTIFIER "=" EXPR             { $$ = new ASTVarDecl($2, $4, $1); }
-  | "let" IDENTIFIER ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, $1); }
-  | "let" "_" "=" EXPR              { $$ = new ASTVarDecl($4, $1); }
+    "let" IDENTIFIER "=" EXPR             { $$ = new ASTVarDecl($2, $4, InTopLvl, $1); }
+  | "let" IDENTIFIER ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, InTopLvl, $1); }
+  | "let" "_" "=" EXPR					  { !InTopLvl ? $$ = new ASTVarDecl($4, $1) : throw std::runtime_error("Cannot declare throw away in top level!"); }
 ;
 
 TYPE_PLUS: TYPE			      { $$ = { $1 }; }
-		 | TYPE_PLUS "," TYPE { $1.push_back($3); $$ = $1; }
+		 | TYPE "," TYPE_PLUS { $3.insert($3.begin(), $1); $$ = $3; }
 ;
 
 TYPE:
@@ -336,7 +335,7 @@ EXPR_STAR: %empty		  { $$ = { }; }
 ;
 
 EXPR_PLUS: EXPR			      { $$ = { $1 }; }
-		 | EXPR_PLUS "," EXPR { $1.push_back($3); $$ = $1; }
+		 | EXPR "," EXPR_PLUS { $3.insert($3.begin(), $1); $$ = $3; }
 ;
 
 EXPR:

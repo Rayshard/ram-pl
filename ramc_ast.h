@@ -35,7 +35,7 @@ namespace ramc {
 	enum class UnopType { NEG, LOG_NOT, BIN_NOT };
 	enum class LiteralType { INT, FLOAT, STRING, BOOL, BYTE, DOUBLE, LONG };
 
-	struct Param { std::string name; TypePtr type; Position position; };
+	struct Param { std::string name; Type* type; Position position; };
 	typedef std::vector<Param> ParamList;
 	typedef std::vector<ASTExpr*> ExprList;
 
@@ -46,16 +46,17 @@ namespace ramc {
 	private:
 		ASTNodeType type;
 		Position position;
-		TypePtr typeSysType;
+		Type* typeSysType;
 	protected:
 		ASTNode(ASTNodeType _type, Position _pos);
+		virtual ~ASTNode();
 
 		virtual TypeResult _TypeCheck(Environment* _env) = 0;
 	public:
 		TypeResult TypeCheck(Environment* _env);
 
 		ASTNodeType GetType() { return type; }
-		TypePtr GetTypeSysType() { return typeSysType; }
+		Type* GetTypeSysType() { return typeSysType; }
 		Position GetPosition() { return position; }
 
 		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
@@ -67,6 +68,8 @@ namespace ramc {
 	{
 		int numLoopLabels = 0;
 	public:
+		static std::string MAIN_FUNC_LABEL;
+
 		struct LabeledLoop { bool isForLoop; };
 		struct LabeledWhileLoop { std::string begin, pop, end; };
 		struct LabeledForLoop { std::string begin, pop, then, end; };
@@ -82,7 +85,7 @@ namespace ramc {
 		LabeledWhileLoop GenWhileLoopLabels();
 		LabeledForLoop GenForLoopLabels();
 		LabeledIf GenIfLabels(bool _hasElse);
-		void AddFuncDecl(std::string _label, Instruction* _instr);
+		void AddFuncDecl(std::string _label, int _regCnt, Instruction* _instr);
 		void SetLabelInstr(std::string _label, Instruction* _instr);
 	};
 
@@ -176,11 +179,11 @@ namespace ramc {
 	class ASTVarDecl : public ASTStmt {
 		ASTIdentifier* id;
 		ASTExpr* expr;
-		bool isUnderscore;
-		TypePtr restraint;
+		bool isUnderscore, isGlobal;
+		Type* restraint;
 	public:
-		ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, Position _pos);
-		ASTVarDecl(ASTIdentifier* _id, TypePtr _restraint, ASTExpr* _expr, Position _pos);
+		ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos);
+		ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, bool _isGlobal, Position _pos);
 		ASTVarDecl(ASTExpr* _expr, Position _pos);
 		~ASTVarDecl();
 
@@ -226,7 +229,6 @@ namespace ramc {
 
 		//Set when type checked successfully
 		std::string funcLabel;
-		int funcRegCnt;
 	public:
 		ASTFuncCallExpr(std::string _funcName, const ExprList& _args, Position _pos);
 		~ASTFuncCallExpr();
@@ -404,13 +406,13 @@ namespace ramc {
 		{
 			switch (litType)
 			{
-				case LiteralType::INT: return TypeResult::GenSuccess(Type::INT);
-				case LiteralType::FLOAT: return TypeResult::GenSuccess(Type::FLOAT);
-				case LiteralType::STRING: return TypeResult::GenSuccess(Type::STRING);
-				case LiteralType::BOOL: return TypeResult::GenSuccess(Type::BOOL);
-				case LiteralType::BYTE: return TypeResult::GenSuccess(Type::BYTE);
-				case LiteralType::DOUBLE: return TypeResult::GenSuccess(Type::DOUBLE);
-				case LiteralType::LONG: return TypeResult::GenSuccess(Type::LONG);
+				case LiteralType::INT: return TypeResult::GenSuccess(Type::INT());
+				case LiteralType::FLOAT: return TypeResult::GenSuccess(Type::FLOAT());
+				case LiteralType::STRING: return TypeResult::GenSuccess(Type::STRING());
+				case LiteralType::BOOL: return TypeResult::GenSuccess(Type::BOOL());
+				case LiteralType::BYTE: return TypeResult::GenSuccess(Type::BYTE());
+				case LiteralType::DOUBLE: return TypeResult::GenSuccess(Type::DOUBLE());
+				case LiteralType::LONG: return TypeResult::GenSuccess(Type::LONG());
 				default: return TypeResult::GenMismatch("Literal::Typecheck - LiteralType not handled!", GetPosition());
 			}
 		}

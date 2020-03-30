@@ -56,6 +56,7 @@
 					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG(std::stoi(value));
 					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
 					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
+					case TokenType::STACK_POS: return Parser::make_TOK_STACK_POS(std::stoi(value));
 					case TokenType::LABEL: return Parser::make_TOK_LABEL(value);
 					case TokenType::INSTR_OFFSET: return Parser::make_TOK_INSTR_OFFSET(std::stoi(value));
 					case TokenType::KW_SP: return Parser::make_TOK_SP();
@@ -114,6 +115,7 @@
 %token <int> TOK_MEM_REG "mreg"
 %token <int> TOK_STACK_REG "sreg"
 %token <int> TOK_SP_OFFSET "spoff"
+%token <int> TOK_STACK_POS "stpos"
 %token <std::string> TOK_LABEL "LABEL"
 %token <int> TOK_INSTR_OFFSET "ipOff"
 %token TOK_SP "SP"
@@ -208,6 +210,7 @@ ARGUMENT:
 	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
 	|	"SP"		{ $$ = Argument(ArgType::STACK_PTR, 0); }
 	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
+	|	"stpos"		{ $$ = Argument(ArgType::STACK_POS, $1); }
 ;
 
 DEST_ARG:
@@ -215,6 +218,7 @@ DEST_ARG:
 	|	"mreg"		{ $$ = Argument(ArgType::MEM_REG, $1); }
 	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
 	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
+	|	"stpos"		{ $$ = Argument(ArgType::STACK_POS, $1); }
 ;
 
 BINOP:

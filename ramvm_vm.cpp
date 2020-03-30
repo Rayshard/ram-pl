@@ -348,6 +348,7 @@ namespace ramvm {
 				return ResultType::SUCCESS;
 			} break;
 			case ArgType::SP_OFFSET: return ReadStack(GetSP() + _arg.value.i, _value);
+			case ArgType::STACK_POS: return ReadStack(_arg.value.i, _value);
 			default: return ResultType::ERR_ARGUMENT;
 		}
 	}
@@ -371,6 +372,7 @@ namespace ramvm {
 				else { return ReadStack(pos.I(), _length, _buffer); }
 			}
 			case ArgType::SP_OFFSET: return ReadStack(GetSP() + _arg.value.i, _length, _buffer);
+			case ArgType::STACK_POS: return ReadStack(_arg.value.i, _length, _buffer);
 			default: return ResultType::ERR_ARGUMENT;
 		}
 	}
@@ -398,6 +400,7 @@ namespace ramvm {
 				if (_arg.IsStackTop()) { stack.insert(stack.end(), _value.Bytes(), _value.Bytes() + _value.GetSize()); return ResultType::SUCCESS; }
 				else { return WriteStack(GetSP() + _arg.value.i, _value); }
 			}
+			case ArgType::STACK_POS: return WriteStack(_arg.value.i, _value);
 			default: return ResultType::ERR_INVALID_DEST;
 		}
 	}

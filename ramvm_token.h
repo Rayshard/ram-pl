@@ -5,7 +5,7 @@
 namespace ramvm {
 	enum class TokenType {
 		HEX_LIT, REG, MEM_REG, STACK_REG, SP_OFFSET,
-		LABEL, INSTR_OFFSET,
+		LABEL, INSTR_OFFSET, STACK_POS,
 
 		KW_SP,
 
