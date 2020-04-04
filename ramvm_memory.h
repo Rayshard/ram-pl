@@ -28,6 +28,7 @@ namespace ramvm {
 		ResultType WriteBuffer(int _start, int _length, byte* _buffer, ResultInfo& _info);
 		ResultType Read(int _addr, DataVariant& _value, ResultInfo& _info);
 		ResultType Write(int _addr, DataVariant _value, ResultInfo& _info);
+		void PrintAllocatedBlocks();
 
 		int GetCapacity() { return capacity; }
 	};

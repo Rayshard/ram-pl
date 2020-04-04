@@ -252,6 +252,24 @@ namespace ramvm {
 		else { return WriteBuffer(_addr, _value.GetSize(), _value.Bytes(), _info); }
 	}
 
+	void Memory::PrintAllocatedBlocks()
+	{
+		int startAddr = 0;
+
+		for (auto const& itBlock : blocks)
+		{
+			Block block = itBlock.second;
+
+			if (!block.free)
+			{
+				for (int i = 0; i < block.size; i++)
+					std::cout << startAddr + i << ": " << std::to_string(block.data[i]) << std::endl;
+			}
+
+			startAddr += block.size;
+		}
+	}
+
 	Memory::Block::Block()
 	{
 		size = 0;

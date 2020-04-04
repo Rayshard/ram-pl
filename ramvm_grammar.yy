@@ -19,12 +19,6 @@
   #include "ramvm_instruction.h"
 
   using namespace ramvm;
-  
-	namespace ramvm {
-		namespace bison {
-			std::vector<TypedArgument> BindArgDataTypes(std::vector<DataType>& _dataTypes, std::vector<Argument>& _args);
-		}
-	}
 }
 
 %code {
@@ -34,8 +28,7 @@
 			auto yylex(Lexer& _lexer,
 						std::vector<Instruction*>& _result,
 						Position& _pos,
-						std::map<std::string, int>& _labels,
-						std::map<Instruction*, std::pair<std::string, Position>>& _ctrlInstrs) -> Parser::symbol_type
+						std::unordered_map<std::string, int>& _labels) -> Parser::symbol_type
 			{
 				LexerResult readRes = _lexer.GetNextToken();
 
@@ -66,14 +59,14 @@
 					case TokenType::KW_RET: return Parser::make_TOK_RET();
 					case TokenType::KW_MALLOC: return Parser::make_TOK_MALLOC();
 					case TokenType::KW_FREE: return Parser::make_TOK_FREE();
-					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH(CharsToDataTypes(value));
+					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH(CharToDataType(value[0]));
 					case TokenType::KW_POP: return Parser::make_TOK_POP(CharToDataType(value[0]));
 					case TokenType::KW_PRINT: return Parser::make_TOK_PRINT();
 					case TokenType::KW_JUMP: return Parser::make_TOK_JUMP();
 					case TokenType::KW_JUMPT: return Parser::make_TOK_JUMPT();
 					case TokenType::KW_JUMPF: return Parser::make_TOK_JUMPF();
 					case TokenType::KW_CALL: return Parser::make_TOK_CALL();
-					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharsToDataTypes(value));
+					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharToDataType(value[0]));
 					case TokenType::KW_ADD: return Parser::make_TOK_ADD(CharsToDataTypes(value[0], value[1], value[2]));
 					case TokenType::KW_SUB: return Parser::make_TOK_SUB(CharsToDataTypes(value[0], value[1], value[2]));
 					case TokenType::KW_MUL: return Parser::make_TOK_MUL(CharsToDataTypes(value[0], value[1], value[2]));
@@ -107,8 +100,7 @@
 %param { Lexer& lexer }
 %param { std::vector<Instruction*>& result }
 %param { Position& position }
-%param { std::map<std::string, int>& labels }
-%param { std::map<Instruction*, std::pair<std::string, Position>>& ctrlInstrs }
+%param { std::unordered_map<std::string, int>& labels }
 
 %token <DataValue> TOK_HEX_LIT "hex"
 %token <int> TOK_REG "reg"
@@ -119,6 +111,7 @@
 %token <std::string> TOK_LABEL "LABEL"
 %token <int> TOK_INSTR_OFFSET "ipOff"
 %token TOK_SP "SP"
+
 %token TOK_HALT "HALT"
 %token TOK_MALLOC "MALLOC"
 %token TOK_FREE "FREE"
@@ -131,8 +124,8 @@
 %token TOK_JUMPF "JUMPF"
 %token <DataType> TOK_MOV "MOV"
 %token <DataType> TOK_POP "POP"
-%token <std::vector<DataType>> TOK_STORE "STORE"
-%token <std::vector<DataType>> TOK_PUSH "PUSH"
+%token <DataType> TOK_STORE "STORE"
+%token <DataType> TOK_PUSH "PUSH"
 %token <DataTypeTriple> TOK_ADD "ADD"
 %token <DataTypeTriple> TOK_SUB "SUB"
 %token <DataTypeTriple> TOK_MUL "MUL"
@@ -155,13 +148,14 @@
 %token <DataTypeDouble> TOK_NEG "NEG"
 %token <DataTypeDouble> TOK_LNOT "LNOT"
 %token <DataTypeDouble> TOK_BNOT "BNOT"
+
 %token TOK_END_OF_FILE 0
 
 %nterm STMTS;
-%nterm <std::vector<Argument>> ARGUMENTS;
+%nterm <std::vector<Argument*>> ARGUMENTS;
 %nterm <Instruction*> STMT;
-%nterm <Argument> ARGUMENT;
-%nterm <Argument> DEST_ARG;
+%nterm <Argument*> ARGUMENT;
+%nterm <Argument*> DEST_ARG;
 %nterm <std::pair<Binop, DataTypeTriple>> BINOP;
 %nterm <std::pair<Unop, DataTypeDouble>> UNOP;
 
@@ -182,20 +176,16 @@ STMT:
 	|	"MALLOC" ARGUMENT DEST_ARG						{ $$ = new InstrMalloc($2, $3); }
 	|	"FREE" ARGUMENT									{ $$ = new InstrFree($2); }
 	|	"PRINT" ARGUMENT ARGUMENT						{ $$ = new InstrPrint($2, $3); }
-	|	"JUMP" "LABEL"									{ $$ = new InstrJump(-1); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"JUMP" "ipOff"									{ $$ = new InstrJump(result.size() + $2); }
-	|	"JUMPT" "LABEL" ARGUMENT						{ $$ = new InstrCJump(-1, $3, false); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"JUMPT" "ipOff" ARGUMENT						{ $$ = new InstrCJump(result.size() + $2, $3, false); }
-	|	"JUMPF" "LABEL" ARGUMENT						{ $$ = new InstrCJump(-1, $3, true); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"JUMPF" "ipOff" ARGUMENT						{ $$ = new InstrCJump(result.size() + $2, $3, true); }
-	|	"CALL" "LABEL" "hex" ARGUMENT					{ $$ = new InstrCall(-1, $3.i, $4); ctrlInstrs.insert_or_assign($$, std::make_pair($2, position)); }
-	|	"CALL" "hex" "hex" ARGUMENT						{ $$ = new InstrCall(result.size() + $2.i, $3.i, $4); }
-	|	"PUSH" ARGUMENTS								{ $$ = new InstrPush(BindArgDataTypes($1, $2)); }
+	|	"JUMP" "LABEL"									{ $$ = new InstrJump($2); }
+	|	"JUMPT" "LABEL" ARGUMENT						{ $$ = new InstrCJump($2, $3, false); }
+	|	"JUMPF" "LABEL" ARGUMENT						{ $$ = new InstrCJump($2, $3, true); }
+	|	"CALL" "LABEL" ARGUMENT ARGUMENT				{ $$ = new InstrCall($2, $3, $4); }
+	|	"PUSH" ARGUMENTS								{ $$ = new InstrPush($1, $2); }
 	|	"POP" ARGUMENT									{ $$ = new InstrPop($1, $2); }
-	|	"STORE" ARGUMENTS DEST_ARG 						{ $$ = $1.size() != 0 ? new InstrStore(BindArgDataTypes($1, $2), $3) : throw std::runtime_error("'STORE' expects at least one source argument!"); }
+	|	"STORE" ARGUMENTS DEST_ARG 						{ $$ = new InstrStore($1, $2, $3); }
 	|	"COMPARE" DEST_ARG DEST_ARG ARGUMENT DEST_ARG 	{ $$ = new InstrCompare($2, $3, $4, $5); }
-	|	BINOP ARGUMENT ARGUMENT DEST_ARG				{ $$ = new InstrBinop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3), TypedArgument(std::get<2>($1.second), $4)); }
-	|	UNOP ARGUMENT DEST_ARG							{ $$ = new InstrUnop($1.first, TypedArgument(std::get<0>($1.second), $2), TypedArgument(std::get<1>($1.second), $3)); }
+	|	BINOP ARGUMENT ARGUMENT DEST_ARG				{ $$ = new InstrBinop($1.first, $1.second, $2, $3, $4); }
+	|	UNOP ARGUMENT DEST_ARG							{ $$ = new InstrUnop($1.first, $1.second, $2, $3); }
 ;
 
 ARGUMENTS:
@@ -204,21 +194,21 @@ ARGUMENTS:
 ;
 
 ARGUMENT:
-		"hex"		{ $$ = Argument(ArgType::VALUE, $1); }
-	|	"reg"		{ $$ = Argument(ArgType::REGISTER, $1); }
-	|	"mreg"		{ $$ = Argument(ArgType::MEM_REG, $1); }
-	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
-	|	"SP"		{ $$ = Argument(ArgType::STACK_PTR, 0); }
-	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
-	|	"stpos"		{ $$ = Argument(ArgType::STACK_POS, $1); }
+		"hex"		{ $$ = new ValueArgument($1); }
+	|	"reg"		{ $$ = RegisterArgument::CreateRegular($1); }
+	|	"mreg"		{ $$ = RegisterArgument::CreateMemory($1); }
+	|	"sreg"		{ $$ = RegisterArgument::CreateStack($1); }
+	|	"SP"		{ $$ = RegisterArgument::CreateSP(); }
+	|	"spoff"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, $1); }
+	|	"stpos"		{ $$ = new StackArgument(StackArgType::ABSOLUTE, $1); }
 ;
 
 DEST_ARG:
-		"reg"		{ $$ = Argument(ArgType::REGISTER, $1); }
-	|	"mreg"		{ $$ = Argument(ArgType::MEM_REG, $1); }
-	|	"sreg"		{ $$ = Argument(ArgType::STACK_REG, $1); }
-	|	"spoff"		{ $$ = Argument(ArgType::SP_OFFSET, $1); }
-	|	"stpos"		{ $$ = Argument(ArgType::STACK_POS, $1); }
+		"reg"		{ $$ = RegisterArgument::CreateRegular($1); }
+	|	"mreg"		{ $$ = RegisterArgument::CreateMemory($1); }
+	|	"sreg"		{ $$ = RegisterArgument::CreateStack($1); }
+	|	"spoff"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, $1); }
+	|	"stpos"		{ $$ = new StackArgument(StackArgType::ABSOLUTE, $1); }
 ;
 
 BINOP:
@@ -255,21 +245,6 @@ namespace ramvm {
 		auto Parser::error(const std::string& _msg) -> void
 		{
 			throw std::runtime_error(_msg);
-		}
-
-		std::vector<TypedArgument> BindArgDataTypes(std::vector<DataType>& _dataTypes, std::vector<Argument>& _args)
-		{
-			if(_dataTypes.size() != _args.size()) { throw std::runtime_error("Instruction expects " + std::to_string(_dataTypes.size()) + " sources!"); }
-			else
-			{
-				std::vector<TypedArgument> result;
-				result.reserve(_dataTypes.size());
-
-				for(int i = 0; i < (int)_dataTypes.size(); i++)
-					result.push_back(TypedArgument(_dataTypes[i], _args[i]));
-
-				return result;
-			}
 		}
 	}
 }

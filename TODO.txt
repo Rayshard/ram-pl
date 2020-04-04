@@ -1,5 +1,18 @@
--put top level variables in Global registers
--functions
--structs
+-Make dest argument to AstExpr::Generate code a shared value so it can be deleted if not used
+but relinquished if used
+-change all defaults to ASSERT_MSG
+
+- in the instruction constructors, assert that their arguments are of the correct type
+- in the argument constructors, assert that their arguments are of the correct type
+
+-start github documentation
+-command line arguments
 -arrays/strings
+-structs
 -COMpiler implement ability to have hex literals
+
+Optimizations:
+	VM:
+		-Make labels into indexes
+	Compiler:
+		-Constant Folding

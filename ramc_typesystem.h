@@ -11,7 +11,7 @@ namespace ramc {
 
 	enum class TypeSystemType {
 		VOID, BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING,
-		TUPLE, FUNC, UNIT
+		TUPLE, FUNC, UNIT, ARRAY
 	};
 
 	class Type {
@@ -20,6 +20,8 @@ namespace ramc {
 	protected:
 		Type(TypeSystemType _type) : type(_type) { }
 	public:
+		static const int POINTER_SIZE = INT_SIZE;
+
 		static Type* BOOL() { return new Type(TypeSystemType::BOOL); }
 		static Type* BYTE() { return new Type(TypeSystemType::BYTE); }
 		static Type* INT() { return new Type(TypeSystemType::INT); }
@@ -72,6 +74,20 @@ namespace ramc {
 	};
 #pragma endregion
 
+#pragma region ArrayType
+	class ArrayType : public Type {
+		Type* storageType;
+	public:
+		ArrayType(Type* _storageType);
+		~ArrayType();
+
+		std::string ToString(int _indentLvl) override;
+		int GetByteSize() override;
+		bool Matches(Type* _t) override;
+		Type* GetCopy() override;
+	};
+#pragma endregion
+
 #pragma region TypeResult
 	enum class TypeResultType {
 		SUCCESS,
@@ -101,41 +117,6 @@ namespace ramc {
 		static TypeResult GenFuncIDParamsTypePairNotFound(std::string _funcName, Type* _paramsType, Position _pos) { return TypeResult(TypeResultType::FUNC_ID_PARAMS_TYPE_PAIR_NOT_FOUND, nullptr, "\"" + _funcName + "\"" + " with param(s) " + _paramsType->ToString(0), _pos); }
 	};
 #pragma endregion
-
-	class Environment {
-		struct VarInfo { Type* type = nullptr; Argument source; };
-		struct FuncInfo { std::string label; Type* type = nullptr; int regCnt = 0; };
-
-		Environment* parent;
-		std::unordered_map<std::string, FuncInfo> functions;
-		std::unordered_map<std::string, VarInfo> variables;
-		std::unordered_map<Environment*, bool> subEnvs;
-		int nextRegIdx, numRegNeeded, nextGlobalStackPos;
-
-		void SetMaxNumVarRegNeeded(int _val);
-	public:
-		Environment(Environment* _parent, bool _incrParentRegCnt);
-		~Environment();
-
-		TypeResult AddVariable(std::string _id, Type* _type, Argument _source, Position _execPos);
-		bool HasVariable(std::string _id, bool _localCheck);
-		bool HasVariable(std::string _id, Type* _type, bool _localCheck);
-		TypeResult GetVariableType(std::string _id, Position _execPos);
-		Argument GetVarSource(std::string _id);
-
-		TypeResult AddFunction(std::string _id, Type* _type, std::string& _label, Position _execPos);
-		TypeResult GetFunctionRetType(std::string _id, Type* _paramsType, Position _execPos);
-
-		int GetNumRegNeeded() { return numRegNeeded; }
-		int GetNextRegIdx() { return nextRegIdx++; }
-		int GetNextGlobalStackPos(int _byteLen) { nextGlobalStackPos += _byteLen;  return nextGlobalStackPos - _byteLen; }
-
-		static std::string GenFuncLabel(std::string _name, Type* _paramsType)
-		{
-			std::string postfix = StrReplace(_paramsType->ToString(0), "(,)", '_');
-			return "%FUNC_" + _name + "_" + postfix;
-		}
-	};
 
 	constexpr DataType TypeSysTypeToDataType(TypeSystemType _type)
 	{

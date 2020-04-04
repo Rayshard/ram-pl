@@ -8,5 +8,9 @@ func Factorial: (i: int, acc: long) -> long = {
 }
 
 func Main: () = {
-	k = Factorial(10, 1l);
+	k = Factorial(5, 1l);
+
+	for i: byte = 0b: while i < 5 do {
+		p += i;
+	} then i += 1b;
 }

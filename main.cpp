@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ramvm_vm.h"
 #include "ramvm_parser.h"
+#include "ramc_environment.h"
 #include "ramvm_instruction.h"
 #include "ramvm_lexer.h"
 #include "ramc_lexer.h"
@@ -131,8 +132,10 @@ int CompilerMain()
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
 		ProgramInfo progInfo = prog->GetInfo();
+		auto labelledInstrs = progInfo.GetLabelledInstrs();
 		std::unordered_multimap<Instruction*, std::string> instrLabels;
-		for (auto it : progInfo.labels)
+
+		for (auto it : labelledInstrs)
 			instrLabels.insert(std::make_pair(it.second, it.first));
 
 		for (int i = 0; i < (int)instrs.size(); i++)
@@ -146,13 +149,13 @@ int CompilerMain()
 			std::cout << i << "\t" << instr->ToString() << std::endl;
 		}
 
-		
+
 		//Run VM
 		using namespace ramvm;
 
 		try
 		{
-			VM vm = VM(env.GetNumRegNeeded(), 1024, instrs);
+			VM vm = VM(env.GetNumRegNeeded(), 1024, instrs, progInfo.GetLabels(instrs));
 
 			ResultInfo resInfo;
 			ResultType result = vm.Run(resInfo);
@@ -161,7 +164,7 @@ int CompilerMain()
 			else
 			{
 				vm.PrintCurRegisters();
-				vm.PrintMemory(0, 6);
+				vm.PrintMemory();
 				vm.PrintStack();
 			}
 		}
@@ -202,7 +205,7 @@ int VMMain()
 	try
 	{
 		auto program = result.GetInstructionSet();
-		VM vm = VM(4, 1024, program);
+		VM vm = VM(4, 1024, program, result.GetLabels());
 
 		ResultInfo resInfo;
 		ResultType result = vm.Run(resInfo);
@@ -211,11 +214,19 @@ int VMMain()
 		else
 		{
 			vm.PrintCurRegisters();
-			vm.PrintMemory(0, 10);
+			vm.PrintMemory();
 			vm.PrintStack();
 		}
 	}
-	catch (std::length_error) { PrintResult(ResultType::ERR_MEMORY_LIMIT); }
+	catch (...)
+	{
+		try
+		{
+			auto ePtr = std::current_exception();
+			if (ePtr) { std::rethrow_exception(ePtr); }
+		}
+		catch (const std::exception& e) { std::cout << e.what() << std::endl; }
+	}
 }
 
 int main()

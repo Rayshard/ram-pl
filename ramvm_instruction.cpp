@@ -2,41 +2,42 @@
 #include "ramvm_instruction.h"
 
 namespace ramvm {
-	const std::string UnopToString(Unop _type)
-	{
-		switch (_type)
-		{
-			case Unop::NEG: return "NEG";
-			case Unop::LOG_NOT: return "LNOT";
-			case Unop::BIN_NOT: return "BNOT";
-			default: return "UnopToString - Unop not handled!";
-		}
-	}
+#pragma region Move
+	InstrMove::InstrMove(DataType _dataType, Argument* _src, Argument* _dest)
+		: Instruction(InstructionType::MOVE), dataType(_dataType), src(_src), dest(_dest) { }
 
+	InstrMove::~InstrMove()
+	{
+		delete src;
+		delete dest;
+	}
+#pragma endregion
+
+#pragma region Binop
 	const std::string BinopToString(Binop _type)
 	{
 		switch (_type)
 		{
-			case ramvm::Binop::ADD: return "ADD";
-			case ramvm::Binop::SUB: return "SUB";
-			case ramvm::Binop::MUL: return "MUL";
-			case ramvm::Binop::DIV: return "DIV";
-			case ramvm::Binop::MOD: return "MOD";
-			case ramvm::Binop::POW: return "POW";
-			case ramvm::Binop::LSHIFT: return "LSHIFT";
-			case ramvm::Binop::RSHIFT: return "RSHIFT";
-			case ramvm::Binop::LT: return "LT";
-			case ramvm::Binop::GT: return "GT";
-			case ramvm::Binop::LTEQ: return "LTEQ";
-			case ramvm::Binop::GTEQ: return "GTEQ";
-			case ramvm::Binop::EQ: return "EQ";
-			case ramvm::Binop::NEQ: return "NEQ";
-			case ramvm::Binop::BIT_AND: return "BAND";
-			case ramvm::Binop::BIT_OR: return "BOR";
-			case ramvm::Binop::BIT_XOR: return "BXOR";
-			case ramvm::Binop::LOG_AND: return "LAND";
-			case ramvm::Binop::LOG_OR: return "LOR";
-			default: return "BinopToString - Binop not handled!";
+			case Binop::ADD: return "ADD";
+			case Binop::SUB: return "SUB";
+			case Binop::MUL: return "MUL";
+			case Binop::DIV: return "DIV";
+			case Binop::MOD: return "MOD";
+			case Binop::POW: return "POW";
+			case Binop::LSHIFT: return "LSHIFT";
+			case Binop::RSHIFT: return "RSHIFT";
+			case Binop::LT: return "LT";
+			case Binop::GT: return "GT";
+			case Binop::LTEQ: return "LTEQ";
+			case Binop::GTEQ: return "GTEQ";
+			case Binop::EQ: return "EQ";
+			case Binop::NEQ: return "NEQ";
+			case Binop::BIT_AND: return "BAND";
+			case Binop::BIT_OR: return "BOR";
+			case Binop::BIT_XOR: return "BXOR";
+			case Binop::LOG_AND: return "LAND";
+			case Binop::LOG_OR: return "LOR";
+			default: ASSERT_MSG(false, "BinopToString - Binop not handled!");
 		}
 	}
 
@@ -655,6 +656,39 @@ namespace ramvm {
 		return ResultType::SUCCESS;
 	}
 
+	InstrBinop::InstrBinop(Binop _op, DataTypeTriple _argDataTypes, Argument* _src1, Argument* _src2, Argument* _dest)
+		: Instruction(InstructionType::BINOP), op(_op), argDataTypes(_argDataTypes), src1(_src1), src2(_src2), dest(_dest) { }
+
+	InstrBinop::~InstrBinop()
+	{
+		delete src1;
+		delete src2;
+		delete dest;
+	}
+
+	std::string InstrBinop::ToString()
+	{
+		std::stringstream ss;
+		ss << BinopToString(op) << '<' << DataTypeToChar(std::get<0>(argDataTypes)) << DataTypeToChar(std::get<1>(argDataTypes)) << DataTypeToChar(std::get<2>(argDataTypes)) << "> ";
+		ss << src1->ToString() << " ";
+		ss << src2->ToString() << " ";
+		ss << dest->ToString();
+		return ss.str();
+	}
+#pragma endregion
+
+#pragma region Unop
+	const std::string UnopToString(Unop _type)
+	{
+		switch (_type)
+		{
+			case Unop::NEG: return "NEG";
+			case Unop::LOG_NOT: return "LNOT";
+			case Unop::BIN_NOT: return "BNOT";
+			default: return "UnopToString - Unop not handled!";
+		}
+	}
+
 	ResultType DoUnop(Unop _op, DataVariant& _val, DataVariant& _result)
 	{
 		switch (ConcatDouble((byte)_val.GetType(), (byte)_op)) //Switch on Operation Type
@@ -685,184 +719,151 @@ namespace ramvm {
 		return ResultType::SUCCESS;
 	}
 
-	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->amt.type == ArgType::VALUE && ((InstrPop*)this)->amt.value.i == 1; }
+	InstrUnop::InstrUnop(Unop _op, DataTypeDouble _argDataTypes, Argument* _src, Argument* _dest)
+		: Instruction(InstructionType::UNOP), op(_op), argDataTypes(_argDataTypes), src(_src), dest(_dest) { }
 
-	Argument::Argument(ArgType _type, DataValue _val)
+	InstrUnop::~InstrUnop()
 	{
-		type = _type;
-		value = _val;
-	}
-
-	std::string Argument::ToString()
-	{
-		switch (type)
-		{
-			case ramvm::ArgType::VALUE: return ToHexString(value.bytes, LONG_SIZE);
-			case ramvm::ArgType::REGISTER: return "R" + std::to_string(value.i);
-			case ramvm::ArgType::MEM_REG: return "{R" + std::to_string(value.i) + "}";
-			case ramvm::ArgType::STACK_PTR: return "SP";
-			case ramvm::ArgType::STACK_REG: return "[R" + std::to_string(value.i) + "]";
-			case ramvm::ArgType::SP_OFFSET: {
-				if (value.i == 0) { return "[SP]"; }
-				else if (value.i > 0) { return "[SP+"+ std::to_string(value.i) + "]"; }
-				else { return "[SP" + std::to_string(value.i) + "]"; }
-			}
-			case ramvm::ArgType::STACK_POS: return "[" + std::to_string(value.i) + "]";
-			case ramvm::ArgType::INVALID: return "INVAILD";
-			default: return "Argument::ToString() - ArgType not handled!";
-		}
-	}
-
-	InstrMove::InstrMove(DataType _dataType, Argument _src, Argument _dest)
-		: Instruction(InstructionType::MOVE)
-	{
-		dataType = _dataType;
-		src = _src;
-		dest = _dest;
-	}
-
-	InstrBinop::InstrBinop(Binop _op, TypedArgument _src1, TypedArgument _src2, TypedArgument _dest)
-		: Instruction(InstructionType::BINOP)
-	{
-		op = _op;
-		src1 = _src1;
-		src2 = _src2;
-		dest = _dest;
-	}
-
-	std::string InstrBinop::ToString()
-	{
-		std::stringstream ss;
-		ss << BinopToString(op) << '<' << DataTypeToChar(src1.dataType) << DataTypeToChar(src2.dataType) << DataTypeToChar(dest.dataType) << "> ";
-		ss << src1.ToString() << " ";
-		ss << src2.ToString() << " ";
-		ss << dest.ToString();
-		return ss.str();
-	}
-
-	InstrUnop::InstrUnop(Unop _op, TypedArgument _src, TypedArgument _dest)
-		: Instruction(InstructionType::UNOP)
-	{
-		op = _op;
-		src = _src;
-		dest = _dest;
+		delete src;
+		delete dest;
 	}
 
 	std::string InstrUnop::ToString()
 	{
 		std::stringstream ss;
-		ss << UnopToString(op) << '<' << DataTypeToChar(src.dataType) << DataTypeToChar(dest.dataType) << "> ";
-		ss << src.ToString() << " ";
-		ss << dest.ToString();
+		ss << UnopToString(op) << '<' << DataTypeToChar(argDataTypes.first) << DataTypeToChar(argDataTypes.second) << "> ";
+		ss << src->ToString() << " ";
+		ss << dest->ToString();
 		return ss.str();
 	}
+#pragma endregion
 
-	InstrCall::InstrCall(int _labelIdx, int _regCnt, Argument _argsByteLen)
-		: Instruction(InstructionType::CALL)
+#pragma region Call
+	InstrCall::InstrCall(std::string _label, Argument* _regCnt, Argument* _argsByteLen)
+		: Instruction(InstructionType::CALL), label(_label), regCnt(_regCnt), argsByteLength(_argsByteLen) { }
+
+	InstrCall::~InstrCall()
 	{
-		instrIdx = _labelIdx;
-		regCnt = _regCnt;
-		argsByteLength = _argsByteLen;
+		delete regCnt;
+		delete argsByteLength;
 	}
+#pragma endregion
 
-	InstrReturn::InstrReturn(Argument _amt)
-		: Instruction(InstructionType::RETURN)
+#pragma region Store
+	InstrStore::InstrStore(DataType _dataType, const std::vector<Argument*>& _srcs, Argument* _dest)
+		: Instruction(InstructionType::STORE), dataType(_dataType), srcs(_srcs), dest(_dest) { }
+
+	InstrStore::~InstrStore()
 	{
-		amt = _amt;
-	}
+		for (auto const& src : srcs)
+			delete src;
 
-	InstrJump::InstrJump(int _labelIdx)
-		: Instruction(InstructionType::JUMP)
-	{
-		instrIdx = _labelIdx;
-	}
-
-	InstrCJump::InstrCJump(int _labelIdx, Argument _condSrc, bool _jumpOnFalse)
-		: Instruction(InstructionType::CJUMP)
-	{
-		instrIdx = _labelIdx;
-		condSrc = _condSrc;
-		jumpOnFalse = _jumpOnFalse;
-	}
-
-	InstrPrint::InstrPrint(Argument _start, Argument _len)
-		: Instruction(InstructionType::PRINT)
-	{
-		start = _start;
-		length = _len;
-	}
-
-	InstrMalloc::InstrMalloc(Argument _size, Argument _dest)
-		: Instruction(InstructionType::MALLOC)
-	{
-		size = _size;
-		dest = _dest;
-	}
-
-	InstrFree::InstrFree(Argument _addr)
-		: Instruction(InstructionType::FREE)
-	{
-		addr = _addr;
-	}
-
-	InstrPush::InstrPush(const std::vector<TypedArgument>& _srcs)
-		: Instruction(InstructionType::PUSH)
-	{
-		srcs = _srcs;
-	}
-
-	std::string InstrPush::ToString()
-	{
-		std::stringstream ss;
-		ss << "PUSH<";
-
-		std::string srcsStr;
-		for (auto src : srcs)
-		{
-			ss << DataTypeToChar(src.dataType);
-			srcsStr += " " + src.ToString();
-		}
-
-		ss << ">" << srcsStr;
-		return ss.str();
-	}
-
-	InstrPop::InstrPop(DataType _type, Argument _amt)
-		: Instruction(InstructionType::POP)
-	{
-		amt = _amt;
-		scale = GetDataTypeSize(_type);
-	}
-
-	InstrStore::InstrStore(const std::vector<TypedArgument>& _srcs, Argument _dest)
-		: Instruction(InstructionType::STORE)
-	{
-		srcs = _srcs;
-		dest = _dest;
+		delete dest;
 	}
 
 	std::string InstrStore::ToString()
 	{
 		std::stringstream ss;
-		ss << "STORE<";
+		ss << "STORE<" << DataTypeToChar(dataType) << ">";
 
-		std::string srcsStr;
 		for (auto src : srcs)
-		{
-			ss << DataTypeToChar(src.dataType);
-			srcsStr += " " + src.ToString();
-		}
+			ss << " " << src->ToString();
 
-		ss << ">" << srcsStr << " " << dest.ToString();
+		ss << " " << dest->ToString();
 		return ss.str();
 	}
+#pragma endregion
 
-	InstrCompare::InstrCompare(Argument _src1, Argument _src2, Argument _len, Argument _dest)
-		: Instruction(InstructionType::COMPARE)
+#pragma region Compare
+	InstrCompare::InstrCompare(Argument* _src1, Argument* _src2, Argument* _len, Argument* _dest)
+		: Instruction(InstructionType::COMPARE), src1(_src1), src2(_src2), length(_len), dest(_dest) { }
+
+	InstrCompare::~InstrCompare()
 	{
-		src1 = _src1;
-		src2 = _src2;
-		length = _len;
-		dest = _dest;
+		delete src1;
+		delete src2;
+		delete length;
+		delete dest;
 	}
+#pragma endregion
+
+#pragma region Return
+	InstrReturn::InstrReturn(Argument* _amt)
+		: Instruction(InstructionType::RETURN), amt(_amt) { }
+
+	InstrReturn::~InstrReturn() { delete amt; }
+#pragma endregion
+
+#pragma region Jump
+	InstrJump::InstrJump(std::string _label)
+		: Instruction(InstructionType::JUMP), label(_label) { }
+#pragma endregion
+
+#pragma region CJump
+	InstrCJump::InstrCJump(std::string _label, Argument* _cond, bool _jumpOnFalse)
+		: Instruction(InstructionType::CJUMP), label(_label), cond(_cond), jumpOnFalse(_jumpOnFalse) { }
+
+	InstrCJump::~InstrCJump() { delete cond; }
+#pragma endregion
+
+#pragma region Print
+	InstrPrint::InstrPrint(Argument* _start, Argument* _len)
+		: Instruction(InstructionType::PRINT), start(_start), length(_len) { }
+
+	InstrPrint::~InstrPrint()
+	{
+		delete start;
+		delete length;
+	}
+#pragma endregion
+
+#pragma region Malloc
+	InstrMalloc::InstrMalloc(Argument* _size, Argument* _dest)
+		: Instruction(InstructionType::MALLOC), size(_size), dest(_dest) { }
+
+	InstrMalloc::~InstrMalloc()
+	{
+		delete size;
+		delete dest;
+	}
+#pragma endregion
+
+#pragma region Free
+	InstrFree::InstrFree(Argument* _addr)
+		: Instruction(InstructionType::FREE), addr(_addr) { }
+
+	InstrFree::~InstrFree() { delete addr; }
+#pragma endregion
+
+#pragma region Push
+	InstrPush::InstrPush(DataType _dataType, const std::vector<Argument*>& _srcs)
+		: Instruction(InstructionType::PUSH), dataType(_dataType), srcs(_srcs) { }
+
+	InstrPush::~InstrPush()
+	{
+		for (auto const& src : srcs)
+			delete src;
+	}
+
+	std::string InstrPush::ToString()
+	{
+		std::stringstream ss;
+		ss << "PUSH<" << DataTypeToChar(dataType) << ">";
+
+		for (auto src : srcs)
+			ss << " " << src->ToString();
+
+		return ss.str();
+	}
+#pragma endregion
+
+#pragma region Pop
+	bool Instruction::IsSinglePop() { return type == InstructionType::POP && ((InstrPop*)this)->IsSinglePop(); }
+
+	InstrPop::InstrPop(DataType _type, Argument* _amt)
+		: Instruction(InstructionType::POP), amt(_amt), scale(GetDataTypeSize(_type)) { }
+
+	InstrPop::~InstrPop() { delete amt; }
+	bool InstrPop::IsSinglePop() { return amt->GetType() == ArgType::VALUE && ((ValueArgument*)amt)->GetValue().i == 1; }
+#pragma endregion
 }

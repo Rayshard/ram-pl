@@ -2,10 +2,11 @@
 
 namespace ramvm {
 	class Instruction;
-	struct Argument;
+	class Argument;
 
 	class ParseResult {
 		std::vector<Instruction*> instrSet;
+		std::unordered_map<std::string, int> labels;
 		bool success;
 
 		std::string errString;
@@ -13,9 +14,10 @@ namespace ramvm {
 	public:
 		bool IsSuccess();
 		std::vector<Instruction*>& GetInstructionSet();
+		std::unordered_map<std::string, int>& GetLabels();
 		std::string ToString();
 
-		static ParseResult GenSuccess(std::vector<Instruction*>& _instrSet);
+		static ParseResult GenSuccess(const std::vector<Instruction*>& _instrSet, const std::unordered_map<std::string, int>& _labels);
 		static ParseResult GenError(std::string _msg, Position _pos, bool _includePos);
 	};
 

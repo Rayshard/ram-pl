@@ -9,6 +9,7 @@ using ramvm::InstructionSet;
 using ramvm::Argument;
 
 namespace ramc {
+	class Environment;
 	class ASTStmt;
 	class ASTIdentifier;
 	class ASTBinopEpxr;
@@ -60,33 +61,35 @@ namespace ramc {
 		Position GetPosition() { return position; }
 
 		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
+		virtual ASTNode* GetCopy() = 0;
 	};
 #pragma endregion
 
 #pragma region Program
 	class ProgramInfo
 	{
-		int numLoopLabels = 0;
 	public:
 		static std::string MAIN_FUNC_LABEL;
 
-		struct LabeledLoop { bool isForLoop; };
-		struct LabeledWhileLoop { std::string begin, pop, end; };
-		struct LabeledForLoop { std::string begin, pop, then, end; };
+		struct LabeledLoop { std::string begin, pop, reset, end; };
 		struct LabeledIf { std::string begin, thenClause, elseClause, end; };
-
-		std::map<std::string, Instruction*> labels;
-		std::vector<LabeledLoop*> curLoopLabels;
-		std::unordered_map<std::string, int> funcRegCnts;
-
-		InstructionSet offsetedCtrlInstrs;
-		std::unordered_map<std::string, InstructionSet> labeledCtrlInstrs;
-
-		LabeledWhileLoop GenWhileLoopLabels();
-		LabeledForLoop GenForLoopLabels();
+	private:
+		std::unordered_map<std::string, Instruction*> labelledInstrs;
+		std::vector<LabeledLoop*> labelledLoopStack;
+		std::unordered_map<std::string, int> funcDecls;
+	public:
+		LabeledLoop GenLoopLabels();
 		LabeledIf GenIfLabels(bool _hasElse);
-		void AddFuncDecl(std::string _label, int _regCnt, Instruction* _instr);
+
+		void AddFuncDecl(std::string _label, int _regCnt);
+		void SetFuncDeclStart(std::string _label, Instruction* _start);
+		int GetFuncRegCount(std::string _label);
 		void SetLabelInstr(std::string _label, Instruction* _instr);
+		void PushCurLoopLabels(LabeledLoop* _labels);
+		void PopCurLoopLabels();
+		LabeledLoop* GetCurLoopLabels();
+		std::unordered_map<std::string, Instruction*> GetLabelledInstrs();
+		std::unordered_map<std::string, int> GetLabels(const std::vector<Instruction*>& _instrs);
 	};
 
 	class ASTProgram : public ASTNode {
@@ -99,6 +102,7 @@ namespace ramc {
 		~ASTProgram();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(Environment* _env);
 
@@ -121,8 +125,12 @@ namespace ramc {
 		~ASTFuncDecl();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(Environment* _env, ProgramInfo& _progInfo);
+
+		std::string GetLabel() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTFuncDecl::GetLabel - Node was not typecheked!"); return label; }
+		int GetRegCount() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTFuncDecl::GetRegCount - Node was not typecheked!"); return regCnt; }
 	};
 #pragma endregion
 
@@ -141,6 +149,7 @@ namespace ramc {
 		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
 		virtual InstructionSet GenerateCode(ProgramInfo& _progInfo) = 0;
 		virtual CodePathNode* GetCodePath() = 0;
+		virtual ASTNode* GetCopy() = 0;
 	};
 #pragma endregion
 
@@ -157,7 +166,8 @@ namespace ramc {
 		ASTExprType GetExprType() { return exprType; }
 
 		virtual std::string ToString(int _indentLvl, std::string _prefix = "") = 0;
-		virtual InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) = 0;
+		virtual InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) = 0;
+		virtual ASTNode* GetCopy() = 0;
 	};
 #pragma endregion
 
@@ -169,6 +179,7 @@ namespace ramc {
 		~ASTBlock();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 		CodePathNode* GetCodePath() override;
@@ -187,7 +198,9 @@ namespace ramc {
 		ASTVarDecl(ASTExpr* _expr, Position _pos);
 		~ASTVarDecl();
 
+
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 		CodePathNode* GetCodePath() override;
@@ -201,6 +214,8 @@ namespace ramc {
 	public:
 		ASTIfStmt(ASTExpr* _condExpr, ASTStmt* _thenStmt, ASTStmt* _elseStmt, Position _pos);
 		~ASTIfStmt();
+
+		ASTNode* GetCopy() override { return new ASTIfStmt((ASTExpr*)condExpr->GetCopy(), (ASTStmt*)thenStmt->GetCopy(), elseStmt ? (ASTStmt*)elseStmt->GetCopy() : nullptr, GetPosition()); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
@@ -216,9 +231,11 @@ namespace ramc {
 		ASTIfExpr(ASTExpr* _condExpr, ASTExpr* _thenExpr, ASTExpr* _elseExpr, Position _pos);
 		~ASTIfExpr();
 
+		ASTNode* GetCopy() override { return new ASTIfExpr((ASTExpr*)condExpr->GetCopy(), (ASTExpr*)thenExpr->GetCopy(), (ASTExpr*)elseExpr->GetCopy(), GetPosition()); }
+
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
@@ -234,8 +251,9 @@ namespace ramc {
 		~ASTFuncCallExpr();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
@@ -246,6 +264,8 @@ namespace ramc {
 	public:
 		ASTWhileStmt(ASTExpr* _condExpr, ASTStmt* _body, Position _pos);
 		~ASTWhileStmt();
+
+		ASTNode* GetCopy() override { return new ASTWhileStmt((ASTExpr*)condExpr->GetCopy(), (ASTStmt*)body->GetCopy(), GetPosition()); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
@@ -265,6 +285,8 @@ namespace ramc {
 		ASTForStmt(ASTVarDecl* _initStmt, ASTExpr* _condExpr, ASTStmt* _body, ASTStmt* _thenStmt, Position _pos);
 		~ASTForStmt();
 
+		ASTNode* GetCopy() override { return new ASTForStmt((ASTVarDecl*)initStmt->GetCopy(), (ASTExpr*)condExpr->GetCopy(), (ASTStmt*)body->GetCopy(), (ASTStmt*)thenStmt->GetCopy(), GetPosition()); }
+
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
@@ -278,6 +300,7 @@ namespace ramc {
 		ASTBreakContinueStmt(bool _isBreak, Position _pos);
 
 		bool IsBreak() { return GetStmtType() == ASTStmtType::BREAK; }
+		ASTNode* GetCopy() override { return new ASTBreakContinueStmt(IsBreak(), GetPosition()); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
@@ -298,6 +321,7 @@ namespace ramc {
 		AssignmentType GetAssignType() { return assignType; }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 		CodePathNode* GetCodePath() override;
@@ -312,6 +336,7 @@ namespace ramc {
 		~ASTReturnStmt();
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 		CodePathNode* GetCodePath() override;
@@ -327,10 +352,11 @@ namespace ramc {
 		~ASTBinopExpr();
 
 		BinopType GetOp() { return op; }
+		ASTNode* GetCopy() override { return new ASTBinopExpr((ASTExpr*)left->GetCopy(), (ASTExpr*)right->GetCopy(), op); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
@@ -343,26 +369,28 @@ namespace ramc {
 		~ASTUnopExpr();
 
 		UnopType GetOp() { return op; }
+		ASTNode* GetCopy() override { return new ASTUnopExpr((ASTExpr*)expr->GetCopy(), op); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
 #pragma region Identifier
 	class ASTIdentifier : public ASTExpr {
 		std::string id;
-		Argument source;
+		Argument* source;
 	public:
 		ASTIdentifier(std::string _id, Position _pos);
 
 		std::string GetID() { return id; }
-		Argument GetSource() { return source; }
+		Argument* GetSource() { return source; }
+		ASTNode* GetCopy() override { return new ASTIdentifier(id, GetPosition()); }
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 
@@ -417,42 +445,50 @@ namespace ramc {
 			}
 		}
 
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override = 0;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override = 0;
+		ASTNode* GetCopy() override = 0;
 	};
 
 	struct ASTIntLit : public ASTLiteral<int> {
 		ASTIntLit(int _val, Position _pos) : ASTLiteral(LiteralType::INT, _val, _pos) { }
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTByteLit : public ASTLiteral<byte> {
 		ASTByteLit(byte _val, Position _pos) : ASTLiteral(LiteralType::BYTE, _val, _pos) { }
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTDoubleLit : public ASTLiteral<double> {
 		ASTDoubleLit(double _val, Position _pos) : ASTLiteral(LiteralType::DOUBLE, _val, _pos) { }
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTLongLit : public ASTLiteral<rLong> {
 		ASTLongLit(rLong _val, Position _pos) : ASTLiteral(LiteralType::LONG, _val, _pos) { }
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTFloatLit : public ASTLiteral<float> {
 		ASTFloatLit(float _val, Position _pos) : ASTLiteral(LiteralType::FLOAT, _val, _pos) { }
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTStringLit : public ASTLiteral<std::string> {
 		ASTStringLit(std::string _val, Position _pos) : ASTLiteral(LiteralType::STRING, _val, _pos) {}
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 
 	struct ASTBoolLit : public ASTLiteral<bool> {
 		ASTBoolLit(bool _val, Position _pos) : ASTLiteral(LiteralType::BOOL, _val, _pos) {}
-		InstructionSet GenerateCode(Argument _dest, ProgramInfo& _progInfo) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
+		ASTNode* GetCopy() override;
 	};
 #pragma endregion
 

@@ -5,7 +5,7 @@ template<typename T> struct TToken {
 	Position position;
 	std::string value;
 
-	TToken() = default;
+	TToken() : type(T::INVALID), position(Position()), value("") { }
 	TToken(Position _pos) : type(T::INVAILD), position(_pos), value("") { }
 	TToken(T _type, Position _pos, std::string _val) : type(type), position(_pos), value(_val) { }
 	

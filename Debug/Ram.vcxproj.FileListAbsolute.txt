@@ -1,0 +1,2 @@
+C:\Users\raysh\source\repos\Ram\Debug\Ram.exe
+C:\Users\raysh\source\repos\Ram\Debug\Ram.pdb

@@ -49,14 +49,8 @@
   #include "ramvm_instruction.h"
 
   using namespace ramvm;
-  
-	namespace ramvm {
-		namespace bison {
-			std::vector<TypedArgument> BindArgDataTypes(std::vector<DataType>& _dataTypes, std::vector<Argument>& _args);
-		}
-	}
 
-#line 60 "ramvm_bison_parser.hpp"
+#line 54 "ramvm_bison_parser.hpp"
 
 
 # include <cstdlib> // std::abort
@@ -191,7 +185,7 @@
 
 #line 8 "ramvm_grammar.yy"
 namespace ramvm { namespace bison {
-#line 195 "ramvm_bison_parser.hpp"
+#line 189 "ramvm_bison_parser.hpp"
 
 
 
@@ -375,10 +369,12 @@ namespace ramvm { namespace bison {
     {
       // ARGUMENT
       // DEST_ARG
-      char dummy1[sizeof (Argument)];
+      char dummy1[sizeof (Argument*)];
 
       // "MOV"
       // "POP"
+      // "STORE"
+      // "PUSH"
       char dummy2[sizeof (DataType)];
 
       // "NEG"
@@ -431,11 +427,7 @@ namespace ramvm { namespace bison {
       char dummy10[sizeof (std::string)];
 
       // ARGUMENTS
-      char dummy11[sizeof (std::vector<Argument>)];
-
-      // "STORE"
-      // "PUSH"
-      char dummy12[sizeof (std::vector<DataType>)];
+      char dummy11[sizeof (std::vector<Argument*>)];
     };
 
     /// The size of the largest semantic type.
@@ -571,12 +563,12 @@ namespace ramvm { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, Argument&& v)
+      basic_symbol (typename Base::kind_type t, Argument*&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const Argument& v)
+      basic_symbol (typename Base::kind_type t, const Argument*& v)
         : Base (t)
         , value (v)
       {}
@@ -681,23 +673,12 @@ namespace ramvm { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::vector<Argument>&& v)
+      basic_symbol (typename Base::kind_type t, std::vector<Argument*>&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const std::vector<Argument>& v)
-        : Base (t)
-        , value (v)
-      {}
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::vector<DataType>&& v)
-        : Base (t)
-        , value (std::move (v))
-      {}
-#else
-      basic_symbol (typename Base::kind_type t, const std::vector<DataType>& v)
+      basic_symbol (typename Base::kind_type t, const std::vector<Argument*>& v)
         : Base (t)
         , value (v)
       {}
@@ -727,11 +708,13 @@ switch (yytype)
     {
       case 52: // ARGUMENT
       case 53: // DEST_ARG
-        value.template destroy< Argument > ();
+        value.template destroy< Argument* > ();
         break;
 
       case 22: // "MOV"
       case 23: // "POP"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.template destroy< DataType > ();
         break;
 
@@ -793,12 +776,7 @@ switch (yytype)
         break;
 
       case 50: // ARGUMENTS
-        value.template destroy< std::vector<Argument> > ();
-        break;
-
-      case 24: // "STORE"
-      case 25: // "PUSH"
-        value.template destroy< std::vector<DataType> > ();
+        value.template destroy< std::vector<Argument*> > ();
         break;
 
       default:
@@ -887,13 +865,13 @@ switch (yytype)
       symbol_type (int tok, DataType v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP);
+        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH);
       }
 #else
       symbol_type (int tok, const DataType& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP);
+        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -961,23 +939,10 @@ switch (yytype)
         YY_ASSERT (tok == token::TOK_LABEL);
       }
 #endif
-#if 201103L <= YY_CPLUSPLUS
-      symbol_type (int tok, std::vector<DataType> v)
-        : super_type(token_type (tok), std::move (v))
-      {
-        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH);
-      }
-#else
-      symbol_type (int tok, const std::vector<DataType>& v)
-        : super_type(token_type (tok), v)
-      {
-        YY_ASSERT (tok == token::TOK_STORE || tok == token::TOK_PUSH);
-      }
-#endif
     };
 
     /// Build a parser object.
-    Parser (Lexer& lexer_yyarg, std::vector<Instruction*>& result_yyarg, Position& position_yyarg, std::map<std::string, int>& labels_yyarg, std::map<Instruction*, std::pair<std::string, Position>>& ctrlInstrs_yyarg);
+    Parser (Lexer& lexer_yyarg, std::vector<Instruction*>& result_yyarg, Position& position_yyarg, std::unordered_map<std::string, int>& labels_yyarg);
     virtual ~Parser ();
 
     /// Parse.  An alias for parse ().
@@ -1343,14 +1308,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_STORE (std::vector<DataType> v)
+      make_TOK_STORE (DataType v)
       {
         return symbol_type (token::TOK_STORE, std::move (v));
       }
 #else
       static
       symbol_type
-      make_TOK_STORE (const std::vector<DataType>& v)
+      make_TOK_STORE (const DataType& v)
       {
         return symbol_type (token::TOK_STORE, v);
       }
@@ -1358,14 +1323,14 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_PUSH (std::vector<DataType> v)
+      make_TOK_PUSH (DataType v)
       {
         return symbol_type (token::TOK_PUSH, std::move (v));
       }
 #else
       static
       symbol_type
-      make_TOK_PUSH (const std::vector<DataType>& v)
+      make_TOK_PUSH (const DataType& v)
       {
         return symbol_type (token::TOK_PUSH, v);
       }
@@ -2026,7 +1991,7 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 153,     ///< Last index in yytable_.
+      yylast_ = 149,     ///< Last index in yytable_.
       yynnts_ = 9,  ///< Number of nonterminal symbols.
       yyfinal_ = 43, ///< Termination state number.
       yyntokens_ = 48  ///< Number of tokens.
@@ -2037,8 +2002,7 @@ switch (yytype)
     Lexer& lexer;
     std::vector<Instruction*>& result;
     Position& position;
-    std::map<std::string, int>& labels;
-    std::map<Instruction*, std::pair<std::string, Position>>& ctrlInstrs;
+    std::unordered_map<std::string, int>& labels;
   };
 
   inline
@@ -2104,11 +2068,13 @@ switch (yytype)
     {
       case 52: // ARGUMENT
       case 53: // DEST_ARG
-        value.move< Argument > (std::move (that.value));
+        value.move< Argument* > (std::move (that.value));
         break;
 
       case 22: // "MOV"
       case 23: // "POP"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.move< DataType > (std::move (that.value));
         break;
 
@@ -2170,12 +2136,7 @@ switch (yytype)
         break;
 
       case 50: // ARGUMENTS
-        value.move< std::vector<Argument> > (std::move (that.value));
-        break;
-
-      case 24: // "STORE"
-      case 25: // "PUSH"
-        value.move< std::vector<DataType> > (std::move (that.value));
+        value.move< std::vector<Argument*> > (std::move (that.value));
         break;
 
       default:
@@ -2194,11 +2155,13 @@ switch (yytype)
     {
       case 52: // ARGUMENT
       case 53: // DEST_ARG
-        value.copy< Argument > (YY_MOVE (that.value));
+        value.copy< Argument* > (YY_MOVE (that.value));
         break;
 
       case 22: // "MOV"
       case 23: // "POP"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.copy< DataType > (YY_MOVE (that.value));
         break;
 
@@ -2260,12 +2223,7 @@ switch (yytype)
         break;
 
       case 50: // ARGUMENTS
-        value.copy< std::vector<Argument> > (YY_MOVE (that.value));
-        break;
-
-      case 24: // "STORE"
-      case 25: // "PUSH"
-        value.copy< std::vector<DataType> > (YY_MOVE (that.value));
+        value.copy< std::vector<Argument*> > (YY_MOVE (that.value));
         break;
 
       default:
@@ -2292,11 +2250,13 @@ switch (yytype)
     {
       case 52: // ARGUMENT
       case 53: // DEST_ARG
-        value.move< Argument > (YY_MOVE (s.value));
+        value.move< Argument* > (YY_MOVE (s.value));
         break;
 
       case 22: // "MOV"
       case 23: // "POP"
+      case 24: // "STORE"
+      case 25: // "PUSH"
         value.move< DataType > (YY_MOVE (s.value));
         break;
 
@@ -2358,12 +2318,7 @@ switch (yytype)
         break;
 
       case 50: // ARGUMENTS
-        value.move< std::vector<Argument> > (YY_MOVE (s.value));
-        break;
-
-      case 24: // "STORE"
-      case 25: // "PUSH"
-        value.move< std::vector<DataType> > (YY_MOVE (s.value));
+        value.move< std::vector<Argument*> > (YY_MOVE (s.value));
         break;
 
       default:
@@ -2421,7 +2376,7 @@ switch (yytype)
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 2425 "ramvm_bison_parser.hpp"
+#line 2380 "ramvm_bison_parser.hpp"
 
 
 

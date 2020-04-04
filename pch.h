@@ -13,6 +13,7 @@
 #include <iterator>
 
 #define IGNORE(x) (void)(x)
+#define ASSERT_MSG(cond, msg) if(!(cond)) { throw std::runtime_error(msg); }
 
 struct Position
 {

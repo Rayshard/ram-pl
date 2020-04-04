@@ -5,75 +5,22 @@
 #include "ramvm_bison_parser.hpp"
 
 namespace ramvm {
-	ResultType ParseArgument(std::string& _token, Argument& _arg)
-	{
-		if (std::regex_match(_token, Lexer::REGEX_REG))
-		{
-			std::string idx = _token.substr(1, _token.length() - 1);
-
-			if (IsInt(idx)) { _arg = Argument(ArgType::REGISTER, std::stoi(idx)); }
-			else { return ResultType::ERR_REG_IDX_OOB; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_MEM_REG))
-		{
-			std::string idx = _token.substr(2, _token.length() - 3);
-
-			if (IsInt(idx)) { _arg = Argument(ArgType::MEM_REG, std::stoi(idx)); }
-			else { return ResultType::ERR_REG_IDX_OOB; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_STACK_REG))
-		{
-			std::string idx = _token.substr(2, _token.length() - 3);
-
-			if (IsInt(idx)) { _arg = Argument(ArgType::STACK_REG, std::stoi(idx)); }
-			else { return ResultType::ERR_REG_IDX_OOB; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_SP_OFFSET))
-		{
-			std::string idx = _token.substr(1, _token.length() - 2);
-
-			if (IsInt(idx)) { _arg = Argument(ArgType::SP_OFFSET, std::stoi(idx)); }
-			else { return ResultType::ERR_REG_IDX_OOB; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_SP)) { _arg = Argument(ArgType::STACK_PTR, 0); }
-		else if (std::regex_match(_token, Lexer::REGEX_INT_LIT))
-		{
-			try { _arg = Argument(ArgType::VALUE, std::stoll(_token)); }
-			catch (...) { return ResultType::ERR_ARGUMENT; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_FLOAT_LIT))
-		{
-			try { _arg = Argument(ArgType::VALUE, std::stof(_token)); }
-			catch (...) { return ResultType::ERR_ARGUMENT; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_DOUBLE_LIT))
-		{
-			try { _arg = Argument(ArgType::VALUE, std::stod(_token)); }
-			catch (...) { return ResultType::ERR_ARGUMENT; }
-		}
-		else if (std::regex_match(_token, Lexer::REGEX_HEX_LIT))
-		{
-			try { _arg = Argument(ArgType::VALUE, std::stoll(_token, 0, 16)); }
-			catch (...) { return ResultType::ERR_ARGUMENT; }
-		}
-		else { return ResultType::PARSE_ERR_INVALID_ARG; }
-
-		return ResultType::SUCCESS;
-	}
-
 	bool ParseResult::IsSuccess() { return success; }
 	std::vector<Instruction*>& ParseResult::GetInstructionSet() { return instrSet; }
+	std::unordered_map<std::string, int>& ParseResult::GetLabels() { return labels; }
 
 	std::string ParseResult::ToString()
 	{
 		if (success) { return "SUCCESS"; }
 		else { return errString; }
 	}
-	ParseResult ParseResult::GenSuccess(std::vector<Instruction*>& _instrSet)
+
+	ParseResult ParseResult::GenSuccess(const std::vector<Instruction*>& _instrSet, const std::unordered_map<std::string, int>& _labels)
 	{
 		ParseResult result;
 		result.success = true;
 		result.instrSet = _instrSet;
+		result.labels = _labels;
 		return result;
 	}
 	ParseResult ParseResult::GenError(std::string _msg, Position _pos, bool _includePos)
@@ -89,33 +36,15 @@ namespace ramvm {
 	{
 		Lexer lexer = Lexer(_stream, _tabSize);
 		std::vector<Instruction*> program;
-		std::map<std::string, int> labels;
-		std::map<Instruction*, std::pair<std::string, Position>> ctrlInstrs;
+		std::unordered_map<std::string, int> labels;
 		Position position;
 
 		try
 		{
-			bison::Parser parse(lexer, program, position, labels, ctrlInstrs);
+			bison::Parser parse(lexer, program, position, labels);
 
-			if (parse() != 0)
-				return ParseResult::GenError("", position, true);
-
-			//Convert Control Instruction Labels
-			for (auto it = ctrlInstrs.begin(); it != ctrlInstrs.end(); it++)
-			{
-				auto search = labels.find(it->second.first);
-
-				if (search != labels.end())
-				{
-					Instruction* instr = it->first;
-					if (instr->GetType() == InstructionType::JUMP) { ((InstrJump*)instr)->instrIdx = labels[it->second.first]; }
-					else if (instr->GetType() == InstructionType::CJUMP) { ((InstrCJump*)instr)->instrIdx = labels[it->second.first]; }
-					else if (instr->GetType() == InstructionType::CALL) { ((InstrCall*)instr)->instrIdx = labels[it->second.first]; }
-				}
-				else { return ParseResult::GenError("Unknown label: " + it->second.first, it->second.second, true); }
-			}
-
-			return ParseResult::GenSuccess(program);
+			if (parse() != 0) { return ParseResult::GenError("", position, true); }
+			else { return ParseResult::GenSuccess(program, labels); }
 		}
 		catch (std::runtime_error err) { return ParseResult::GenError(err.what(), position, true); }
 	}
