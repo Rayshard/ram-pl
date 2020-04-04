@@ -20,7 +20,7 @@ namespace ramc {
 
 	enum class ASTNodeType { PROGRAM, FUNCDECL, STMT, EXPR };
 	enum class ASTStmtType { ASSIGNMENT, VARDECL, BLOCK, IF, WHILE, FORLOOP, BREAK, CONTINUE, RETURN, FUNC_CALL };
-	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL, FUNC_CALL };
+	enum class ASTExprType { IF, LITERAL, BINOP, UNOP, IDENTIFIER, EXPR, VARDECL, FUNC_CALL, ARRAY_INIT };
 
 	enum class BinopType {
 		ADD, SUB, MUL, DIV, MOD, POW,
@@ -489,6 +489,23 @@ namespace ramc {
 		ASTBoolLit(bool _val, Position _pos) : ASTLiteral(LiteralType::BOOL, _val, _pos) {}
 		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 		ASTNode* GetCopy() override;
+	};
+#pragma endregion
+
+#pragma region ArrayInit
+	class ASTArrayInit : public ASTExpr {
+		std::vector<ASTExpr*> elemExprs;
+
+		//Set when type checked successfully
+		Type* restraint;
+	public:
+		ASTArrayInit(std::vector<ASTExpr*> _elemExprs, Position _pos);
+		~ASTArrayInit();
+
+		std::string ToString(int _indentLvl, std::string _prefix = "") override;
+		ASTNode* GetCopy() override;
+		TypeResult _TypeCheck(Environment* _env) override;
+		InstructionSet GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo) override;
 	};
 #pragma endregion
 

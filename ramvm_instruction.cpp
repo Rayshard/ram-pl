@@ -32,11 +32,9 @@ namespace ramvm {
 			case Binop::GTEQ: return "GTEQ";
 			case Binop::EQ: return "EQ";
 			case Binop::NEQ: return "NEQ";
-			case Binop::BIT_AND: return "BAND";
-			case Binop::BIT_OR: return "BOR";
-			case Binop::BIT_XOR: return "BXOR";
-			case Binop::LOG_AND: return "LAND";
-			case Binop::LOG_OR: return "LOR";
+			case Binop::AND: return "AND";
+			case Binop::OR: return "OR";
+			case Binop::XOR: return "XOR";
 			default: ASSERT_MSG(false, "BinopToString - Binop not handled!");
 		}
 	}
@@ -541,113 +539,49 @@ namespace ramvm {
 			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::NEQ): _result = DataVariant(byte(_val1.L() != _val2.L())); break;
 #pragma endregion
 
-#pragma region BIT_AND
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_AND): _result = DataVariant(byte(_val1.B() & _val2.B())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.B() & _val2.I())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::BIT_AND): _result = DataVariant(rLong(_val1.B() & _val2.L())); break;
+#pragma region AND
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::AND): _result = DataVariant(byte(_val1.B() & _val2.B())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::AND): _result = DataVariant(int(_val1.B() & _val2.I())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::AND): _result = DataVariant(rLong(_val1.B() & _val2.L())); break;
 
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.I() & _val2.B())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_AND): _result = DataVariant(int(_val1.I() & _val2.I())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::BIT_AND): _result = DataVariant(rLong(_val1.I() & _val2.L())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::AND): _result = DataVariant(int(_val1.I() & _val2.B())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::AND): _result = DataVariant(int(_val1.I() & _val2.I())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::AND): _result = DataVariant(rLong(_val1.I() & _val2.L())); break;
 
 
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::BIT_AND): _result = DataVariant(rLong(_val1.L() & _val2.B())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::BIT_AND): _result = DataVariant(rLong(_val1.L() & _val2.I())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::BIT_AND): _result = DataVariant(rLong(_val1.L() & _val2.L())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::AND): _result = DataVariant(rLong(_val1.L() & _val2.B())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::AND): _result = DataVariant(rLong(_val1.L() & _val2.I())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::AND): _result = DataVariant(rLong(_val1.L() & _val2.L())); break;
 #pragma endregion
 
-#pragma region BIT_OR
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_OR): _result = DataVariant(byte(_val1.B() | _val2.B())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.B() | _val2.I())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::BIT_OR): _result = DataVariant(rLong(_val1.B() | _val2.L())); break;
+#pragma region OR
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::OR): _result = DataVariant(byte(_val1.B() | _val2.B())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::OR): _result = DataVariant(int(_val1.B() | _val2.I())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::OR): _result = DataVariant(rLong(_val1.B() | _val2.L())); break;
 
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.I() | _val2.B())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_OR): _result = DataVariant(int(_val1.I() | _val2.I())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::BIT_OR): _result = DataVariant(rLong(_val1.I() | _val2.L())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::OR): _result = DataVariant(int(_val1.I() | _val2.B())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::OR): _result = DataVariant(int(_val1.I() | _val2.I())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::OR): _result = DataVariant(rLong(_val1.I() | _val2.L())); break;
 
 
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::BIT_OR): _result = DataVariant(rLong(_val1.L() | _val2.B())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::BIT_OR): _result = DataVariant(rLong(_val1.L() | _val2.I())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::BIT_OR): _result = DataVariant(rLong(_val1.L() | _val2.L())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::OR): _result = DataVariant(rLong(_val1.L() | _val2.B())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::OR): _result = DataVariant(rLong(_val1.L() | _val2.I())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::OR): _result = DataVariant(rLong(_val1.L() | _val2.L())); break;
 #pragma endregion
 
-#pragma region BIT_XOR
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::BIT_XOR): _result = DataVariant(byte(_val1.B() ^ _val2.B())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.B() ^ _val2.I())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::BIT_XOR): _result = DataVariant(rLong(_val1.B() ^ _val2.L())); break;
+#pragma region XOR
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::XOR): _result = DataVariant(byte(_val1.B() ^ _val2.B())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::XOR): _result = DataVariant(int(_val1.B() ^ _val2.I())); break;
+			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::XOR): _result = DataVariant(rLong(_val1.B() ^ _val2.L())); break;
 
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.I() ^ _val2.B())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::BIT_XOR): _result = DataVariant(int(_val1.I() ^ _val2.I())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::BIT_XOR): _result = DataVariant(rLong(_val1.I() ^ _val2.L())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::XOR): _result = DataVariant(int(_val1.I() ^ _val2.B())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::XOR): _result = DataVariant(int(_val1.I() ^ _val2.I())); break;
+			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::XOR): _result = DataVariant(rLong(_val1.I() ^ _val2.L())); break;
 
 
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::BIT_XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.B())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::BIT_XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.I())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::BIT_XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.L())); break;
-#pragma endregion
-
-#pragma region LOG_AND
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.B() && _val2.B())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.B() && _val2.I())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::FLOAT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.B() && _val2.F())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::DOUBLE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.B() && _val2.D())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.B() && _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.I() && _val2.B())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.I() && _val2.I())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::FLOAT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.I() && _val2.F())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::DOUBLE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.I() && _val2.D())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.I() && _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.F() && _val2.B())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.F() && _val2.I())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::FLOAT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.F() && _val2.F())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::DOUBLE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.F() && _val2.D())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::LONG, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.F() && _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.D() && _val2.B())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.D() && _val2.I())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::FLOAT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.D() && _val2.F())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::DOUBLE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.D() && _val2.D())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::LONG, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.D() && _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.L() && _val2.B())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.L() && _val2.I())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::FLOAT, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.L() && _val2.F())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::DOUBLE, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.L() && _val2.D())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::LOG_AND): _result = DataVariant(byte(_val1.L() && _val2.L())); break;
-#pragma endregion
-
-#pragma region LOG_OR
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.B() || _val2.B())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.B() || _val2.I())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::FLOAT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.B() || _val2.F())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::DOUBLE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.B() || _val2.D())); break;
-			case ConcatTriple((byte)DataType::BYTE, (byte)DataType::LONG, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.B() || _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.I() || _val2.B())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.I() || _val2.I())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::FLOAT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.I() || _val2.F())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::DOUBLE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.I() || _val2.D())); break;
-			case ConcatTriple((byte)DataType::INT, (byte)DataType::LONG, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.I() || _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.F() || _val2.B())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.F() || _val2.I())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::FLOAT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.F() || _val2.F())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::DOUBLE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.F() || _val2.D())); break;
-			case ConcatTriple((byte)DataType::FLOAT, (byte)DataType::LONG, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.F() || _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.D() || _val2.B())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.D() || _val2.I())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::FLOAT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.D() || _val2.F())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::DOUBLE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.D() || _val2.D())); break;
-			case ConcatTriple((byte)DataType::DOUBLE, (byte)DataType::LONG, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.D() || _val2.L())); break;
-
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.L() || _val2.B())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.L() || _val2.I())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::FLOAT, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.L() || _val2.F())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::DOUBLE, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.L() || _val2.D())); break;
-			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::LOG_OR): _result = DataVariant(byte(_val1.L() || _val2.L())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::BYTE, (byte)Binop::XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.B())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::INT, (byte)Binop::XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.I())); break;
+			case ConcatTriple((byte)DataType::LONG, (byte)DataType::LONG, (byte)Binop::XOR): _result = DataVariant(rLong(_val1.L() ^ _val2.L())); break;
 #pragma endregion
 
 			default: return ResultType::ERR_DO_BINOP;
@@ -683,8 +617,7 @@ namespace ramvm {
 		switch (_type)
 		{
 			case Unop::NEG: return "NEG";
-			case Unop::LOG_NOT: return "LNOT";
-			case Unop::BIN_NOT: return "BNOT";
+			case Unop::NOT: return "NOT";
 			default: return "UnopToString - Unop not handled!";
 		}
 	}
@@ -694,24 +627,19 @@ namespace ramvm {
 		switch (ConcatDouble((byte)_val.GetType(), (byte)_op)) //Switch on Operation Type
 		{
 			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::NEG): _result = DataVariant(byte(-_val.B())); break;
-			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::LOG_NOT): _result = DataVariant(byte(!_val.B())); break;
-			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::BIN_NOT): _result = DataVariant(byte(~_val.B())); break;
+			case ConcatDouble((byte)DataType::BYTE, (byte)Unop::NOT): _result = DataVariant(byte(~_val.B())); break;
 
 			case ConcatDouble((byte)DataType::INT, (byte)Unop::NEG): _result = DataVariant(int(-_val.I())); break;
-			case ConcatDouble((byte)DataType::INT, (byte)Unop::LOG_NOT): _result = DataVariant(int(!_val.I())); break;
-			case ConcatDouble((byte)DataType::INT, (byte)Unop::BIN_NOT): _result = DataVariant(int(~_val.B())); break;
+			case ConcatDouble((byte)DataType::INT, (byte)Unop::NOT): _result = DataVariant(int(~_val.B())); break;
 
 			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::NEG): _result = DataVariant(float(-_val.F())); break;
-			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::LOG_NOT): _result = DataVariant(float(!_val.F())); break;
-			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::BIN_NOT): _result = DataVariant(float(~_val.B())); break;
+			case ConcatDouble((byte)DataType::FLOAT, (byte)Unop::NOT): _result = DataVariant(float(~_val.B())); break;
 
 			case ConcatDouble((byte)DataType::DOUBLE, (byte)Unop::NEG): _result = DataVariant(double(-_val.D())); break;
-			case ConcatDouble((byte)DataType::DOUBLE, (byte)Unop::LOG_NOT): _result = DataVariant(double(!_val.D())); break;
-			case ConcatDouble((byte)DataType::DOUBLE, (byte)Unop::BIN_NOT): _result = DataVariant(double(~_val.B())); break;
+			case ConcatDouble((byte)DataType::DOUBLE, (byte)Unop::NOT): _result = DataVariant(double(~_val.B())); break;
 
 			case ConcatDouble((byte)DataType::LONG, (byte)Unop::NEG): _result = DataVariant(rLong(-_val.L())); break;
-			case ConcatDouble((byte)DataType::LONG, (byte)Unop::LOG_NOT): _result = DataVariant(rLong(!_val.L())); break;
-			case ConcatDouble((byte)DataType::LONG, (byte)Unop::BIN_NOT): _result = DataVariant(rLong(~_val.B())); break;
+			case ConcatDouble((byte)DataType::LONG, (byte)Unop::NOT): _result = DataVariant(rLong(~_val.B())); break;
 
 			default: return ResultType::ERR_DO_UNOP;
 		}

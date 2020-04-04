@@ -18,6 +18,9 @@ public:
 
 		if (result == '\n')
 		{
+			if (stream->peek() == '\r')
+				stream->get();
+
 			position.line++;
 			position.colomn = 0;
 		}

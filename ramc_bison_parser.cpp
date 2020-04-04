@@ -137,7 +137,7 @@
 				case TokenType::RPAREN: return Parser::make_RPAREN();
 				case TokenType::LCBRACKET: return Parser::make_LCBRACKET(token.position);
 				case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
-				case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
+				case TokenType::LSBRACKET: return Parser::make_LSBRACKET(token.position);
 				case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
 				case TokenType::SEMICOLON: return Parser::make_SEMICOLON();
 				case TokenType::PERIOD: return Parser::make_PERIOD();
@@ -337,6 +337,10 @@ namespace ramc { namespace bison {
   {
     switch (that.type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.YY_MOVE_OR_COPY< ASTArrayInit* > (YY_MOVE (that.value));
+        break;
+
       case 81: // ASSIGNMENT
         value.YY_MOVE_OR_COPY< ASTAssignment* > (YY_MOVE (that.value));
         break;
@@ -415,15 +419,16 @@ namespace ramc { namespace bison {
         value.YY_MOVE_OR_COPY< ASTVarDecl* > (YY_MOVE (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.YY_MOVE_OR_COPY< AssignmentType > (YY_MOVE (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.YY_MOVE_OR_COPY< Param > (YY_MOVE (that.value));
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -446,7 +451,7 @@ namespace ramc { namespace bison {
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.YY_MOVE_OR_COPY< Type* > (YY_MOVE (that.value));
         break;
 
@@ -454,29 +459,29 @@ namespace ramc { namespace bison {
         value.YY_MOVE_OR_COPY< std::pair<std::string, Position> > (YY_MOVE (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.YY_MOVE_OR_COPY< std::vector<ASTExpr*> > (YY_MOVE (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.YY_MOVE_OR_COPY< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.YY_MOVE_OR_COPY< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.YY_MOVE_OR_COPY< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.YY_MOVE_OR_COPY< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.YY_MOVE_OR_COPY< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
@@ -495,6 +500,10 @@ namespace ramc { namespace bison {
   {
     switch (that.type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.move< ASTArrayInit* > (YY_MOVE (that.value));
+        break;
+
       case 81: // ASSIGNMENT
         value.move< ASTAssignment* > (YY_MOVE (that.value));
         break;
@@ -573,15 +582,16 @@ namespace ramc { namespace bison {
         value.move< ASTVarDecl* > (YY_MOVE (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (YY_MOVE (that.value));
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -604,7 +614,7 @@ namespace ramc { namespace bison {
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (YY_MOVE (that.value));
         break;
 
@@ -612,29 +622,29 @@ namespace ramc { namespace bison {
         value.move< std::pair<std::string, Position> > (YY_MOVE (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (YY_MOVE (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
@@ -653,6 +663,10 @@ namespace ramc { namespace bison {
     state = that.state;
     switch (that.type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.copy< ASTArrayInit* > (that.value);
+        break;
+
       case 81: // ASSIGNMENT
         value.copy< ASTAssignment* > (that.value);
         break;
@@ -731,15 +745,16 @@ namespace ramc { namespace bison {
         value.copy< ASTVarDecl* > (that.value);
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.copy< AssignmentType > (that.value);
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.copy< Param > (that.value);
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -762,7 +777,7 @@ namespace ramc { namespace bison {
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.copy< Type* > (that.value);
         break;
 
@@ -770,29 +785,29 @@ namespace ramc { namespace bison {
         value.copy< std::pair<std::string, Position> > (that.value);
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.copy< std::vector<ASTExpr*> > (that.value);
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.copy< std::vector<ASTFuncDecl*> > (that.value);
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.copy< std::vector<ASTStmt*> > (that.value);
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (that.value);
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.copy< std::vector<Param> > (that.value);
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.copy< std::vector<Type*> > (that.value);
         break;
 
@@ -809,6 +824,10 @@ namespace ramc { namespace bison {
     state = that.state;
     switch (that.type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.move< ASTArrayInit* > (that.value);
+        break;
+
       case 81: // ASSIGNMENT
         value.move< ASTAssignment* > (that.value);
         break;
@@ -887,15 +906,16 @@ namespace ramc { namespace bison {
         value.move< ASTVarDecl* > (that.value);
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (that.value);
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (that.value);
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -918,7 +938,7 @@ namespace ramc { namespace bison {
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (that.value);
         break;
 
@@ -926,29 +946,29 @@ namespace ramc { namespace bison {
         value.move< std::pair<std::string, Position> > (that.value);
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (that.value);
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (that.value);
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (that.value);
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (that.value);
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (that.value);
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (that.value);
         break;
 
@@ -1207,6 +1227,10 @@ namespace ramc { namespace bison {
          when using variants.  */
       switch (yyr1_[yyn])
     {
+      case 102: // ARRAY_INIT
+        yylhs.value.emplace< ASTArrayInit* > ();
+        break;
+
       case 81: // ASSIGNMENT
         yylhs.value.emplace< ASTAssignment* > ();
         break;
@@ -1285,15 +1309,16 @@ namespace ramc { namespace bison {
         yylhs.value.emplace< ASTVarDecl* > ();
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         yylhs.value.emplace< AssignmentType > ();
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         yylhs.value.emplace< Param > ();
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -1316,7 +1341,7 @@ namespace ramc { namespace bison {
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         yylhs.value.emplace< Type* > ();
         break;
 
@@ -1324,29 +1349,29 @@ namespace ramc { namespace bison {
         yylhs.value.emplace< std::pair<std::string, Position> > ();
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         yylhs.value.emplace< std::vector<ASTExpr*> > ();
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         yylhs.value.emplace< std::vector<ASTFuncDecl*> > ();
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         yylhs.value.emplace< std::vector<ASTStmt*> > ();
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         yylhs.value.emplace< std::vector<ASTVarDecl*> > ();
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         yylhs.value.emplace< std::vector<Param> > ();
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         yylhs.value.emplace< std::vector<Type*> > ();
         break;
 
@@ -1365,703 +1390,721 @@ namespace ramc { namespace bison {
           switch (yyn)
             {
   case 2:
-#line 245 "ramc_grammar.yy"
+#line 246 "ramc_grammar.yy"
          { InTopLvl = true; }
-#line 1371 "ramc_bison_parser.cpp"
+#line 1396 "ramc_bison_parser.cpp"
     break;
 
   case 3:
-#line 245 "ramc_grammar.yy"
+#line 246 "ramc_grammar.yy"
                                        { InTopLvl = false; }
-#line 1377 "ramc_bison_parser.cpp"
+#line 1402 "ramc_bison_parser.cpp"
     break;
 
   case 4:
-#line 245 "ramc_grammar.yy"
+#line 246 "ramc_grammar.yy"
                                                                           { result = new ASTProgram("Test File", yystack_[2].value.as < std::vector<ASTVarDecl*> > (), yystack_[0].value.as < std::vector<ASTFuncDecl*> > ()); }
-#line 1383 "ramc_bison_parser.cpp"
+#line 1408 "ramc_bison_parser.cpp"
     break;
 
   case 5:
-#line 247 "ramc_grammar.yy"
+#line 248 "ramc_grammar.yy"
                                            { yylhs.value.as < std::vector<ASTVarDecl*> > () = { }; }
-#line 1389 "ramc_bison_parser.cpp"
+#line 1414 "ramc_bison_parser.cpp"
     break;
 
   case 6:
-#line 248 "ramc_grammar.yy"
+#line 249 "ramc_grammar.yy"
                                        { yystack_[0].value.as < std::vector<ASTVarDecl*> > ().insert(yystack_[0].value.as < std::vector<ASTVarDecl*> > ().begin(), yystack_[2].value.as < ASTVarDecl* > ()); yylhs.value.as < std::vector<ASTVarDecl*> > () = yystack_[0].value.as < std::vector<ASTVarDecl*> > (); }
-#line 1395 "ramc_bison_parser.cpp"
+#line 1420 "ramc_bison_parser.cpp"
     break;
 
   case 7:
-#line 251 "ramc_grammar.yy"
+#line 252 "ramc_grammar.yy"
                                                 { yylhs.value.as < std::vector<ASTFuncDecl*> > () = { }; }
-#line 1401 "ramc_bison_parser.cpp"
+#line 1426 "ramc_bison_parser.cpp"
     break;
 
   case 8:
-#line 252 "ramc_grammar.yy"
+#line 253 "ramc_grammar.yy"
                                                 { yystack_[0].value.as < std::vector<ASTFuncDecl*> > ().insert(yystack_[0].value.as < std::vector<ASTFuncDecl*> > ().begin(), yystack_[1].value.as < ASTFuncDecl* > ()); yylhs.value.as < std::vector<ASTFuncDecl*> > () = yystack_[0].value.as < std::vector<ASTFuncDecl*> > (); }
-#line 1407 "ramc_bison_parser.cpp"
+#line 1432 "ramc_bison_parser.cpp"
     break;
 
   case 9:
-#line 255 "ramc_grammar.yy"
+#line 256 "ramc_grammar.yy"
                                                                      { yylhs.value.as < ASTFuncDecl* > () = new ASTFuncDecl(yystack_[8].value.as < std::pair<std::string, Position> > ().first, yystack_[5].value.as < std::vector<Param> > (), yystack_[2].value.as < std::vector<Type*> > (), yystack_[0].value.as < ASTStmt* > (), yystack_[9].value.as < Position > ()); }
-#line 1413 "ramc_bison_parser.cpp"
+#line 1438 "ramc_bison_parser.cpp"
     break;
 
   case 10:
-#line 256 "ramc_grammar.yy"
+#line 257 "ramc_grammar.yy"
                                                                                          { yylhs.value.as < ASTFuncDecl* > () = new ASTFuncDecl(yystack_[6].value.as < std::pair<std::string, Position> > ().first, yystack_[3].value.as < std::vector<Param> > (), { }, yystack_[0].value.as < ASTStmt* > (), yystack_[7].value.as < Position > ()); }
-#line 1419 "ramc_bison_parser.cpp"
+#line 1444 "ramc_bison_parser.cpp"
     break;
 
   case 11:
-#line 258 "ramc_grammar.yy"
+#line 259 "ramc_grammar.yy"
                            { yylhs.value.as < std::vector<Param> > () = { }; }
-#line 1425 "ramc_bison_parser.cpp"
+#line 1450 "ramc_bison_parser.cpp"
     break;
 
   case 12:
-#line 259 "ramc_grammar.yy"
+#line 260 "ramc_grammar.yy"
                                { yylhs.value.as < std::vector<Param> > () = yystack_[0].value.as < std::vector<Param> > (); }
-#line 1431 "ramc_bison_parser.cpp"
+#line 1456 "ramc_bison_parser.cpp"
     break;
 
   case 13:
-#line 262 "ramc_grammar.yy"
+#line 263 "ramc_grammar.yy"
                                              { yylhs.value.as < std::vector<Param> > () = { yystack_[0].value.as < Param > () }; }
-#line 1437 "ramc_bison_parser.cpp"
+#line 1462 "ramc_bison_parser.cpp"
     break;
 
   case 14:
-#line 263 "ramc_grammar.yy"
+#line 264 "ramc_grammar.yy"
                                          { yystack_[0].value.as < std::vector<Param> > ().insert(yystack_[0].value.as < std::vector<Param> > ().begin(), yystack_[2].value.as < Param > ()); yylhs.value.as < std::vector<Param> > () = yystack_[0].value.as < std::vector<Param> > (); }
-#line 1443 "ramc_bison_parser.cpp"
+#line 1468 "ramc_bison_parser.cpp"
     break;
 
   case 15:
-#line 266 "ramc_grammar.yy"
+#line 267 "ramc_grammar.yy"
                      { yylhs.value.as < Param > () = { yystack_[2].value.as < std::pair<std::string, Position> > ().first, yystack_[0].value.as < Type* > (), yystack_[2].value.as < std::pair<std::string, Position> > ().second }; }
-#line 1449 "ramc_bison_parser.cpp"
+#line 1474 "ramc_bison_parser.cpp"
     break;
 
   case 16:
-#line 268 "ramc_grammar.yy"
+#line 269 "ramc_grammar.yy"
                           { yylhs.value.as < std::vector<ASTStmt*> > () = { }; }
-#line 1455 "ramc_bison_parser.cpp"
+#line 1480 "ramc_bison_parser.cpp"
     break;
 
   case 17:
-#line 269 "ramc_grammar.yy"
+#line 270 "ramc_grammar.yy"
                           { yystack_[0].value.as < std::vector<ASTStmt*> > ().insert(yystack_[0].value.as < std::vector<ASTStmt*> > ().begin(), yystack_[2].value.as < ASTStmt* > ()); yylhs.value.as < std::vector<ASTStmt*> > () = yystack_[0].value.as < std::vector<ASTStmt*> > (); }
-#line 1461 "ramc_bison_parser.cpp"
+#line 1486 "ramc_bison_parser.cpp"
     break;
 
   case 18:
-#line 272 "ramc_grammar.yy"
+#line 273 "ramc_grammar.yy"
                   { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTStmt* > (); }
-#line 1467 "ramc_bison_parser.cpp"
+#line 1492 "ramc_bison_parser.cpp"
     break;
 
   case 19:
-#line 273 "ramc_grammar.yy"
+#line 274 "ramc_grammar.yy"
                   { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTStmt* > (); }
-#line 1473 "ramc_bison_parser.cpp"
+#line 1498 "ramc_bison_parser.cpp"
     break;
 
   case 20:
-#line 276 "ramc_grammar.yy"
+#line 277 "ramc_grammar.yy"
                                                                                 { yylhs.value.as < ASTStmt* > () = new ASTIfStmt(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTStmt* > (), nullptr, yystack_[3].value.as < Position > ()); }
-#line 1479 "ramc_bison_parser.cpp"
+#line 1504 "ramc_bison_parser.cpp"
     break;
 
   case 21:
-#line 277 "ramc_grammar.yy"
+#line 278 "ramc_grammar.yy"
                                                                         { yylhs.value.as < ASTStmt* > () = new ASTIfStmt(yystack_[4].value.as < ASTExpr* > (), yystack_[2].value.as < ASTStmt* > (), yystack_[0].value.as < ASTStmt* > (), yystack_[5].value.as < Position > ()); }
-#line 1485 "ramc_bison_parser.cpp"
+#line 1510 "ramc_bison_parser.cpp"
     break;
 
   case 22:
-#line 278 "ramc_grammar.yy"
+#line 279 "ramc_grammar.yy"
                                                                                                         { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTStmt* > (); }
-#line 1491 "ramc_bison_parser.cpp"
+#line 1516 "ramc_bison_parser.cpp"
     break;
 
   case 23:
-#line 281 "ramc_grammar.yy"
+#line 282 "ramc_grammar.yy"
                                                                                                         { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTAssignment* > (); }
-#line 1497 "ramc_bison_parser.cpp"
+#line 1522 "ramc_bison_parser.cpp"
     break;
 
   case 24:
-#line 282 "ramc_grammar.yy"
+#line 283 "ramc_grammar.yy"
                                                                                                                 { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTVarDecl* > (); }
-#line 1503 "ramc_bison_parser.cpp"
+#line 1528 "ramc_bison_parser.cpp"
     break;
 
   case 25:
-#line 283 "ramc_grammar.yy"
+#line 284 "ramc_grammar.yy"
                                                                                                         { yystack_[1].value.as < std::vector<ASTStmt*> > ().insert(yystack_[1].value.as < std::vector<ASTStmt*> > ().begin(), yystack_[3].value.as < ASTStmt* > ()); yylhs.value.as < ASTStmt* > () = new ASTBlock(yystack_[1].value.as < std::vector<ASTStmt*> > (), yystack_[4].value.as < Position > ());}
-#line 1509 "ramc_bison_parser.cpp"
+#line 1534 "ramc_bison_parser.cpp"
     break;
 
   case 26:
-#line 284 "ramc_grammar.yy"
+#line 285 "ramc_grammar.yy"
                                                                         { yylhs.value.as < ASTStmt* > () = new ASTIfStmt(yystack_[4].value.as < ASTExpr* > (), yystack_[2].value.as < ASTStmt* > (), yystack_[0].value.as < ASTStmt* > (), yystack_[5].value.as < Position > ()); }
-#line 1515 "ramc_bison_parser.cpp"
+#line 1540 "ramc_bison_parser.cpp"
     break;
 
   case 27:
-#line 285 "ramc_grammar.yy"
+#line 286 "ramc_grammar.yy"
                                                                                                                 { yylhs.value.as < ASTStmt* > () = yystack_[0].value.as < ASTStmt* > (); }
-#line 1521 "ramc_bison_parser.cpp"
+#line 1546 "ramc_bison_parser.cpp"
     break;
 
   case 28:
-#line 286 "ramc_grammar.yy"
+#line 287 "ramc_grammar.yy"
                                                                                                                 { IsInLoop ? yylhs.value.as < ASTStmt* > () = new ASTBreakContinueStmt(true, yystack_[0].value.as < Position > ()) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
-#line 1527 "ramc_bison_parser.cpp"
+#line 1552 "ramc_bison_parser.cpp"
     break;
 
   case 29:
-#line 287 "ramc_grammar.yy"
+#line 288 "ramc_grammar.yy"
                                                                                                                 { IsInLoop ? yylhs.value.as < ASTStmt* > () = new ASTBreakContinueStmt(false, yystack_[0].value.as < Position > ()) : throw std::runtime_error("Cannot have 'continue' outside of a loop!"); }
-#line 1533 "ramc_bison_parser.cpp"
+#line 1558 "ramc_bison_parser.cpp"
     break;
 
   case 30:
-#line 288 "ramc_grammar.yy"
+#line 289 "ramc_grammar.yy"
                                                                                                         { yylhs.value.as < ASTStmt* > () = new ASTReturnStmt(yystack_[0].value.as < std::vector<ASTExpr*> > (), yystack_[1].value.as < Position > ()); }
-#line 1539 "ramc_bison_parser.cpp"
+#line 1564 "ramc_bison_parser.cpp"
     break;
 
   case 31:
-#line 291 "ramc_grammar.yy"
+#line 292 "ramc_grammar.yy"
                                { IsInLoop = true; }
-#line 1545 "ramc_bison_parser.cpp"
+#line 1570 "ramc_bison_parser.cpp"
     break;
 
   case 32:
-#line 291 "ramc_grammar.yy"
+#line 292 "ramc_grammar.yy"
                                                          { IsInLoop = false; yylhs.value.as < ASTStmt* > () = new ASTWhileStmt(yystack_[3].value.as < ASTExpr* > (), yystack_[0].value.as < ASTStmt* > (), yystack_[4].value.as < Position > ()); }
-#line 1551 "ramc_bison_parser.cpp"
+#line 1576 "ramc_bison_parser.cpp"
     break;
 
   case 33:
-#line 293 "ramc_grammar.yy"
+#line 294 "ramc_grammar.yy"
                                                                     { IsInLoop = true; }
-#line 1557 "ramc_bison_parser.cpp"
+#line 1582 "ramc_bison_parser.cpp"
     break;
 
   case 34:
-#line 293 "ramc_grammar.yy"
+#line 294 "ramc_grammar.yy"
                                                                                               { IsInLoop = false; }
-#line 1563 "ramc_bison_parser.cpp"
+#line 1588 "ramc_bison_parser.cpp"
     break;
 
   case 35:
-#line 293 "ramc_grammar.yy"
+#line 294 "ramc_grammar.yy"
                                                                                                                                        { yylhs.value.as < ASTStmt* > () = new ASTForStmt(new ASTVarDecl(yystack_[13].value.as < ASTIdentifier* > (), yystack_[11].value.as < Type* > (), yystack_[9].value.as < ASTExpr* > (), false, yystack_[14].value.as < Position > ()), yystack_[6].value.as < ASTExpr* > (), yystack_[3].value.as < ASTStmt* > (), yystack_[0].value.as < ASTStmt* > (), yystack_[14].value.as < Position > ()); }
-#line 1569 "ramc_bison_parser.cpp"
+#line 1594 "ramc_bison_parser.cpp"
     break;
 
   case 36:
-#line 294 "ramc_grammar.yy"
+#line 295 "ramc_grammar.yy"
                                                                    { IsInLoop = true; }
-#line 1575 "ramc_bison_parser.cpp"
+#line 1600 "ramc_bison_parser.cpp"
     break;
 
   case 37:
-#line 294 "ramc_grammar.yy"
+#line 295 "ramc_grammar.yy"
                                                                                              { IsInLoop = false; }
-#line 1581 "ramc_bison_parser.cpp"
+#line 1606 "ramc_bison_parser.cpp"
     break;
 
   case 38:
-#line 294 "ramc_grammar.yy"
+#line 295 "ramc_grammar.yy"
                                                                                                                                       { yylhs.value.as < ASTStmt* > () = new ASTForStmt(new ASTVarDecl(yystack_[11].value.as < ASTIdentifier* > (), yystack_[9].value.as < ASTExpr* > (), false, yystack_[12].value.as < Position > ()), yystack_[6].value.as < ASTExpr* > (), yystack_[3].value.as < ASTStmt* > (), yystack_[0].value.as < ASTStmt* > (), yystack_[12].value.as < Position > ()); }
-#line 1587 "ramc_bison_parser.cpp"
+#line 1612 "ramc_bison_parser.cpp"
     break;
 
   case 39:
-#line 297 "ramc_grammar.yy"
+#line 298 "ramc_grammar.yy"
                                           { yylhs.value.as < ASTVarDecl* > () = new ASTVarDecl(yystack_[2].value.as < ASTIdentifier* > (), yystack_[0].value.as < ASTExpr* > (), InTopLvl, yystack_[3].value.as < Position > ()); }
-#line 1593 "ramc_bison_parser.cpp"
+#line 1618 "ramc_bison_parser.cpp"
     break;
 
   case 40:
-#line 298 "ramc_grammar.yy"
+#line 299 "ramc_grammar.yy"
                                           { yylhs.value.as < ASTVarDecl* > () = new ASTVarDecl(yystack_[4].value.as < ASTIdentifier* > (), yystack_[2].value.as < Type* > (), yystack_[0].value.as < ASTExpr* > (), InTopLvl, yystack_[5].value.as < Position > ()); }
-#line 1599 "ramc_bison_parser.cpp"
+#line 1624 "ramc_bison_parser.cpp"
     break;
 
   case 41:
-#line 299 "ramc_grammar.yy"
+#line 300 "ramc_grammar.yy"
                                                           { !InTopLvl ? yylhs.value.as < ASTVarDecl* > () = new ASTVarDecl(yystack_[0].value.as < ASTExpr* > (), yystack_[3].value.as < Position > ()) : throw std::runtime_error("Cannot declare throw away in top level!"); }
-#line 1605 "ramc_bison_parser.cpp"
+#line 1630 "ramc_bison_parser.cpp"
     break;
 
   case 42:
-#line 302 "ramc_grammar.yy"
+#line 303 "ramc_grammar.yy"
                                       { yylhs.value.as < std::vector<Type*> > () = { yystack_[0].value.as < Type* > () }; }
-#line 1611 "ramc_bison_parser.cpp"
+#line 1636 "ramc_bison_parser.cpp"
     break;
 
   case 43:
-#line 303 "ramc_grammar.yy"
+#line 304 "ramc_grammar.yy"
                                       { yystack_[0].value.as < std::vector<Type*> > ().insert(yystack_[0].value.as < std::vector<Type*> > ().begin(), yystack_[2].value.as < Type* > ()); yylhs.value.as < std::vector<Type*> > () = yystack_[0].value.as < std::vector<Type*> > (); }
-#line 1617 "ramc_bison_parser.cpp"
+#line 1642 "ramc_bison_parser.cpp"
     break;
 
   case 44:
-#line 307 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1623 "ramc_bison_parser.cpp"
+#line 308 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1648 "ramc_bison_parser.cpp"
     break;
 
   case 45:
-#line 308 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1629 "ramc_bison_parser.cpp"
+#line 309 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1654 "ramc_bison_parser.cpp"
     break;
 
   case 46:
-#line 309 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1635 "ramc_bison_parser.cpp"
+#line 310 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1660 "ramc_bison_parser.cpp"
     break;
 
   case 47:
-#line 310 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1641 "ramc_bison_parser.cpp"
+#line 311 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1666 "ramc_bison_parser.cpp"
     break;
 
   case 48:
-#line 311 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1647 "ramc_bison_parser.cpp"
+#line 312 "ramc_grammar.yy"
+                        { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1672 "ramc_bison_parser.cpp"
     break;
 
   case 49:
-#line 312 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1653 "ramc_bison_parser.cpp"
+#line 313 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1678 "ramc_bison_parser.cpp"
     break;
 
   case 50:
-#line 313 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1659 "ramc_bison_parser.cpp"
+#line 314 "ramc_grammar.yy"
+                        { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1684 "ramc_bison_parser.cpp"
     break;
 
   case 51:
-#line 314 "ramc_grammar.yy"
-               { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
-#line 1665 "ramc_bison_parser.cpp"
+#line 315 "ramc_grammar.yy"
+                                { yylhs.value.as < Type* > () = yystack_[0].value.as < Type* > (); }
+#line 1690 "ramc_bison_parser.cpp"
     break;
 
   case 52:
-#line 317 "ramc_grammar.yy"
-                                      { yylhs.value.as < ASTAssignment* > () = new ASTAssignment(yystack_[2].value.as < ASTIdentifier* > (), yystack_[0].value.as < ASTExpr* > (), yystack_[1].value.as < AssignmentType > ()); }
-#line 1671 "ramc_bison_parser.cpp"
+#line 316 "ramc_grammar.yy"
+                    { yylhs.value.as < Type* > () = new ArrayType(yystack_[1].value.as < Type* > ()); }
+#line 1696 "ramc_bison_parser.cpp"
     break;
 
   case 53:
-#line 320 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::EQ; }
-#line 1677 "ramc_bison_parser.cpp"
+#line 319 "ramc_grammar.yy"
+                                      { yylhs.value.as < ASTAssignment* > () = new ASTAssignment(yystack_[2].value.as < ASTIdentifier* > (), yystack_[0].value.as < ASTExpr* > (), yystack_[1].value.as < AssignmentType > ()); }
+#line 1702 "ramc_bison_parser.cpp"
     break;
 
   case 54:
-#line 321 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::ADD_EQ; }
-#line 1683 "ramc_bison_parser.cpp"
+#line 322 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::EQ; }
+#line 1708 "ramc_bison_parser.cpp"
     break;
 
   case 55:
-#line 322 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::SUB_EQ; }
-#line 1689 "ramc_bison_parser.cpp"
+#line 323 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::ADD_EQ; }
+#line 1714 "ramc_bison_parser.cpp"
     break;
 
   case 56:
-#line 323 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::MUL_EQ; }
-#line 1695 "ramc_bison_parser.cpp"
+#line 324 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::SUB_EQ; }
+#line 1720 "ramc_bison_parser.cpp"
     break;
 
   case 57:
-#line 324 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::DIV_EQ; }
-#line 1701 "ramc_bison_parser.cpp"
+#line 325 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::MUL_EQ; }
+#line 1726 "ramc_bison_parser.cpp"
     break;
 
   case 58:
-#line 325 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::MOD_EQ; }
-#line 1707 "ramc_bison_parser.cpp"
+#line 326 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::DIV_EQ; }
+#line 1732 "ramc_bison_parser.cpp"
     break;
 
   case 59:
-#line 326 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::POW_EQ; }
-#line 1713 "ramc_bison_parser.cpp"
+#line 327 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::MOD_EQ; }
+#line 1738 "ramc_bison_parser.cpp"
     break;
 
   case 60:
-#line 327 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_AND_EQ; }
-#line 1719 "ramc_bison_parser.cpp"
+#line 328 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::POW_EQ; }
+#line 1744 "ramc_bison_parser.cpp"
     break;
 
   case 61:
-#line 328 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_OR_EQ; }
-#line 1725 "ramc_bison_parser.cpp"
+#line 329 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_AND_EQ; }
+#line 1750 "ramc_bison_parser.cpp"
     break;
 
   case 62:
-#line 329 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_XOR_EQ; }
-#line 1731 "ramc_bison_parser.cpp"
+#line 330 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_OR_EQ; }
+#line 1756 "ramc_bison_parser.cpp"
     break;
 
   case 63:
-#line 330 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::LSHIFT_EQ; }
-#line 1737 "ramc_bison_parser.cpp"
+#line 331 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::BIN_XOR_EQ; }
+#line 1762 "ramc_bison_parser.cpp"
     break;
 
   case 64:
-#line 331 "ramc_grammar.yy"
-            { yylhs.value.as < AssignmentType > () = AssignmentType::RSHIFT_EQ; }
-#line 1743 "ramc_bison_parser.cpp"
+#line 332 "ramc_grammar.yy"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::LSHIFT_EQ; }
+#line 1768 "ramc_bison_parser.cpp"
     break;
 
   case 65:
 #line 333 "ramc_grammar.yy"
-                                  { yylhs.value.as < std::vector<ASTExpr*> > () = { }; }
-#line 1749 "ramc_bison_parser.cpp"
+            { yylhs.value.as < AssignmentType > () = AssignmentType::RSHIFT_EQ; }
+#line 1774 "ramc_bison_parser.cpp"
     break;
 
   case 66:
-#line 334 "ramc_grammar.yy"
-                                  { yylhs.value.as < std::vector<ASTExpr*> > () = yystack_[0].value.as < std::vector<ASTExpr*> > (); }
-#line 1755 "ramc_bison_parser.cpp"
+#line 335 "ramc_grammar.yy"
+                                  { yylhs.value.as < std::vector<ASTExpr*> > () = { }; }
+#line 1780 "ramc_bison_parser.cpp"
     break;
 
   case 67:
-#line 337 "ramc_grammar.yy"
-                                      { yylhs.value.as < std::vector<ASTExpr*> > () = { yystack_[0].value.as < ASTExpr* > () }; }
-#line 1761 "ramc_bison_parser.cpp"
+#line 336 "ramc_grammar.yy"
+                                  { yylhs.value.as < std::vector<ASTExpr*> > () = yystack_[0].value.as < std::vector<ASTExpr*> > (); }
+#line 1786 "ramc_bison_parser.cpp"
     break;
 
   case 68:
-#line 338 "ramc_grammar.yy"
-                                      { yystack_[0].value.as < std::vector<ASTExpr*> > ().insert(yystack_[0].value.as < std::vector<ASTExpr*> > ().begin(), yystack_[2].value.as < ASTExpr* > ()); yylhs.value.as < std::vector<ASTExpr*> > () = yystack_[0].value.as < std::vector<ASTExpr*> > (); }
-#line 1767 "ramc_bison_parser.cpp"
+#line 339 "ramc_grammar.yy"
+                                      { yylhs.value.as < std::vector<ASTExpr*> > () = { yystack_[0].value.as < ASTExpr* > () }; }
+#line 1792 "ramc_bison_parser.cpp"
     break;
 
   case 69:
-#line 342 "ramc_grammar.yy"
-                                              { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1773 "ramc_bison_parser.cpp"
+#line 340 "ramc_grammar.yy"
+                                      { yystack_[0].value.as < std::vector<ASTExpr*> > ().insert(yystack_[0].value.as < std::vector<ASTExpr*> > ().begin(), yystack_[2].value.as < ASTExpr* > ()); yylhs.value.as < std::vector<ASTExpr*> > () = yystack_[0].value.as < std::vector<ASTExpr*> > (); }
+#line 1798 "ramc_bison_parser.cpp"
     break;
 
   case 70:
-#line 343 "ramc_grammar.yy"
-                                              { yylhs.value.as < ASTExpr* > () = new ASTIfExpr(yystack_[4].value.as < ASTExpr* > (), yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), yystack_[5].value.as < Position > ()); }
-#line 1779 "ramc_bison_parser.cpp"
+#line 344 "ramc_grammar.yy"
+                                              { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1804 "ramc_bison_parser.cpp"
     break;
 
   case 71:
-#line 347 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LOG_OR); }
-#line 1785 "ramc_bison_parser.cpp"
+#line 345 "ramc_grammar.yy"
+                                              { yylhs.value.as < ASTExpr* > () = new ASTIfExpr(yystack_[4].value.as < ASTExpr* > (), yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), yystack_[5].value.as < Position > ()); }
+#line 1810 "ramc_bison_parser.cpp"
     break;
 
   case 72:
-#line 348 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1791 "ramc_bison_parser.cpp"
+#line 349 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LOG_OR); }
+#line 1816 "ramc_bison_parser.cpp"
     break;
 
   case 73:
-#line 352 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LOG_AND); }
-#line 1797 "ramc_bison_parser.cpp"
+#line 350 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1822 "ramc_bison_parser.cpp"
     break;
 
   case 74:
-#line 353 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1803 "ramc_bison_parser.cpp"
+#line 354 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LOG_AND); }
+#line 1828 "ramc_bison_parser.cpp"
     break;
 
   case 75:
-#line 357 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_OR); }
-#line 1809 "ramc_bison_parser.cpp"
+#line 355 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1834 "ramc_bison_parser.cpp"
     break;
 
   case 76:
-#line 358 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1815 "ramc_bison_parser.cpp"
+#line 359 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_OR); }
+#line 1840 "ramc_bison_parser.cpp"
     break;
 
   case 77:
-#line 362 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_XOR); }
-#line 1821 "ramc_bison_parser.cpp"
+#line 360 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1846 "ramc_bison_parser.cpp"
     break;
 
   case 78:
-#line 363 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1827 "ramc_bison_parser.cpp"
+#line 364 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_XOR); }
+#line 1852 "ramc_bison_parser.cpp"
     break;
 
   case 79:
-#line 367 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_AND); }
-#line 1833 "ramc_bison_parser.cpp"
+#line 365 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1858 "ramc_bison_parser.cpp"
     break;
 
   case 80:
-#line 368 "ramc_grammar.yy"
-                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1839 "ramc_bison_parser.cpp"
+#line 369 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::BIN_AND); }
+#line 1864 "ramc_bison_parser.cpp"
     break;
 
   case 81:
-#line 372 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::EQ_EQ); }
-#line 1845 "ramc_bison_parser.cpp"
+#line 370 "ramc_grammar.yy"
+                      { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1870 "ramc_bison_parser.cpp"
     break;
 
   case 82:
-#line 373 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::NEQ); }
-#line 1851 "ramc_bison_parser.cpp"
+#line 374 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::EQ_EQ); }
+#line 1876 "ramc_bison_parser.cpp"
     break;
 
   case 83:
-#line 374 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1857 "ramc_bison_parser.cpp"
+#line 375 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::NEQ); }
+#line 1882 "ramc_bison_parser.cpp"
     break;
 
   case 84:
-#line 378 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LT); }
-#line 1863 "ramc_bison_parser.cpp"
+#line 376 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1888 "ramc_bison_parser.cpp"
     break;
 
   case 85:
-#line 379 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::GT); }
-#line 1869 "ramc_bison_parser.cpp"
+#line 380 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LT); }
+#line 1894 "ramc_bison_parser.cpp"
     break;
 
   case 86:
-#line 380 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LT_EQ); }
-#line 1875 "ramc_bison_parser.cpp"
+#line 381 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::GT); }
+#line 1900 "ramc_bison_parser.cpp"
     break;
 
   case 87:
-#line 381 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::GT_EQ); }
-#line 1881 "ramc_bison_parser.cpp"
+#line 382 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LT_EQ); }
+#line 1906 "ramc_bison_parser.cpp"
     break;
 
   case 88:
-#line 382 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1887 "ramc_bison_parser.cpp"
+#line 383 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::GT_EQ); }
+#line 1912 "ramc_bison_parser.cpp"
     break;
 
   case 89:
-#line 386 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LSHIFT); }
-#line 1893 "ramc_bison_parser.cpp"
+#line 384 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1918 "ramc_bison_parser.cpp"
     break;
 
   case 90:
-#line 387 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::RSHIFT); }
-#line 1899 "ramc_bison_parser.cpp"
+#line 388 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::LSHIFT); }
+#line 1924 "ramc_bison_parser.cpp"
     break;
 
   case 91:
-#line 388 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1905 "ramc_bison_parser.cpp"
+#line 389 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::RSHIFT); }
+#line 1930 "ramc_bison_parser.cpp"
     break;
 
   case 92:
-#line 392 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::ADD); }
-#line 1911 "ramc_bison_parser.cpp"
+#line 390 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1936 "ramc_bison_parser.cpp"
     break;
 
   case 93:
-#line 393 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::SUB); }
-#line 1917 "ramc_bison_parser.cpp"
+#line 394 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::ADD); }
+#line 1942 "ramc_bison_parser.cpp"
     break;
 
   case 94:
-#line 394 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1923 "ramc_bison_parser.cpp"
+#line 395 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::SUB); }
+#line 1948 "ramc_bison_parser.cpp"
     break;
 
   case 95:
-#line 398 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::MUL); }
-#line 1929 "ramc_bison_parser.cpp"
+#line 396 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1954 "ramc_bison_parser.cpp"
     break;
 
   case 96:
-#line 399 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::DIV); }
-#line 1935 "ramc_bison_parser.cpp"
+#line 400 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::MUL); }
+#line 1960 "ramc_bison_parser.cpp"
     break;
 
   case 97:
-#line 400 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::MOD); }
-#line 1941 "ramc_bison_parser.cpp"
+#line 401 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::DIV); }
+#line 1966 "ramc_bison_parser.cpp"
     break;
 
   case 98:
-#line 401 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1947 "ramc_bison_parser.cpp"
+#line 402 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::MOD); }
+#line 1972 "ramc_bison_parser.cpp"
     break;
 
   case 99:
-#line 405 "ramc_grammar.yy"
-                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::NEG); }
-#line 1953 "ramc_bison_parser.cpp"
+#line 403 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 1978 "ramc_bison_parser.cpp"
     break;
 
   case 100:
-#line 406 "ramc_grammar.yy"
-                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::LOG_NOT); }
-#line 1959 "ramc_bison_parser.cpp"
+#line 407 "ramc_grammar.yy"
+                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::NEG); }
+#line 1984 "ramc_bison_parser.cpp"
     break;
 
   case 101:
-#line 407 "ramc_grammar.yy"
-                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::BIN_NOT); }
-#line 1965 "ramc_bison_parser.cpp"
+#line 408 "ramc_grammar.yy"
+                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::LOG_NOT); }
+#line 1990 "ramc_bison_parser.cpp"
     break;
 
   case 102:
-#line 408 "ramc_grammar.yy"
-                 { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1971 "ramc_bison_parser.cpp"
+#line 409 "ramc_grammar.yy"
+                 { yylhs.value.as < ASTExpr* > () = new ASTUnopExpr(yystack_[0].value.as < ASTExpr* > (), UnopType::BIN_NOT); }
+#line 1996 "ramc_bison_parser.cpp"
     break;
 
   case 103:
-#line 412 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::POW); }
-#line 1977 "ramc_bison_parser.cpp"
+#line 410 "ramc_grammar.yy"
+                 { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 2002 "ramc_bison_parser.cpp"
     break;
 
   case 104:
-#line 413 "ramc_grammar.yy"
-                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
-#line 1983 "ramc_bison_parser.cpp"
+#line 414 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = new ASTBinopExpr(yystack_[2].value.as < ASTExpr* > (), yystack_[0].value.as < ASTExpr* > (), BinopType::POW); }
+#line 2008 "ramc_bison_parser.cpp"
     break;
 
   case 105:
-#line 417 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTIntLit* > (); }
-#line 1989 "ramc_bison_parser.cpp"
+#line 415 "ramc_grammar.yy"
+                       { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTExpr* > (); }
+#line 2014 "ramc_bison_parser.cpp"
     break;
 
   case 106:
-#line 418 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTFloatLit* > (); }
-#line 1995 "ramc_bison_parser.cpp"
+#line 419 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTIntLit* > (); }
+#line 2020 "ramc_bison_parser.cpp"
     break;
 
   case 107:
-#line 419 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTByteLit* > (); }
-#line 2001 "ramc_bison_parser.cpp"
+#line 420 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTFloatLit* > (); }
+#line 2026 "ramc_bison_parser.cpp"
     break;
 
   case 108:
-#line 420 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTDoubleLit* > (); }
-#line 2007 "ramc_bison_parser.cpp"
+#line 421 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTByteLit* > (); }
+#line 2032 "ramc_bison_parser.cpp"
     break;
 
   case 109:
-#line 421 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTLongLit* > (); }
-#line 2013 "ramc_bison_parser.cpp"
+#line 422 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTDoubleLit* > (); }
+#line 2038 "ramc_bison_parser.cpp"
     break;
 
   case 110:
-#line 422 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTStringLit* > (); }
-#line 2019 "ramc_bison_parser.cpp"
+#line 423 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTLongLit* > (); }
+#line 2044 "ramc_bison_parser.cpp"
     break;
 
   case 111:
-#line 423 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTBoolLit* > (); }
-#line 2025 "ramc_bison_parser.cpp"
+#line 424 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTStringLit* > (); }
+#line 2050 "ramc_bison_parser.cpp"
     break;
 
   case 112:
-#line 424 "ramc_grammar.yy"
-                    { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTBoolLit* > (); }
-#line 2031 "ramc_bison_parser.cpp"
+#line 425 "ramc_grammar.yy"
+                                { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTBoolLit* > (); }
+#line 2056 "ramc_bison_parser.cpp"
     break;
 
   case 113:
-#line 425 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTIdentifier* > (); }
-#line 2037 "ramc_bison_parser.cpp"
+#line 426 "ramc_grammar.yy"
+                                { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTBoolLit* > (); }
+#line 2062 "ramc_bison_parser.cpp"
     break;
 
   case 114:
-#line 426 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTFuncCallExpr* > (); }
-#line 2043 "ramc_bison_parser.cpp"
+#line 427 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTIdentifier* > (); }
+#line 2068 "ramc_bison_parser.cpp"
     break;
 
   case 115:
-#line 427 "ramc_grammar.yy"
-                        { yylhs.value.as < ASTExpr* > () = yystack_[1].value.as < ASTExpr* > (); }
-#line 2049 "ramc_bison_parser.cpp"
+#line 428 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTFuncCallExpr* > (); }
+#line 2074 "ramc_bison_parser.cpp"
     break;
 
   case 116:
-#line 430 "ramc_grammar.yy"
-                                                  { yylhs.value.as < ASTIdentifier* > () = new ASTIdentifier(yystack_[0].value.as < std::pair<std::string, Position> > ().first, yystack_[0].value.as < std::pair<std::string, Position> > ().second); }
-#line 2055 "ramc_bison_parser.cpp"
+#line 429 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[1].value.as < ASTExpr* > (); }
+#line 2080 "ramc_bison_parser.cpp"
     break;
 
   case 117:
-#line 431 "ramc_grammar.yy"
-                                  { yylhs.value.as < ASTFuncCallExpr* > () = new ASTFuncCallExpr(yystack_[3].value.as < std::pair<std::string, Position> > ().first, yystack_[1].value.as < std::vector<ASTExpr*> > (), yystack_[3].value.as < std::pair<std::string, Position> > ().second); }
-#line 2061 "ramc_bison_parser.cpp"
+#line 430 "ramc_grammar.yy"
+                        { yylhs.value.as < ASTExpr* > () = yystack_[0].value.as < ASTArrayInit* > (); }
+#line 2086 "ramc_bison_parser.cpp"
+    break;
+
+  case 118:
+#line 433 "ramc_grammar.yy"
+                                                        { yylhs.value.as < ASTIdentifier* > () = new ASTIdentifier(yystack_[0].value.as < std::pair<std::string, Position> > ().first, yystack_[0].value.as < std::pair<std::string, Position> > ().second); }
+#line 2092 "ramc_bison_parser.cpp"
+    break;
+
+  case 119:
+#line 434 "ramc_grammar.yy"
+                                        { yylhs.value.as < ASTFuncCallExpr* > () = new ASTFuncCallExpr(yystack_[3].value.as < std::pair<std::string, Position> > ().first, yystack_[1].value.as < std::vector<ASTExpr*> > (), yystack_[3].value.as < std::pair<std::string, Position> > ().second); }
+#line 2098 "ramc_bison_parser.cpp"
+    break;
+
+  case 120:
+#line 435 "ramc_grammar.yy"
+                                        { yylhs.value.as < ASTArrayInit* > () = new ASTArrayInit(yystack_[1].value.as < std::vector<ASTExpr*> > (), yystack_[2].value.as < Position > ()); }
+#line 2104 "ramc_bison_parser.cpp"
     break;
 
 
-#line 2065 "ramc_bison_parser.cpp"
+#line 2108 "ramc_bison_parser.cpp"
 
             default:
               break;
@@ -2466,186 +2509,190 @@ namespace ramc { namespace bison {
   }
 
 
-  const signed char Parser::yypact_ninf_ = -125;
+  const short Parser::yypact_ninf_ = -133;
 
   const signed char Parser::yytable_ninf_ = -1;
 
   const short
   Parser::yypact_[] =
   {
-    -125,    17,   -46,  -125,   -20,   -13,  -125,    12,  -125,   -16,
-     -46,   -28,    -1,    -1,    40,  -125,    -2,   -28,  -125,    35,
-      35,    35,    -1,    31,  -125,  -125,  -125,  -125,  -125,  -125,
-    -125,  -125,    35,  -125,    43,    53,    72,    94,   114,    19,
-      46,    28,   106,    27,  -125,   118,  -125,  -125,  -125,  -125,
-    -125,  -125,  -125,  -125,  -125,  -125,  -125,  -125,   104,    84,
-    -125,  -125,  -125,  -125,    95,    -1,     2,    35,    35,    35,
-      35,    35,    35,    35,    35,    35,    35,    35,    35,    35,
-      35,    35,    35,    35,    35,   175,    -1,    97,  -125,    85,
-     100,  -125,    -1,    53,    72,    94,   114,    19,    46,    46,
-      28,    28,    28,    28,   106,   106,    27,    27,  -125,  -125,
-    -125,  -125,  -125,    86,    -1,  -125,    73,    93,   105,  -125,
-     101,  -125,    -1,    40,     1,    86,  -125,  -125,    70,    40,
-    -125,    70,    35,    35,    98,  -125,  -125,    -1,  -125,  -125,
-    -125,  -125,  -125,  -125,  -125,   208,   124,   103,   107,     3,
-     -12,   -14,  -125,  -125,  -125,  -125,  -125,  -125,  -125,  -125,
-    -125,  -125,  -125,  -125,  -125,    -1,    70,    40,    70,    70,
-    -125,    -1,    40,  -125,  -125,  -125,   108,   113,  -125,    87,
-      70,   111,   129,    70,  -125,    70,  -125,    88,    -1,  -125,
-    -125,  -125,    35,   116,    -5,    89,  -125,    35,    70,    -3,
-    -125,  -125,    92,    70,   147,  -125,    35,  -125,   102,     5,
-     147,   147,  -125,    99,   147
+    -133,    10,   -38,  -133,     3,   -14,  -133,    16,  -133,   -15,
+     -38,   -30,     9,     9,   134,  -133,     4,   -30,  -133,    49,
+      49,    49,     9,     9,    20,  -133,  -133,  -133,  -133,  -133,
+    -133,  -133,  -133,    49,  -133,    45,    57,    86,    79,    97,
+      61,     8,    80,    83,    41,  -133,   102,  -133,  -133,  -133,
+    -133,  -133,   134,  -133,  -133,  -133,  -133,  -133,  -133,  -133,
+    -133,    87,    72,  -133,  -133,  -133,  -133,    82,    77,    84,
+       9,   -13,    49,    49,    49,    49,    49,    49,    49,    49,
+      49,    49,    49,    49,    49,    49,    49,    49,    49,    49,
+     172,    88,     9,    91,  -133,     9,  -133,    93,  -133,     9,
+      57,    86,    79,    97,    61,     8,     8,    80,    80,    80,
+      80,    83,    83,    41,    41,  -133,  -133,  -133,  -133,  -133,
+    -133,    76,  -133,  -133,    52,    96,    98,  -133,    99,     9,
+     134,    -7,    76,  -133,  -133,    74,   134,  -133,    74,    49,
+      49,    94,  -133,  -133,     9,  -133,  -133,  -133,  -133,  -133,
+    -133,  -133,   205,   122,   104,   108,     0,    -3,   -12,  -133,
+    -133,  -133,  -133,  -133,  -133,  -133,  -133,  -133,  -133,  -133,
+    -133,  -133,     9,    74,   134,    74,    74,  -133,     9,   134,
+    -133,  -133,  -133,   109,   114,  -133,    89,    74,   113,   130,
+      74,  -133,    74,  -133,   106,     9,  -133,  -133,  -133,    49,
+     117,    -2,   107,  -133,    49,    74,    -1,  -133,  -133,    92,
+      74,    90,  -133,    49,  -133,   101,     7,    90,    90,  -133,
+     111,    90
   };
 
   const signed char
   Parser::yydefact_[] =
   {
-       2,     0,     5,     1,     0,     0,     3,     0,   116,     0,
+       2,     0,     5,     1,     0,     0,     3,     0,   118,     0,
        5,     7,     0,     0,     0,     6,     0,     7,     4,     0,
-       0,     0,     0,   116,   105,   110,   106,   107,   108,   109,
-     111,   112,     0,    41,    69,    72,    74,    76,    78,    80,
-      83,    88,    91,    94,    98,   102,   104,   113,   114,    39,
-      44,    45,    46,    47,    48,    49,    50,    51,     0,     0,
-       8,    99,   100,   101,     0,    65,     0,     0,     0,     0,
+       0,     0,     0,     0,   118,   106,   111,   107,   108,   109,
+     110,   112,   113,     0,    41,    70,    73,    75,    77,    79,
+      81,    84,    89,    92,    95,    99,   103,   105,   114,   115,
+     117,    39,     0,    44,    45,    46,    47,    48,    49,    50,
+      51,     0,     0,     8,   100,   101,   102,     0,    68,     0,
+      66,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,   115,    67,
-       0,    66,     0,    71,    73,    75,    77,    79,    81,    82,
-      84,    85,    86,    87,    89,    90,    92,    93,    95,    96,
-      97,   103,    40,    11,     0,   117,     0,     0,     0,    12,
-      13,    68,     0,     0,     0,     0,    70,    15,     0,     0,
-      14,     0,     0,     0,     0,    28,    29,    65,    10,    18,
-      19,    23,    24,    22,    27,     0,     0,    42,     0,     0,
-       0,     0,    30,    53,    54,    55,    56,    57,    58,    59,
-      60,    61,    62,    63,    64,     0,     0,     0,    16,     0,
-      31,     0,     0,    52,     9,    43,     0,     0,    20,    19,
-       0,     0,     0,    16,    25,     0,    32,     0,     0,    17,
-      21,    26,     0,     0,     0,     0,    36,     0,     0,     0,
-      37,    33,     0,     0,     0,    34,     0,    38,     0,     0,
-       0,     0,    35,     0,     0
+       0,     0,     0,     0,   116,     0,   120,     0,    67,     0,
+      72,    74,    76,    78,    80,    82,    83,    85,    86,    87,
+      88,    90,    91,    93,    94,    96,    97,    98,   104,    52,
+      40,    11,    69,   119,     0,     0,     0,    12,    13,     0,
+       0,     0,     0,    71,    15,     0,     0,    14,     0,     0,
+       0,     0,    28,    29,    66,    10,    18,    19,    23,    24,
+      22,    27,     0,     0,    42,     0,     0,     0,     0,    30,
+      54,    55,    56,    57,    58,    59,    60,    61,    62,    63,
+      64,    65,     0,     0,     0,    16,     0,    31,     0,     0,
+      53,     9,    43,     0,     0,    20,    19,     0,     0,     0,
+      16,    25,     0,    32,     0,     0,    17,    21,    26,     0,
+       0,     0,     0,    36,     0,     0,     0,    37,    33,     0,
+       0,     0,    34,     0,    38,     0,     0,     0,     0,    35,
+       0,     0
   };
 
   const short
   Parser::yypgoto_[] =
   {
-    -125,  -125,  -124,   -17,   -89,  -125,    10,  -125,  -125,  -125,
-     -11,   -26,   115,   110,   117,   119,   112,    44,    18,    34,
-      39,    -6,  -125,    90,    -4,  -125,   160,   155,   -10,    37,
-      74,  -125,    20,    -9,  -125,    59,  -125,  -125,  -125,  -125,
-    -125,  -125,  -125,  -125
+    -133,  -133,  -132,   -10,   -85,  -133,    24,  -133,  -133,  -133,
+     -11,   -26,   105,   112,   115,   124,   126,    17,   -43,    25,
+      30,    -5,  -133,   100,    -4,  -133,  -133,   156,   163,    13,
+      37,   -19,  -133,    26,    -9,  -133,    73,  -133,  -133,  -133,
+    -133,  -133,  -133,  -133,  -133
   };
 
   const short
   Parser::yydefgoto_[] =
   {
-      -1,     1,   176,   139,   140,   141,   142,    17,   143,   144,
-      89,    34,    35,    36,    37,    38,    39,    40,    41,    42,
-      43,    44,    45,    46,    47,    48,     6,    18,   177,    90,
-      91,   165,   146,   147,   118,   119,   120,     2,    11,   180,
-     203,   208,   198,   202
+      -1,     1,   183,   146,   147,   148,   149,    17,   150,   151,
+      68,    35,    36,    37,    38,    39,    40,    41,    42,    43,
+      44,    45,    46,    47,    48,    49,    50,     6,    18,   184,
+      97,    98,   172,   153,   154,   126,   127,   128,     2,    11,
+     187,   210,   215,   205,   209
   };
 
   const unsigned char
   Parser::yytable_[] =
   {
-       9,    33,    49,    19,   138,    58,    66,   148,    13,    67,
-     171,    64,     5,    61,    62,    63,    67,     3,    67,     4,
-       5,    20,    21,    67,    67,   128,    67,     7,     8,    14,
-      10,   172,    82,    83,    84,    22,    12,    72,    73,    19,
-      78,    79,   174,   129,    16,   178,    59,    23,    24,    25,
-      26,    27,    28,    29,    30,    31,   186,    20,    21,   170,
-      74,    75,    76,    77,    67,    32,   196,    65,   201,    92,
-     169,    22,   211,    68,   200,   112,   108,   109,   110,   205,
-     179,   116,    69,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,   100,   101,   102,   103,   191,    50,    51,    52,
-      53,    54,    55,    56,    57,    70,   149,   150,   131,    80,
-      81,   126,   104,   105,   127,   207,    98,    99,     8,   106,
-     107,   212,   213,    71,   145,   191,    85,   145,    86,    87,
-     151,   114,    88,   113,   117,     4,   132,   115,   123,   133,
-     134,   122,   124,   135,   136,   137,     8,   125,   166,   167,
-     168,   183,   184,   188,   173,   185,   187,   192,   197,   204,
-     181,   195,   145,   182,   145,   145,   194,   214,   190,   210,
-      15,   199,    60,   189,   152,   111,   145,   193,    94,   145,
-     209,   145,    93,    97,   130,   131,    95,   175,   121,    96,
-       0,     0,     0,     0,   145,     8,     0,     0,     0,   145,
-     145,     0,     0,     0,     0,     0,   145,   145,     0,     0,
-     145,    22,     4,   206,     0,     0,     0,   134,     0,     0,
-     135,   136,   137,    23,    24,    25,    26,    27,    28,    29,
-      30,    31,   153,   154,   155,   156,   157,   158,   159,   160,
-     161,   162,   163,   164
+       9,    34,    51,   145,    69,    61,   155,    71,    72,    13,
+       3,    67,   178,    19,    64,    65,    66,   135,    72,    72,
+      72,    72,    79,    80,    81,    82,     5,     4,    72,    10,
+      14,    20,    21,   179,     5,   136,   107,   108,   109,   110,
+      12,   181,    16,    91,   185,    22,    87,    88,    89,    23,
+       7,     8,    62,    19,    99,   193,    70,    24,    25,    26,
+      27,    28,    29,    30,    31,    32,    72,   176,   177,   203,
+     208,    20,    21,   207,   218,    33,   122,    73,   212,    77,
+      78,   120,   115,   116,   117,    22,    85,    86,   124,    23,
+      75,   186,    83,    84,   105,   106,    74,    24,    25,    26,
+      27,    28,    29,    30,    31,    32,    76,   198,   111,   112,
+      90,    92,   138,   156,   157,   113,   114,    93,   133,    94,
+     129,   134,     8,    95,   125,    96,   214,   121,   138,   119,
+     123,   152,   219,   220,   152,   131,   198,   158,     8,     4,
+     139,   130,     8,   140,   141,   132,   173,   142,   143,   144,
+     174,   175,   190,   191,   195,     4,   213,   192,   194,   211,
+     141,   180,   202,   142,   143,   144,    15,   188,   217,   152,
+     189,   152,   152,   201,    52,   199,   204,   100,   206,   221,
+      63,   159,   197,   152,   200,   101,   152,   216,   152,   102,
+     118,    53,    54,    55,    56,    57,    58,    59,    60,   103,
+     182,   152,   104,   196,     0,   137,   152,   152,    22,     0,
+       0,     0,    23,   152,   152,     0,     0,   152,     0,     0,
+      24,    25,    26,    27,    28,    29,    30,    31,    32,   160,
+     161,   162,   163,   164,   165,   166,   167,   168,   169,   170,
+     171
   };
 
   const short
   Parser::yycheck_[] =
   {
-       4,    12,    13,     4,   128,    14,    32,   131,    24,    21,
-      24,    22,     2,    19,    20,    21,    21,     0,    21,    65,
-      10,    22,    23,    21,    21,    24,    21,    47,    48,    45,
-      43,    45,     5,     6,     7,    36,    24,    18,    19,     4,
-      12,    13,   166,    42,    72,   169,    48,    48,    49,    50,
-      51,    52,    53,    54,    55,    56,   180,    22,    23,    71,
-      14,    15,    16,    17,    21,    66,    71,    36,    71,    67,
-      67,    36,    67,    20,   198,    86,    82,    83,    84,   203,
-     169,    92,    10,    48,    49,    50,    51,    52,    53,    54,
-      55,    56,    74,    75,    76,    77,   185,    57,    58,    59,
-      60,    61,    62,    63,    64,    11,   132,   133,    38,     3,
-       4,   122,    78,    79,   123,   204,    72,    73,    48,    80,
-      81,   210,   211,     9,   128,   214,     8,   131,    24,    45,
-     134,    46,    37,    36,    48,    65,    66,    37,    45,    69,
-      70,    68,    37,    73,    74,    75,    48,    46,    24,    46,
-      43,    43,    39,    24,   165,    68,    45,    69,    69,    67,
-     171,    45,   166,   172,   168,   169,   192,    68,   185,    67,
-      10,   197,    17,   183,   137,    85,   180,   188,    68,   183,
-     206,   185,    67,    71,   125,    38,    69,   167,   114,    70,
-      -1,    -1,    -1,    -1,   198,    48,    -1,    -1,    -1,   203,
-     204,    -1,    -1,    -1,    -1,    -1,   210,   211,    -1,    -1,
-     214,    36,    65,    66,    -1,    -1,    -1,    70,    -1,    -1,
-      73,    74,    75,    48,    49,    50,    51,    52,    53,    54,
-      55,    56,    24,    25,    26,    27,    28,    29,    30,    31,
-      32,    33,    34,    35
+       4,    12,    13,   135,    23,    14,   138,    33,    21,    24,
+       0,    22,    24,     4,    19,    20,    21,    24,    21,    21,
+      21,    21,    14,    15,    16,    17,     2,    65,    21,    43,
+      45,    22,    23,    45,    10,    42,    79,    80,    81,    82,
+      24,   173,    72,    52,   176,    36,     5,     6,     7,    40,
+      47,    48,    48,     4,    67,   187,    36,    48,    49,    50,
+      51,    52,    53,    54,    55,    56,    21,    67,    71,    71,
+      71,    22,    23,   205,    67,    66,    95,    20,   210,    18,
+      19,    92,    87,    88,    89,    36,     3,     4,    99,    40,
+      11,   176,    12,    13,    77,    78,    10,    48,    49,    50,
+      51,    52,    53,    54,    55,    56,     9,   192,    83,    84,
+       8,    24,    38,   139,   140,    85,    86,    45,   129,    37,
+      68,   130,    48,    46,    48,    41,   211,    36,    38,    41,
+      37,   135,   217,   218,   138,    37,   221,   141,    48,    65,
+      66,    45,    48,    69,    70,    46,    24,    73,    74,    75,
+      46,    43,    43,    39,    24,    65,    66,    68,    45,    67,
+      70,   172,    45,    73,    74,    75,    10,   178,    67,   173,
+     179,   175,   176,   199,    40,    69,    69,    72,   204,    68,
+      17,   144,   192,   187,   195,    73,   190,   213,   192,    74,
+      90,    57,    58,    59,    60,    61,    62,    63,    64,    75,
+     174,   205,    76,   190,    -1,   132,   210,   211,    36,    -1,
+      -1,    -1,    40,   217,   218,    -1,    -1,   221,    -1,    -1,
+      48,    49,    50,    51,    52,    53,    54,    55,    56,    24,
+      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
+      35
   };
 
   const signed char
   Parser::yystos_[] =
   {
-       0,    77,   113,     0,    65,    82,   102,    47,    48,   100,
-      43,   114,    24,    24,    45,   102,    72,    83,   103,     4,
-      22,    23,    36,    48,    49,    50,    51,    52,    53,    54,
-      55,    56,    66,    86,    87,    88,    89,    90,    91,    92,
-      93,    94,    95,    96,    97,    98,    99,   100,   101,    86,
-      57,    58,    59,    60,    61,    62,    63,    64,   109,    48,
-     103,    97,    97,    97,    86,    36,    87,    21,    20,    10,
-      11,     9,    18,    19,    14,    15,    16,    17,    12,    13,
-       3,     4,     5,     6,     7,     8,    24,    45,    37,    86,
-     105,   106,    67,    88,    89,    90,    91,    92,    93,    93,
-      94,    94,    94,    94,    95,    95,    96,    96,    97,    97,
-      97,    99,    86,    36,    46,    37,    86,    48,   110,   111,
-     112,   106,    68,    45,    37,    46,    86,   109,    24,    42,
-     111,    38,    66,    69,    70,    73,    74,    75,    78,    79,
-      80,    81,    82,    84,    85,   100,   108,   109,    78,    87,
-      87,   100,   105,    24,    25,    26,    27,    28,    29,    30,
-      31,    32,    33,    34,    35,   107,    24,    46,    43,    67,
-      71,    24,    45,    86,    78,   108,    78,   104,    78,    80,
-     115,    86,   109,    43,    39,    68,    78,    45,    24,   104,
-      79,    80,    69,    86,    87,    45,    71,    69,   118,    87,
-      78,    71,   119,   116,    67,    78,    66,    80,   117,    87,
-      67,    67,    80,    80,    68
+       0,    77,   114,     0,    65,    82,   103,    47,    48,   100,
+      43,   115,    24,    24,    45,   103,    72,    83,   104,     4,
+      22,    23,    36,    40,    48,    49,    50,    51,    52,    53,
+      54,    55,    56,    66,    86,    87,    88,    89,    90,    91,
+      92,    93,    94,    95,    96,    97,    98,    99,   100,   101,
+     102,    86,    40,    57,    58,    59,    60,    61,    62,    63,
+      64,   110,    48,   104,    97,    97,    97,    86,    86,   107,
+      36,    87,    21,    20,    10,    11,     9,    18,    19,    14,
+      15,    16,    17,    12,    13,     3,     4,     5,     6,     7,
+       8,   110,    24,    45,    37,    46,    41,   106,   107,    67,
+      88,    89,    90,    91,    92,    93,    93,    94,    94,    94,
+      94,    95,    95,    96,    96,    97,    97,    97,    99,    41,
+      86,    36,   107,    37,    86,    48,   111,   112,   113,    68,
+      45,    37,    46,    86,   110,    24,    42,   112,    38,    66,
+      69,    70,    73,    74,    75,    78,    79,    80,    81,    82,
+      84,    85,   100,   109,   110,    78,    87,    87,   100,   106,
+      24,    25,    26,    27,    28,    29,    30,    31,    32,    33,
+      34,    35,   108,    24,    46,    43,    67,    71,    24,    45,
+      86,    78,   109,    78,   105,    78,    80,   116,    86,   110,
+      43,    39,    68,    78,    45,    24,   105,    79,    80,    69,
+      86,    87,    45,    71,    69,   119,    87,    78,    71,   120,
+     117,    67,    78,    66,    80,   118,    87,    67,    67,    80,
+      80,    68
   };
 
   const signed char
   Parser::yyr1_[] =
   {
-       0,    76,   113,   114,    77,   102,   102,   103,   103,    83,
-      83,   110,   110,   111,   111,   112,   104,   104,    78,    78,
+       0,    76,   114,   115,    77,   103,   103,   104,   104,    83,
+      83,   111,   111,   112,   112,   113,   105,   105,    78,    78,
       79,    79,    79,    80,    80,    80,    80,    80,    80,    80,
-      80,   115,    84,   116,   117,    85,   118,   119,    85,    82,
-      82,    82,   108,   108,   109,   109,   109,   109,   109,   109,
-     109,   109,    81,   107,   107,   107,   107,   107,   107,   107,
-     107,   107,   107,   107,   107,   105,   105,   106,   106,    86,
-      86,    87,    87,    88,    88,    89,    89,    90,    90,    91,
-      91,    92,    92,    92,    93,    93,    93,    93,    93,    94,
-      94,    94,    95,    95,    95,    96,    96,    96,    96,    97,
-      97,    97,    97,    98,    98,    99,    99,    99,    99,    99,
-      99,    99,    99,    99,    99,    99,   100,   101
+      80,   116,    84,   117,   118,    85,   119,   120,    85,    82,
+      82,    82,   109,   109,   110,   110,   110,   110,   110,   110,
+     110,   110,   110,    81,   108,   108,   108,   108,   108,   108,
+     108,   108,   108,   108,   108,   108,   106,   106,   107,   107,
+      86,    86,    87,    87,    88,    88,    89,    89,    90,    90,
+      91,    91,    92,    92,    92,    93,    93,    93,    93,    93,
+      94,    94,    94,    95,    95,    95,    96,    96,    96,    96,
+      97,    97,    97,    97,    98,    98,    99,    99,    99,    99,
+      99,    99,    99,    99,    99,    99,    99,    99,   100,   101,
+     102
   };
 
   const signed char
@@ -2656,13 +2703,14 @@ namespace ramc { namespace bison {
        4,     6,     1,     1,     1,     5,     6,     1,     1,     1,
        2,     0,     5,     0,     0,    15,     0,     0,    13,     4,
        6,     4,     1,     3,     1,     1,     1,     1,     1,     1,
-       1,     1,     3,     1,     1,     1,     1,     1,     1,     1,
-       1,     1,     1,     1,     1,     0,     1,     1,     3,     1,
-       6,     3,     1,     3,     1,     3,     1,     3,     1,     3,
-       1,     3,     3,     1,     3,     3,     3,     3,     1,     3,
-       3,     1,     3,     3,     1,     3,     3,     3,     1,     2,
-       2,     2,     1,     3,     1,     1,     1,     1,     1,     1,
-       1,     1,     1,     1,     1,     3,     1,     4
+       1,     1,     3,     3,     1,     1,     1,     1,     1,     1,
+       1,     1,     1,     1,     1,     1,     0,     1,     1,     3,
+       1,     6,     3,     1,     3,     1,     3,     1,     3,     1,
+       3,     1,     3,     3,     1,     3,     3,     3,     3,     1,
+       3,     3,     1,     3,     3,     1,     3,     3,     3,     1,
+       2,     2,     2,     1,     3,     1,     1,     1,     1,     1,
+       1,     1,     1,     1,     1,     1,     3,     1,     1,     4,
+       3
   };
 
 
@@ -2688,27 +2736,29 @@ namespace ramc { namespace bison {
   "CLOSED_STMT", "ASSIGNMENT", "VARDECL", "FUNCDECL", "WHILE_STMT",
   "FOR_STMT", "EXPR", "EXPR1", "EXPR2", "EXPR3", "EXPR4", "EXPR5", "EXPR6",
   "EXPR7", "EXPR8", "EXPR9", "EXPR10", "EXPR11", "EXPR12", "ATOM",
-  "IDENTIFIER", "FUNC_CALL", "VARDECLS", "TL_FUNCDECLS", "STMTS",
-  "EXPR_STAR", "EXPR_PLUS", "OP_ASSIGN", "TYPE_PLUS", "TYPE", "PARAM_STAR",
-  "PARAM_PLUS", "PARAM", "$@1", "$@2", "$@3", "$@4", "$@5", "$@6", "$@7", YY_NULLPTR
+  "IDENTIFIER", "FUNC_CALL", "ARRAY_INIT", "VARDECLS", "TL_FUNCDECLS",
+  "STMTS", "EXPR_STAR", "EXPR_PLUS", "OP_ASSIGN", "TYPE_PLUS", "TYPE",
+  "PARAM_STAR", "PARAM_PLUS", "PARAM", "$@1", "$@2", "$@3", "$@4", "$@5",
+  "$@6", "$@7", YY_NULLPTR
   };
 
 #if YYDEBUG
   const short
   Parser::yyrline_[] =
   {
-       0,   245,   245,   245,   245,   247,   248,   251,   252,   255,
-     256,   258,   259,   262,   263,   266,   268,   269,   272,   273,
-     276,   277,   278,   281,   282,   283,   284,   285,   286,   287,
-     288,   291,   291,   293,   293,   293,   294,   294,   294,   297,
-     298,   299,   302,   303,   307,   308,   309,   310,   311,   312,
-     313,   314,   317,   320,   321,   322,   323,   324,   325,   326,
-     327,   328,   329,   330,   331,   333,   334,   337,   338,   342,
-     343,   347,   348,   352,   353,   357,   358,   362,   363,   367,
-     368,   372,   373,   374,   378,   379,   380,   381,   382,   386,
-     387,   388,   392,   393,   394,   398,   399,   400,   401,   405,
-     406,   407,   408,   412,   413,   417,   418,   419,   420,   421,
-     422,   423,   424,   425,   426,   427,   430,   431
+       0,   246,   246,   246,   246,   248,   249,   252,   253,   256,
+     257,   259,   260,   263,   264,   267,   269,   270,   273,   274,
+     277,   278,   279,   282,   283,   284,   285,   286,   287,   288,
+     289,   292,   292,   294,   294,   294,   295,   295,   295,   298,
+     299,   300,   303,   304,   308,   309,   310,   311,   312,   313,
+     314,   315,   316,   319,   322,   323,   324,   325,   326,   327,
+     328,   329,   330,   331,   332,   333,   335,   336,   339,   340,
+     344,   345,   349,   350,   354,   355,   359,   360,   364,   365,
+     369,   370,   374,   375,   376,   380,   381,   382,   383,   384,
+     388,   389,   390,   394,   395,   396,   400,   401,   402,   403,
+     407,   408,   409,   410,   414,   415,   419,   420,   421,   422,
+     423,   424,   425,   426,   427,   428,   429,   430,   433,   434,
+     435
   };
 
   // Print the state stack on the debug stream.
@@ -2743,9 +2793,9 @@ namespace ramc { namespace bison {
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 2747 "ramc_bison_parser.cpp"
+#line 2797 "ramc_bison_parser.cpp"
 
-#line 433 "ramc_grammar.yy"
+#line 437 "ramc_grammar.yy"
 
 namespace ramc {
 	namespace bison {

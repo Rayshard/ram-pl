@@ -108,7 +108,7 @@
 				case TokenType::RPAREN: return Parser::make_RPAREN();
 				case TokenType::LCBRACKET: return Parser::make_LCBRACKET(token.position);
 				case TokenType::RCBRACKET: return Parser::make_RCBRACKET();
-				case TokenType::LSBRACKET: return Parser::make_LSBRACKET();
+				case TokenType::LSBRACKET: return Parser::make_LSBRACKET(token.position);
 				case TokenType::RSBRACKET: return Parser::make_RSBRACKET();
 				case TokenType::SEMICOLON: return Parser::make_SEMICOLON();
 				case TokenType::PERIOD: return Parser::make_PERIOD();
@@ -164,7 +164,7 @@
 %token RPAREN ")"
 %token <Position> LCBRACKET "{"
 %token RCBRACKET "}"
-%token LSBRACKET "["
+%token <Position> LSBRACKET "["
 %token RSBRACKET "]"
 %token GOES_TO "->"
 %token SEMICOLON ";"
@@ -227,6 +227,7 @@
 %nterm <ASTExpr*> ATOM;
 %nterm <ASTIdentifier*> IDENTIFIER;
 %nterm <ASTFuncCallExpr*> FUNC_CALL;
+%nterm <ASTArrayInit*> ARRAY_INIT;
 
 %nterm <std::vector<ASTVarDecl*>> VARDECLS;
 %nterm <std::vector<ASTFuncDecl*>> TL_FUNCDECLS;
@@ -304,14 +305,15 @@ TYPE_PLUS: TYPE			      { $$ = { $1 }; }
 ;
 
 TYPE:
-    "byte"     { $$ = $1; }
-  | "bool"     { $$ = $1; }
-  | "int"      { $$ = $1; }
-  | "float"    { $$ = $1; }
-  | "double"   { $$ = $1; }
-  | "long"     { $$ = $1; }
-  | "string"   { $$ = $1; }
-  | "void"     { $$ = $1; }
+    "byte"			{ $$ = $1; }
+  | "bool"			{ $$ = $1; }
+  | "int"			{ $$ = $1; }
+  | "float"			{ $$ = $1; }
+  | "double"		{ $$ = $1; }
+  | "long"			{ $$ = $1; }
+  | "string"		{ $$ = $1; }
+  | "void"			{ $$ = $1; }
+  | "[" TYPE "]"    { $$ = new ArrayType($2); }
 ;
 
 ASSIGNMENT: IDENTIFIER OP_ASSIGN EXPR { $$ = new ASTAssignment($1, $3, $2); };
@@ -414,21 +416,23 @@ EXPR12:
 ;
 
 ATOM:
-    "INT_LIT"       { $$ = $1; }
-  | "FLOAT_LIT"     { $$ = $1; }
-  | "BYTE_LIT"      { $$ = $1; }
-  | "DOUBLE_LIT"    { $$ = $1; }
-  | "LONG_LIT"      { $$ = $1; }
-  | "STRING_LIT"    { $$ = $1; }
-  | "true"          { $$ = $1; }
-  | "false"         { $$ = $1; }
+    "INT_LIT"		{ $$ = $1; }
+  | "FLOAT_LIT"		{ $$ = $1; }
+  | "BYTE_LIT"		{ $$ = $1; }
+  | "DOUBLE_LIT"	{ $$ = $1; }
+  | "LONG_LIT"		{ $$ = $1; }
+  | "STRING_LIT"	{ $$ = $1; }
+  | "true"			{ $$ = $1; }
+  | "false"			{ $$ = $1; }
   | IDENTIFIER		{ $$ = $1; }
   | FUNC_CALL		{ $$ = $1; }
   | "(" EXPR ")"	{ $$ = $2; }
+  | ARRAY_INIT		{ $$ = $1; }
 ;
 
-IDENTIFIER: "ID"				  { $$ = new ASTIdentifier($1.first, $1.second); }
-FUNC_CALL: "ID" "(" EXPR_STAR ")" { $$ = new ASTFuncCallExpr($1.first, $3, $1.second); }
+IDENTIFIER: "ID"					{ $$ = new ASTIdentifier($1.first, $1.second); }
+FUNC_CALL: "ID" "(" EXPR_STAR ")"	{ $$ = new ASTFuncCallExpr($1.first, $3, $1.second); }
+ARRAY_INIT: "[" EXPR_PLUS "]"		{ $$ = new ASTArrayInit($2, $1); }
 
 %%
 namespace ramc {

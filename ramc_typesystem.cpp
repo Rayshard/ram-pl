@@ -169,7 +169,7 @@ namespace ramc {
 
 	ArrayType::~ArrayType() { delete storageType; }
 
-	std::string ArrayType::ToString(int _indentLvl) { return storageType->ToString(_indentLvl) + "[]"; }
+	std::string ArrayType::ToString(int _indentLvl) { return CreateIndent(_indentLvl) + "[" + storageType->ToString(0) + "]"; }
 	int ArrayType::GetByteSize() { return POINTER_SIZE; }
 	Type* ArrayType::GetCopy() { return new ArrayType(storageType->GetCopy()); }
 

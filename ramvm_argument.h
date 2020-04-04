@@ -3,7 +3,7 @@
 namespace ramvm
 {
 	enum class ArgType { VALUE, REGISTER, STACK, MEMORY };
-	enum class RegisterArgType { REGULAR, MEMORY, STACK, SP };
+	enum class RegisterArgType { REGULAR, STACK, SP };
 	enum class StackArgType { ABSOLUTE, SP_OFFSETED };
 
 	class Argument
@@ -48,7 +48,6 @@ namespace ramvm
 
 		static RegisterArgument* CreateRegular(int _index) { return new RegisterArgument(RegisterArgType::REGULAR, _index); }
 		static RegisterArgument* CreateStack(int _index) { return new RegisterArgument(RegisterArgType::STACK, _index); }
-		static RegisterArgument* CreateMemory(int _index) { return new RegisterArgument(RegisterArgType::MEMORY, _index); }
 		static RegisterArgument* CreateSP() { return new RegisterArgument(RegisterArgType::SP, 0); }
 	};
 
@@ -70,5 +69,20 @@ namespace ramvm
 		static StackArgument* GenStackTop() { return new StackArgument(StackArgType::SP_OFFSETED, 1); };
 		static StackArgument* GenStackCur() { return new StackArgument(StackArgType::SP_OFFSETED, 0); };
 		static StackArgument* GenStackPrev() { return new StackArgument(StackArgType::SP_OFFSETED, -1); };
+	};
+
+	class MemoryArgument : public Argument {
+		Argument* addrSrc;
+		int offset;
+	public:
+		MemoryArgument(Argument* _addrSrc, int _offset = 0)
+			: Argument(ArgType::MEMORY), addrSrc(_addrSrc), offset(_offset) { }
+		
+		~MemoryArgument() { delete addrSrc; }
+		Argument* GetAddrSrc() { return addrSrc; }
+		int GetOffset() { return offset; }
+		Argument* GetCopy() override { return new MemoryArgument(addrSrc->GetCopy(), offset); }
+		
+		std::string ToString() override;
 	};
 }

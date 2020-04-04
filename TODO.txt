@@ -1,5 +1,3 @@
--Make dest argument to AstExpr::Generate code a shared value so it can be deleted if not used
-but relinquished if used
 -change all defaults to ASSERT_MSG
 
 - in the instruction constructors, assert that their arguments are of the correct type

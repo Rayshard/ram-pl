@@ -32,7 +32,7 @@ namespace ramvm {
 			case StackArgType::ABSOLUTE: return "[" + std::to_string(value) + "]";
 			case StackArgType::SP_OFFSETED: {
 				if (value == 0) { return "[SP]"; }
-				else if (value == 1) { return "[SP+1]"; }
+				else if (value == 1) { return "[+]"; }
 				else { return "[SP" + std::to_string(value) + "]"; }
 			}
 			default: return "StackArgument::ToString() - StackArgType not handled!";
@@ -43,11 +43,17 @@ namespace ramvm {
 	{
 		switch (readType)
 		{
-			case RegisterArgType::REGULAR: return "R" + std::to_string(index);
-			case RegisterArgType::STACK: return "[R" + std::to_string(index) + "]";
-			case RegisterArgType::MEMORY: return "{R" + std::to_string(index) + "}";
+			case RegisterArgType::REGULAR: return "$" + std::to_string(index);
+			case RegisterArgType::STACK: return "[$" + std::to_string(index) + "]";
 			case RegisterArgType::SP: return "SP";
 			default: return "RegisterArgument::ToString() - RegisterArgType not handled!";
 		}
+	}
+	
+	std::string MemoryArgument::ToString()
+	{
+		if (offset == 0) { return "{" + addrSrc->ToString() + "}"; }
+		else if (offset > 0) { return "{" + addrSrc->ToString() + "+" + std::to_string(offset) + "}"; }
+		else { return "{" + addrSrc->ToString() + std::to_string(offset) + "}"; }
 	}
 }

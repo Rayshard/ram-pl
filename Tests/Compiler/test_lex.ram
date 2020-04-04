@@ -2,6 +2,10 @@ let k : long = 0l;
 let t : float = 1234.7809;
 let p : byte = 4b;
 
+func ArrayTest: () = {
+	let array: [int] = [4, 5, 9, 14];
+}
+
 func Factorial: (i: int, acc: long) -> long = {
 	if i == 0 then return acc
 	else return Factorial(i - 1, acc * i);

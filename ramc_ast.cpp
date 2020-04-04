@@ -8,6 +8,7 @@
 #pragma region RamVM Usings
 using ramvm::Argument;
 using ramvm::ValueArgument;
+using ramvm::MemoryArgument;
 using ramvm::RegisterArgument;
 using ramvm::StackArgument;
 using ramvm::StackArgType;
@@ -26,6 +27,7 @@ using ramvm::InstructionType;
 using ramvm::InstrHalt;
 using ramvm::InstrReturn;
 using ramvm::InstrCall;
+using ramvm::InstrMalloc;
 #pragma endregion
 
 namespace ramc {
@@ -1374,9 +1376,9 @@ namespace ramc {
 			case BinopType::DIV: instrs.push_back(new InstrBinop(Binop::DIV, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::MOD: instrs.push_back(new InstrBinop(Binop::MOD, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::POW: instrs.push_back(new InstrBinop(Binop::POW, opDataTypes, src1, src2, stackDest)); break;
-			case BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::BIT_AND, opDataTypes, src1, src2, stackDest)); break;
-			case BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::BIT_OR, opDataTypes, src1, src2, stackDest)); break;
-			case BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::BIT_XOR, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::BIN_AND: instrs.push_back(new InstrBinop(Binop::AND, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::BIN_OR: instrs.push_back(new InstrBinop(Binop::OR, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::BIN_XOR: instrs.push_back(new InstrBinop(Binop::XOR, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::LSHIFT: instrs.push_back(new InstrBinop(Binop::LSHIFT, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::RSHIFT: instrs.push_back(new InstrBinop(Binop::RSHIFT, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::LT: instrs.push_back(new InstrBinop(Binop::LT, opDataTypes, src1, src2, stackDest)); break;
@@ -1385,8 +1387,8 @@ namespace ramc {
 			case BinopType::GT_EQ: instrs.push_back(new InstrBinop(Binop::GTEQ, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::EQ_EQ: instrs.push_back(new InstrBinop(Binop::EQ, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, opDataTypes, src1, src2, stackDest)); break;
-			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::LOG_AND, opDataTypes, src1, src2, stackDest)); break;
-			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::LOG_OR, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::AND, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::OR, opDataTypes, src1, src2, stackDest)); break;
 			default: ASSERT_MSG(false, "BinopExpr::GenerateCode - BinopType not handled!");
 		}
 
@@ -1495,9 +1497,9 @@ namespace ramc {
 
 		switch (op)
 		{
-			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::LOG_NOT, opDataTypes, src, stackDest)); break;
+			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::NOT, opDataTypes, src, stackDest)); break;
 			case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, opDataTypes, src, stackDest)); break;
-			case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::BIN_NOT, opDataTypes, src, stackDest)); break;
+			case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::NOT, opDataTypes, src, stackDest)); break;
 			default: throw std::runtime_error("UnopExpr::GenerateCode - UnopType not handled!");
 		}
 
@@ -2151,6 +2153,91 @@ namespace ramc {
 	}
 
 	CodePathNode* ASTReturnStmt::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, false); }
+#pragma endregion
+
+#pragma region ArrayInit
+	ASTArrayInit::ASTArrayInit(std::vector<ASTExpr*> _elemExprs, Position _pos)
+		: ASTExpr(ASTExprType::ARRAY_INIT, _pos), elemExprs(_elemExprs), restraint(nullptr) { }
+
+	ASTArrayInit::~ASTArrayInit()
+	{
+		for (auto const& it : elemExprs)
+			delete it;
+
+		if (restraint)
+			delete restraint;
+	}
+
+	std::string ASTArrayInit::ToString(int _indentLvl, std::string _prefix)
+	{
+		std::stringstream ss;
+		ss << CreateIndent(_indentLvl) + _prefix;
+		ss << "Array Initializer" << (elemExprs.size() == 0 ? "" : ": ");
+
+		for (auto const& it : elemExprs)
+			ss << std::endl << it->ToString(_indentLvl + 1);
+
+		return ss.str();
+	}
+
+	ASTNode* ASTArrayInit::GetCopy()
+	{
+		ExprList copiedExprs;
+
+		for (auto const& expr : elemExprs)
+			copiedExprs.push_back((ASTExpr*)expr->GetCopy());
+
+		return new ASTArrayInit(copiedExprs, GetPosition());
+	}
+
+	TypeResult ASTArrayInit::_TypeCheck(Environment* _env)
+	{
+		//Typecheck first element to get restraint
+		TypeResult restraintRes = elemExprs[0]->TypeCheck(_env);
+		if (!restraintRes.IsSuccess()) { return restraintRes; }
+		else { restraint = (*restraintRes.GetValue())->GetCopy(); }
+
+		for (int i = 1; i < elemExprs.size(); i++)
+		{
+			ASTExpr* elemExpr = elemExprs[i];
+
+			TypeResult exprTypeRes = elemExpr->TypeCheck(_env);
+			if (!exprTypeRes.IsSuccess()) { return exprTypeRes; }
+			else if (!Type::Matches(restraint, *exprTypeRes.GetValue())) { return TypeResult::GenExpectation(restraint->ToString(0), (*exprTypeRes.GetValue())->ToString(0), elemExpr->GetPosition()); }
+		}
+
+		return TypeResult::GenSuccess(new ArrayType(restraint));
+	}
+
+	InstructionSet ASTArrayInit::GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo)
+	{
+		int mallocLength = restraint->GetByteSize() * elemExprs.size();
+		InstructionSet instrs;
+
+		instrs.push_back(new InstrMalloc(new ValueArgument(mallocLength), StackArgument::GenStackTop())); //Allocate memory
+
+		//Store values
+		int offset = 1;
+
+		for (int i = 0; i < (int)elemExprs.size(); i++)
+		{
+			auto addr = std::shared_ptr<Argument>(new MemoryArgument(StackArgument::GenStackCur(), i * restraint->GetByteSize() - 1));
+			InstructionSet code = elemExprs[i]->GenerateCode(addr, _progInfo);
+
+			instrs.insert(instrs.end(), code.begin(), code.end());
+		}
+
+		//Create Move to move address to destination
+		if (!_dest->IsStackTop())
+		{
+			instrs.push_back(new InstrMove(DataType::INT, new StackArgument(StackArgType::SP_OFFSETED, -INT_SIZE + 1), _dest->GetCopy()));
+			instrs.push_back(new InstrPop(DataType::INT, new ValueArgument(1)));
+		}
+
+		//TODO: Add address to functions garbage collector
+
+		return instrs;
+	}
 #pragma endregion
 
 #pragma region Program Info

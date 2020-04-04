@@ -45,50 +45,66 @@
 				switch (token.type)
 				{
 					case TokenType::HEX_LIT: return Parser::make_TOK_HEX_LIT(DataValue((byte*)value.c_str(), value.length()));
-					case TokenType::REG: return Parser::make_TOK_REG(std::stoi(value));
-					case TokenType::MEM_REG: return Parser::make_TOK_MEM_REG(std::stoi(value));
-					case TokenType::STACK_REG: return Parser::make_TOK_STACK_REG(std::stoi(value));
-					case TokenType::SP_OFFSET: return Parser::make_TOK_SP_OFFSET(std::stoi(value));
-					case TokenType::STACK_POS: return Parser::make_TOK_STACK_POS(std::stoi(value));
+                    case TokenType::BYTE_LIT: return Parser::make_TOK_BYTE_LIT((byte)std::stoi(value));
+                    case TokenType::INT_LIT: return Parser::make_TOK_INT_LIT(std::stoi(value));
+                    case TokenType::FLOAT_LIT: return Parser::make_TOK_FLOAT_LIT(std::stof(value));
+                    case TokenType::DOUBLE_LIT: return Parser::make_TOK_DOUBLE_LIT(std::stod(value));
+                    case TokenType::LONG_LIT: return Parser::make_TOK_LONG_LIT(std::stoll(value));
+
+                    case TokenType::LSBRACKET: return Parser::make_TOK_LSBRACKET();
+                    case TokenType::RSBRACKET: return Parser::make_TOK_RSBRACKET();
+                    case TokenType::LCBRACKET: return Parser::make_TOK_LCBRACKET();
+                    case TokenType::RCBRACKET: return Parser::make_TOK_RCBRACKET();
+                    case TokenType::LPAREN: return Parser::make_TOK_LPAREN();
+                    case TokenType::RPAREN: return Parser::make_TOK_RPAREN();
+                    case TokenType::SEMICOLON: return Parser::make_TOK_SEMICOLON();
+                    case TokenType::COMMA: return Parser::make_TOK_COMMA();
+                    case TokenType::PLUS: return Parser::make_TOK_PLUS();
+                    case TokenType::MINUS: return Parser::make_TOK_MINUS();
+                    
+                    case TokenType::SINGLE_TYPE: return Parser::make_TOK_SINGLE_TYPE(CharToDataType(value[0]));
+                    case TokenType::DOUBLE_TYPE: return Parser::make_TOK_DOUBLE_TYPE(CharsToDataTypes(value[0], value[1]));
+                    case TokenType::TRIPLE_TYPE: return Parser::make_TOK_TRIPLE_TYPE(CharsToDataTypes(value[0], value[1], value[2]));
+
+					case TokenType::REGISTER: return Parser::make_TOK_REG(std::stoi(value));
 					case TokenType::LABEL: return Parser::make_TOK_LABEL(value);
-					case TokenType::INSTR_OFFSET: return Parser::make_TOK_INSTR_OFFSET(std::stoi(value));
 					case TokenType::KW_SP: return Parser::make_TOK_SP();
+
 					case TokenType::KW_HALT: return Parser::make_TOK_HALT();
 					case TokenType::KW_COMPARE: return Parser::make_TOK_COMPARE();
-					case TokenType::KW_MOV: return Parser::make_TOK_MOV(CharToDataType(value[0]));
+					case TokenType::KW_MOV: return Parser::make_TOK_MOV();
 					case TokenType::KW_RET: return Parser::make_TOK_RET();
 					case TokenType::KW_MALLOC: return Parser::make_TOK_MALLOC();
 					case TokenType::KW_FREE: return Parser::make_TOK_FREE();
-					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH(CharToDataType(value[0]));
-					case TokenType::KW_POP: return Parser::make_TOK_POP(CharToDataType(value[0]));
+					case TokenType::KW_PUSH: return Parser::make_TOK_PUSH();
+					case TokenType::KW_POP: return Parser::make_TOK_POP();
 					case TokenType::KW_PRINT: return Parser::make_TOK_PRINT();
 					case TokenType::KW_JUMP: return Parser::make_TOK_JUMP();
 					case TokenType::KW_JUMPT: return Parser::make_TOK_JUMPT();
 					case TokenType::KW_JUMPF: return Parser::make_TOK_JUMPF();
 					case TokenType::KW_CALL: return Parser::make_TOK_CALL();
-					case TokenType::KW_STORE: return Parser::make_TOK_STORE(CharToDataType(value[0]));
-					case TokenType::KW_ADD: return Parser::make_TOK_ADD(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_SUB: return Parser::make_TOK_SUB(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_MUL: return Parser::make_TOK_MUL(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_DIV: return Parser::make_TOK_DIV(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_MOD: return Parser::make_TOK_MOD(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_POW: return Parser::make_TOK_POW(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_LSHIFT: return Parser::make_TOK_LSHIFT(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_RSHIFT: return Parser::make_TOK_RSHIFT(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_BAND: return Parser::make_TOK_BAND(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_BOR: return Parser::make_TOK_BOR(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_BXOR: return Parser::make_TOK_BXOR(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_LAND: return Parser::make_TOK_LAND(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_LOR: return Parser::make_TOK_LOR(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_LT: return Parser::make_TOK_LT(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_GT: return Parser::make_TOK_GT(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_LTEQ: return Parser::make_TOK_LTEQ(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_GTEQ: return Parser::make_TOK_GTEQ(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_EQ: return Parser::make_TOK_EQ(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_NEQ: return Parser::make_TOK_NEQ(CharsToDataTypes(value[0], value[1], value[2]));
-					case TokenType::KW_NEG: return Parser::make_TOK_NEG(CharsToDataTypes(value[0], value[1]));
-					case TokenType::KW_LNOT: return Parser::make_TOK_LNOT(CharsToDataTypes(value[0], value[1]));
-					case TokenType::KW_BNOT: return Parser::make_TOK_BNOT(CharsToDataTypes(value[0], value[1]));
+					case TokenType::KW_STORE: return Parser::make_TOK_STORE();
+
+					case TokenType::KW_ADD: return Parser::make_TOK_ADD();
+					case TokenType::KW_SUB: return Parser::make_TOK_SUB();
+					case TokenType::KW_MUL: return Parser::make_TOK_MUL();
+					case TokenType::KW_DIV: return Parser::make_TOK_DIV();
+					case TokenType::KW_MOD: return Parser::make_TOK_MOD();
+					case TokenType::KW_POW: return Parser::make_TOK_POW();
+					case TokenType::KW_LSHIFT: return Parser::make_TOK_LSHIFT();
+					case TokenType::KW_RSHIFT: return Parser::make_TOK_RSHIFT();
+					case TokenType::KW_AND: return Parser::make_TOK_AND();
+					case TokenType::KW_OR: return Parser::make_TOK_OR();
+					case TokenType::KW_XOR: return Parser::make_TOK_XOR();
+					case TokenType::KW_LT: return Parser::make_TOK_LT();
+					case TokenType::KW_GT: return Parser::make_TOK_GT();
+					case TokenType::KW_LTEQ: return Parser::make_TOK_LTEQ();
+					case TokenType::KW_GTEQ: return Parser::make_TOK_GTEQ();
+					case TokenType::KW_EQ: return Parser::make_TOK_EQ();
+					case TokenType::KW_NEQ: return Parser::make_TOK_NEQ();
+					case TokenType::KW_NEG: return Parser::make_TOK_NEG();
+					case TokenType::KW_NOT: return Parser::make_TOK_NOT();
+
 					case TokenType::END_OF_FILE: return Parser::make_TOK_END_OF_FILE();
 					default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
 				}
@@ -103,13 +119,29 @@
 %param { std::unordered_map<std::string, int>& labels }
 
 %token <DataValue> TOK_HEX_LIT "hex"
+%token <byte> TOK_BYTE_LIT "byte"
+%token <int> TOK_INT_LIT "int"
+%token <float> TOK_FLOAT_LIT "float"
+%token <double> TOK_DOUBLE_LIT "double"
+%token <rLong> TOK_LONG_LIT "long"
+
+%token TOK_LSBRACKET "["
+%token TOK_RSBRACKET "]"
+%token TOK_LCBRACKET "{"
+%token TOK_RCBRACKET "}"
+%token TOK_LPAREN "("
+%token TOK_RPAREN ")"
+%token TOK_SEMICOLON ";"
+%token TOK_COMMA ","
+%token TOK_PLUS "+"
+%token TOK_MINUS "-"
+
+%token <DataType> TOK_SINGLE_TYPE "<T>"
+%token <DataTypeDouble> TOK_DOUBLE_TYPE "<TT>"
+%token <DataTypeTriple> TOK_TRIPLE_TYPE "<TTT>"
+
 %token <int> TOK_REG "reg"
-%token <int> TOK_MEM_REG "mreg"
-%token <int> TOK_STACK_REG "sreg"
-%token <int> TOK_SP_OFFSET "spoff"
-%token <int> TOK_STACK_POS "stpos"
 %token <std::string> TOK_LABEL "LABEL"
-%token <int> TOK_INSTR_OFFSET "ipOff"
 %token TOK_SP "SP"
 
 %token TOK_HALT "HALT"
@@ -122,32 +154,30 @@
 %token TOK_JUMP "JUMP"
 %token TOK_JUMPT "JUMPT"
 %token TOK_JUMPF "JUMPF"
-%token <DataType> TOK_MOV "MOV"
-%token <DataType> TOK_POP "POP"
-%token <DataType> TOK_STORE "STORE"
-%token <DataType> TOK_PUSH "PUSH"
-%token <DataTypeTriple> TOK_ADD "ADD"
-%token <DataTypeTriple> TOK_SUB "SUB"
-%token <DataTypeTriple> TOK_MUL "MUL"
-%token <DataTypeTriple> TOK_DIV "DIV"
-%token <DataTypeTriple> TOK_MOD "MOD"
-%token <DataTypeTriple> TOK_POW "POW"
-%token <DataTypeTriple> TOK_LSHIFT "LSHIFT"
-%token <DataTypeTriple> TOK_RSHIFT "RSHIFT"
-%token <DataTypeTriple> TOK_BAND "BAND"
-%token <DataTypeTriple> TOK_BOR "BOR"
-%token <DataTypeTriple> TOK_BXOR "BXOR"
-%token <DataTypeTriple> TOK_LAND "LAND"
-%token <DataTypeTriple> TOK_LOR "LOR"
-%token <DataTypeTriple> TOK_LT "LT"
-%token <DataTypeTriple> TOK_GT "GT"
-%token <DataTypeTriple> TOK_LTEQ "LTEQ"
-%token <DataTypeTriple> TOK_GTEQ "GTEQ"
-%token <DataTypeTriple> TOK_EQ "EQ"
-%token <DataTypeTriple> TOK_NEQ "NEQ"
-%token <DataTypeDouble> TOK_NEG "NEG"
-%token <DataTypeDouble> TOK_LNOT "LNOT"
-%token <DataTypeDouble> TOK_BNOT "BNOT"
+%token TOK_MOV "MOV"
+%token TOK_POP "POP"
+%token TOK_STORE "STORE"
+%token TOK_PUSH "PUSH"
+
+%token TOK_ADD "ADD"
+%token TOK_SUB "SUB"
+%token TOK_MUL "MUL"
+%token TOK_DIV "DIV"
+%token TOK_MOD "MOD"
+%token TOK_POW "POW"
+%token TOK_LSHIFT "LSHIFT"
+%token TOK_RSHIFT "RSHIFT"
+%token TOK_AND "AND"
+%token TOK_OR "OR"
+%token TOK_XOR "XOR"
+%token TOK_LT "LT"
+%token TOK_GT "GT"
+%token TOK_LTEQ "LTEQ"
+%token TOK_GTEQ "GTEQ"
+%token TOK_EQ "EQ"
+%token TOK_NEQ "NEQ"
+%token TOK_NEG "NEG"
+%token TOK_NOT "NOT"
 
 %token TOK_END_OF_FILE 0
 
@@ -155,87 +185,84 @@
 %nterm <std::vector<Argument*>> ARGUMENTS;
 %nterm <Instruction*> STMT;
 %nterm <Argument*> ARGUMENT;
-%nterm <Argument*> DEST_ARG;
-%nterm <std::pair<Binop, DataTypeTriple>> BINOP;
-%nterm <std::pair<Unop, DataTypeDouble>> UNOP;
+%nterm <Binop> BINOP;
+%nterm <Unop> UNOP;
 
 %%
 %start PROGRAM;
 PROGRAM: STMTS;
 
 STMTS:
-		%empty      
-	|	STMTS STMT		{ result.push_back($2); }
-	|	STMTS "LABEL"	{ labels.find($2) == labels.end() ? labels.insert_or_assign($2, result.size()) : throw std::runtime_error("Duplicate Label: " + $2); }
+		%empty
+	|	STMTS STMT ";" 				{ result.push_back($2); }
+	|	STMTS "LABEL" ";"			{ ASSERT_MSG(labels.find($2) == labels.end(), "Duplicate Label: " + $2); labels.insert_or_assign($2, result.size()); }
 ;
 
 STMT:
-		"HALT"											{ $$ = new InstrHalt(); }
-	|	"RET" ARGUMENT									{ $$ = new InstrReturn($2); }
-	|	"MOV" ARGUMENT DEST_ARG							{ $$ = new InstrMove($1, $2, $3); }
-	|	"MALLOC" ARGUMENT DEST_ARG						{ $$ = new InstrMalloc($2, $3); }
-	|	"FREE" ARGUMENT									{ $$ = new InstrFree($2); }
-	|	"PRINT" ARGUMENT ARGUMENT						{ $$ = new InstrPrint($2, $3); }
-	|	"JUMP" "LABEL"									{ $$ = new InstrJump($2); }
-	|	"JUMPT" "LABEL" ARGUMENT						{ $$ = new InstrCJump($2, $3, false); }
-	|	"JUMPF" "LABEL" ARGUMENT						{ $$ = new InstrCJump($2, $3, true); }
-	|	"CALL" "LABEL" ARGUMENT ARGUMENT				{ $$ = new InstrCall($2, $3, $4); }
-	|	"PUSH" ARGUMENTS								{ $$ = new InstrPush($1, $2); }
-	|	"POP" ARGUMENT									{ $$ = new InstrPop($1, $2); }
-	|	"STORE" ARGUMENTS DEST_ARG 						{ $$ = new InstrStore($1, $2, $3); }
-	|	"COMPARE" DEST_ARG DEST_ARG ARGUMENT DEST_ARG 	{ $$ = new InstrCompare($2, $3, $4, $5); }
-	|	BINOP ARGUMENT ARGUMENT DEST_ARG				{ $$ = new InstrBinop($1.first, $1.second, $2, $3, $4); }
-	|	UNOP ARGUMENT DEST_ARG							{ $$ = new InstrUnop($1.first, $1.second, $2, $3); }
+		"HALT"																{ $$ = new InstrHalt(); }
+	|	"RET" "(" ARGUMENT ")"												{ $$ = new InstrReturn($3); }
+	|	"MOV" "<T>" "(" ARGUMENT "," ARGUMENT ")"							{ $$ = new InstrMove($2, $4, $6); }
+	|	"MALLOC" "(" ARGUMENT "," ARGUMENT ")"								{ $$ = new InstrMalloc($3, $5); }
+	|	"FREE" "(" ARGUMENT	")"												{ $$ = new InstrFree($3); }
+	|	"PRINT" "(" ARGUMENT  "," ARGUMENT ")"								{ $$ = new InstrPrint($3, $5); }
+	|	"JUMP" "(" "LABEL" ")"												{ $$ = new InstrJump($3); }
+	|	"JUMPT" "(" "LABEL" "," ARGUMENT ")"								{ $$ = new InstrCJump($3, $5, false); }
+	|	"JUMPF" "(" "LABEL" "," ARGUMENT ")"								{ $$ = new InstrCJump($3, $5, true); }
+	|	"CALL" "(" "LABEL" "," ARGUMENT "," ARGUMENT ")"					{ $$ = new InstrCall($3, $5, $7); }
+	|	"PUSH" "<T>" "(" ARGUMENTS ")"										{ $$ = new InstrPush($2, $4); }
+	|	"POP" "<T>" "(" ARGUMENT ")"										{ $$ = new InstrPop($2, $4); }
+	|	"STORE" "<T>" "(" ARGUMENTS ")"		 								{ $$ = new InstrStore($2, $4, $4.back()); }
+	|	"COMPARE" "(" ARGUMENT "," ARGUMENT "," ARGUMENT "," ARGUMENT ")"	{ $$ = new InstrCompare($3, $5, $7, $9); }
+	|	BINOP "<TTT>" "(" ARGUMENT "," ARGUMENT "," ARGUMENT ")"			{ $$ = new InstrBinop($1, $2, $4, $6, $8); }
+	|	UNOP "<TT>" "(" ARGUMENT "," ARGUMENT ")"							{ $$ = new InstrUnop($1, $2, $4, $6); }
 ;
 
 ARGUMENTS:
-		%empty				{ $$ = { }; }
-	|	ARGUMENTS ARGUMENT  { $1.push_back($2); $$ = $1; }
+		ARGUMENT					{ $$ = { $1 }; }
+	|	ARGUMENTS "," ARGUMENT 		{ $1.push_back($3); $$ = $1; }
 ;
 
 ARGUMENT:
-		"hex"		{ $$ = new ValueArgument($1); }
-	|	"reg"		{ $$ = RegisterArgument::CreateRegular($1); }
-	|	"mreg"		{ $$ = RegisterArgument::CreateMemory($1); }
-	|	"sreg"		{ $$ = RegisterArgument::CreateStack($1); }
-	|	"SP"		{ $$ = RegisterArgument::CreateSP(); }
-	|	"spoff"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, $1); }
-	|	"stpos"		{ $$ = new StackArgument(StackArgType::ABSOLUTE, $1); }
-;
-
-DEST_ARG:
-		"reg"		{ $$ = RegisterArgument::CreateRegular($1); }
-	|	"mreg"		{ $$ = RegisterArgument::CreateMemory($1); }
-	|	"sreg"		{ $$ = RegisterArgument::CreateStack($1); }
-	|	"spoff"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, $1); }
-	|	"stpos"		{ $$ = new StackArgument(StackArgType::ABSOLUTE, $1); }
+		"hex"						{ $$ = new ValueArgument($1); }
+	|	"byte"						{ $$ = new ValueArgument($1); }
+	|	"int"						{ $$ = new ValueArgument($1); }
+	|	"float"						{ $$ = new ValueArgument($1); }
+	|	"double"					{ $$ = new ValueArgument($1); }
+	|	"long"						{ $$ = new ValueArgument($1); }
+	|	"reg"						{ $$ = RegisterArgument::CreateRegular($1); }
+	|	"SP"						{ $$ = RegisterArgument::CreateSP(); }
+	|	"[" "reg" "]"				{ $$ = RegisterArgument::CreateStack($2); }
+	|	"[" "SP" "]"				{ $$ = new StackArgument(StackArgType::SP_OFFSETED, 0); }
+	|	"[" "+" "]"					{ $$ = new StackArgument(StackArgType::SP_OFFSETED, 1); }
+	|	"[" "SP" "-" "int" "]"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, -$4); }
+	|	"[" "int" "]"				{ $$ = new StackArgument(StackArgType::ABSOLUTE, $2); }
+	|	"{" ARGUMENT "}"			{ $$ = new MemoryArgument($2, 0); }
+	|	"{" ARGUMENT "+" "int" "}"	{ $$ = new MemoryArgument($2, $4); }
+	|	"{" ARGUMENT "-" "int" "}"	{ $$ = new MemoryArgument($2, -$4); }
 ;
 
 BINOP:
-		"ADD"		{ $$ = { Binop::ADD, $1 }; }
-	|	"SUB"		{ $$ = { Binop::SUB, $1 }; }
-	|	"MUL"		{ $$ = { Binop::MUL, $1 }; }
-	|	"DIV"		{ $$ = { Binop::DIV, $1 }; }
-	|	"MOD"		{ $$ = { Binop::MOD, $1 }; }
-	|	"POW"		{ $$ = { Binop::POW, $1 }; }
-	|	"LSHIFT"	{ $$ = { Binop::LSHIFT, $1 }; }
-	|	"RSHIFT"	{ $$ = { Binop::RSHIFT, $1 }; }
-	|	"BAND"		{ $$ = { Binop::BIT_AND, $1 }; }
-	|	"BOR"		{ $$ = { Binop::BIT_OR, $1 }; }
-	|	"BXOR"		{ $$ = { Binop::BIT_XOR, $1 }; }
-	|	"LAND"		{ $$ = { Binop::LOG_AND, $1 }; }
-	|	"LOR"		{ $$ = { Binop::LOG_OR, $1 }; }
-	|	"LT"		{ $$ = { Binop::LT, $1 }; }
-	|	"GT"		{ $$ = { Binop::GT, $1 }; }
-	|	"LTEQ"		{ $$ = { Binop::LTEQ, $1 }; }
-	|	"GTEQ"		{ $$ = { Binop::GTEQ, $1 }; }
-	|	"EQ"		{ $$ = { Binop::EQ, $1 }; }
-	|	"NEQ"		{ $$ = { Binop::NEQ, $1 }; }
+		"ADD"	 { $$ = Binop::ADD; }
+	|	"SUB"	 { $$ = Binop::SUB; }
+	|	"MUL"	 { $$ = Binop::MUL; }
+	|	"DIV"	 { $$ = Binop::DIV; }
+	|	"MOD"	 { $$ = Binop::MOD; }
+	|	"POW"	 { $$ = Binop::POW; }
+	|	"LSHIFT" { $$ = Binop::LSHIFT; }
+	|	"RSHIFT" { $$ = Binop::RSHIFT; }
+	|	"AND"	 { $$ = Binop::AND; }
+	|	"OR"	 { $$ = Binop::OR; }
+	|	"XOR"	 { $$ = Binop::XOR; }
+	|	"LT"	 { $$ = Binop::LT; }
+	|	"GT"	 { $$ = Binop::GT; }
+	|	"LTEQ"	 { $$ = Binop::LTEQ; }
+	|	"GTEQ"	 { $$ = Binop::GTEQ; }
+	|	"EQ"	 { $$ = Binop::EQ; }
+	|	"NEQ"	 { $$ = Binop::NEQ; }
 
 UNOP:
-		"NEG"	{ $$ = std::make_pair(Unop::NEG, $1); }
-	|	"LNOT"	{ $$ = std::make_pair(Unop::LOG_NOT, $1); }
-	|	"BNOT"	{ $$ = std::make_pair(Unop::BIN_NOT, $1); }
+		"NEG" { $$ = Unop::NEG; }
+	|	"NOT" { $$ = Unop::NOT; }
 ;
 
 %%

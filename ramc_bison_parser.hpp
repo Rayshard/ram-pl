@@ -366,18 +366,21 @@ namespace ramc { namespace bison {
     /// An auxiliary type to compute the largest semantic type.
     union union_type
     {
+      // ARRAY_INIT
+      char dummy1[sizeof (ASTArrayInit*)];
+
       // ASSIGNMENT
-      char dummy1[sizeof (ASTAssignment*)];
+      char dummy2[sizeof (ASTAssignment*)];
 
       // "true"
       // "false"
-      char dummy2[sizeof (ASTBoolLit*)];
+      char dummy3[sizeof (ASTBoolLit*)];
 
       // "BYTE_LIT"
-      char dummy3[sizeof (ASTByteLit*)];
+      char dummy4[sizeof (ASTByteLit*)];
 
       // "DOUBLE_LIT"
-      char dummy4[sizeof (ASTDoubleLit*)];
+      char dummy5[sizeof (ASTDoubleLit*)];
 
       // EXPR
       // EXPR1
@@ -393,49 +396,50 @@ namespace ramc { namespace bison {
       // EXPR11
       // EXPR12
       // ATOM
-      char dummy5[sizeof (ASTExpr*)];
+      char dummy6[sizeof (ASTExpr*)];
 
       // "FLOAT_LIT"
-      char dummy6[sizeof (ASTFloatLit*)];
+      char dummy7[sizeof (ASTFloatLit*)];
 
       // FUNC_CALL
-      char dummy7[sizeof (ASTFuncCallExpr*)];
+      char dummy8[sizeof (ASTFuncCallExpr*)];
 
       // FUNCDECL
-      char dummy8[sizeof (ASTFuncDecl*)];
+      char dummy9[sizeof (ASTFuncDecl*)];
 
       // IDENTIFIER
-      char dummy9[sizeof (ASTIdentifier*)];
+      char dummy10[sizeof (ASTIdentifier*)];
 
       // "INT_LIT"
-      char dummy10[sizeof (ASTIntLit*)];
+      char dummy11[sizeof (ASTIntLit*)];
 
       // "LONG_LIT"
-      char dummy11[sizeof (ASTLongLit*)];
+      char dummy12[sizeof (ASTLongLit*)];
 
       // PROGRAM
-      char dummy12[sizeof (ASTProgram*)];
+      char dummy13[sizeof (ASTProgram*)];
 
       // STMT
       // OPEN_STMT
       // CLOSED_STMT
       // WHILE_STMT
       // FOR_STMT
-      char dummy13[sizeof (ASTStmt*)];
+      char dummy14[sizeof (ASTStmt*)];
 
       // "STRING_LIT"
-      char dummy14[sizeof (ASTStringLit*)];
+      char dummy15[sizeof (ASTStringLit*)];
 
       // VARDECL
-      char dummy15[sizeof (ASTVarDecl*)];
+      char dummy16[sizeof (ASTVarDecl*)];
 
       // OP_ASSIGN
-      char dummy16[sizeof (AssignmentType)];
+      char dummy17[sizeof (AssignmentType)];
 
       // PARAM
-      char dummy17[sizeof (Param)];
+      char dummy18[sizeof (Param)];
 
       // "{"
+      // "["
       // "let"
       // "if"
       // "then"
@@ -447,7 +451,7 @@ namespace ramc { namespace bison {
       // "break"
       // "continue"
       // "return"
-      char dummy18[sizeof (Position)];
+      char dummy19[sizeof (Position)];
 
       // "byte"
       // "bool"
@@ -458,30 +462,30 @@ namespace ramc { namespace bison {
       // "string"
       // "void"
       // TYPE
-      char dummy19[sizeof (Type*)];
+      char dummy20[sizeof (Type*)];
 
       // "ID"
-      char dummy20[sizeof (std::pair<std::string, Position>)];
+      char dummy21[sizeof (std::pair<std::string, Position>)];
 
       // EXPR_STAR
       // EXPR_PLUS
-      char dummy21[sizeof (std::vector<ASTExpr*>)];
+      char dummy22[sizeof (std::vector<ASTExpr*>)];
 
       // TL_FUNCDECLS
-      char dummy22[sizeof (std::vector<ASTFuncDecl*>)];
+      char dummy23[sizeof (std::vector<ASTFuncDecl*>)];
 
       // STMTS
-      char dummy23[sizeof (std::vector<ASTStmt*>)];
+      char dummy24[sizeof (std::vector<ASTStmt*>)];
 
       // VARDECLS
-      char dummy24[sizeof (std::vector<ASTVarDecl*>)];
+      char dummy25[sizeof (std::vector<ASTVarDecl*>)];
 
       // PARAM_STAR
       // PARAM_PLUS
-      char dummy25[sizeof (std::vector<Param>)];
+      char dummy26[sizeof (std::vector<Param>)];
 
       // TYPE_PLUS
-      char dummy26[sizeof (std::vector<Type*>)];
+      char dummy27[sizeof (std::vector<Type*>)];
     };
 
     /// The size of the largest semantic type.
@@ -642,6 +646,17 @@ namespace ramc { namespace bison {
 #else
       basic_symbol (typename Base::kind_type t)
         : Base (t)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, ASTArrayInit*&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const ASTArrayInit*& v)
+        : Base (t)
+        , value (v)
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -953,6 +968,10 @@ namespace ramc { namespace bison {
         // Type destructor.
 switch (yytype)
     {
+      case 102: // ARRAY_INIT
+        value.template destroy< ASTArrayInit* > ();
+        break;
+
       case 81: // ASSIGNMENT
         value.template destroy< ASTAssignment* > ();
         break;
@@ -1031,15 +1050,16 @@ switch (yytype)
         value.template destroy< ASTVarDecl* > ();
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.template destroy< Param > ();
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -1062,7 +1082,7 @@ switch (yytype)
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.template destroy< Type* > ();
         break;
 
@@ -1070,29 +1090,29 @@ switch (yytype)
         value.template destroy< std::pair<std::string, Position> > ();
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.template destroy< std::vector<ASTExpr*> > ();
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.template destroy< std::vector<ASTFuncDecl*> > ();
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.template destroy< std::vector<ASTStmt*> > ();
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.template destroy< std::vector<ASTVarDecl*> > ();
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.template destroy< std::vector<Param> > ();
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.template destroy< std::vector<Type*> > ();
         break;
 
@@ -1169,13 +1189,13 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::LSBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
+        YY_ASSERT (tok == token::END_OF_FILE || tok == token::PLUS || tok == token::MINUS || tok == token::TIMES || tok == token::DIVIDE || tok == token::MOD || tok == token::POW || tok == token::BIN_AND || tok == token::BIN_OR || tok == token::BIN_XOR || tok == token::LSHIFT || tok == token::RSHIFT || tok == token::LT || tok == token::GT || tok == token::LT_EQ || tok == token::GT_EQ || tok == token::EQ_EQ || tok == token::NEQ || tok == token::LOG_AND || tok == token::LOG_OR || tok == token::LOG_NOT || tok == token::BIN_NOT || tok == token::EQ || tok == token::ADD_EQ || tok == token::SUB_EQ || tok == token::MUL_EQ || tok == token::DIV_EQ || tok == token::MOD_EQ || tok == token::POW_EQ || tok == token::BIN_AND_EQ || tok == token::BIN_OR_EQ || tok == token::BIN_XOR_EQ || tok == token::LSHIFT_EQ || tok == token::RSHIFT_EQ || tok == token::LPAREN || tok == token::RPAREN || tok == token::RCBRACKET || tok == token::RSBRACKET || tok == token::GOES_TO || tok == token::SEMICOLON || tok == token::PERIOD || tok == token::COLON || tok == token::COMMA || tok == token::UNDERSCORE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1273,13 +1293,13 @@ switch (yytype)
       symbol_type (int tok, Position v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::LSBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #else
       symbol_type (int tok, const Position& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::LCBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
+        YY_ASSERT (tok == token::LCBRACKET || tok == token::LSBRACKET || tok == token::KW_LET || tok == token::KW_IF || tok == token::KW_THEN || tok == token::KW_ELSE || tok == token::KW_WHILE || tok == token::KW_FOR || tok == token::KW_DO || tok == token::KW_FUNC || tok == token::KW_BREAK || tok == token::KW_CONTINUE || tok == token::KW_RETURN);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1917,16 +1937,16 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_LSBRACKET ()
+      make_LSBRACKET (Position v)
       {
-        return symbol_type (token::LSBRACKET);
+        return symbol_type (token::LSBRACKET, std::move (v));
       }
 #else
       static
       symbol_type
-      make_LSBRACKET ()
+      make_LSBRACKET (const Position& v)
       {
-        return symbol_type (token::LSBRACKET);
+        return symbol_type (token::LSBRACKET, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2494,7 +2514,7 @@ switch (yytype)
     /// \param yyvalue   the value to check
     static bool yy_table_value_is_error_ (int yyvalue);
 
-    static const signed char yypact_ninf_;
+    static const short yypact_ninf_;
     static const signed char yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
@@ -2780,8 +2800,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 243,     ///< Last index in yytable_.
-      yynnts_ = 44,  ///< Number of nonterminal symbols.
+      yylast_ = 240,     ///< Last index in yytable_.
+      yynnts_ = 45,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 76  ///< Number of tokens.
     };
@@ -2857,6 +2877,10 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.move< ASTArrayInit* > (std::move (that.value));
+        break;
+
       case 81: // ASSIGNMENT
         value.move< ASTAssignment* > (std::move (that.value));
         break;
@@ -2935,15 +2959,16 @@ switch (yytype)
         value.move< ASTVarDecl* > (std::move (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (std::move (that.value));
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -2966,7 +2991,7 @@ switch (yytype)
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (std::move (that.value));
         break;
 
@@ -2974,29 +2999,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (std::move (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (std::move (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (std::move (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (std::move (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (std::move (that.value));
         break;
 
@@ -3014,6 +3039,10 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.copy< ASTArrayInit* > (YY_MOVE (that.value));
+        break;
+
       case 81: // ASSIGNMENT
         value.copy< ASTAssignment* > (YY_MOVE (that.value));
         break;
@@ -3092,15 +3121,16 @@ switch (yytype)
         value.copy< ASTVarDecl* > (YY_MOVE (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.copy< Param > (YY_MOVE (that.value));
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -3123,7 +3153,7 @@ switch (yytype)
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.copy< Type* > (YY_MOVE (that.value));
         break;
 
@@ -3131,29 +3161,29 @@ switch (yytype)
         value.copy< std::pair<std::string, Position> > (YY_MOVE (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.copy< std::vector<ASTExpr*> > (YY_MOVE (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.copy< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.copy< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.copy< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
@@ -3179,6 +3209,10 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
+      case 102: // ARRAY_INIT
+        value.move< ASTArrayInit* > (YY_MOVE (s.value));
+        break;
+
       case 81: // ASSIGNMENT
         value.move< ASTAssignment* > (YY_MOVE (s.value));
         break;
@@ -3257,15 +3291,16 @@ switch (yytype)
         value.move< ASTVarDecl* > (YY_MOVE (s.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (YY_MOVE (s.value));
         break;
 
       case 38: // "{"
+      case 40: // "["
       case 65: // "let"
       case 66: // "if"
       case 67: // "then"
@@ -3288,7 +3323,7 @@ switch (yytype)
       case 62: // "long"
       case 63: // "string"
       case 64: // "void"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (YY_MOVE (s.value));
         break;
 
@@ -3296,29 +3331,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (YY_MOVE (s.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (YY_MOVE (s.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (YY_MOVE (s.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (YY_MOVE (s.value));
         break;
 
@@ -3377,7 +3412,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 3381 "ramc_bison_parser.hpp"
+#line 3416 "ramc_bison_parser.hpp"
 
 
 

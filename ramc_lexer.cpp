@@ -182,8 +182,6 @@ namespace ramc {
 		}
 	}
 
-	bool IsWhitespace(char _char) { return _char == ' ' || _char == '\n' || _char == '\r' || _char == '\t'; }
-
 	LexerResult Lexer::GetNextToken()
 	{
 		char firstChar = (char)ReadNextChar();
@@ -191,7 +189,7 @@ namespace ramc {
 #pragma region Ignores
 		while (true)
 		{
-			if (ignoreWhitespace && IsWhitespace(firstChar)) { firstChar = (char)ReadNextChar(); }
+			if (ignoreWhitespace && isspace(firstChar)) { firstChar = (char)ReadNextChar(); }
 			else if (ignoreComments && firstChar == '`')
 			{
 				LexerResult commentRes = LexComment(this, position);
@@ -222,7 +220,7 @@ namespace ramc {
 			case '[': return LexerResult::GenSuccess(Token(TokenType::LSBRACKET, tokStartPos, ""));
 			case ']': return LexerResult::GenSuccess(Token(TokenType::RSBRACKET, tokStartPos, ""));
 			case '+': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 				
 				if (peekedChar == '=') {
 					ReadNextChar();
@@ -231,7 +229,7 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::PLUS, tokStartPos, "")); }
 			}
 			case '-': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '>') {
 					ReadNextChar();
@@ -244,12 +242,12 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::MINUS, tokStartPos, "")); }
 			}
 			case '*': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '*') {
 					ReadNextChar();
 
-					if ((char)stream->peek() == '=') {
+					if ((char)PeekNextChar() == '=') {
 						ReadNextChar();
 						return LexerResult::GenSuccess(Token(TokenType::POW_EQ, tokStartPos, ""));
 					}
@@ -262,21 +260,21 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::TIMES, tokStartPos, "")); }
 			}
 			case '/': {
-				if ((char)stream->peek() == '=') {
+				if ((char)PeekNextChar() == '=') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::DIVIDE_EQ, tokStartPos, ""));
 				}
 				else { return LexerResult::GenSuccess(Token(TokenType::DIVIDE, tokStartPos, "")); }
 			}
 			case '%': {
-				if ((char)stream->peek() == '=') {
+				if ((char)PeekNextChar() == '=') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::MOD_EQ, tokStartPos, ""));
 				}
 				else { return LexerResult::GenSuccess(Token(TokenType::MOD, tokStartPos, "")); }
 			}
 			case '&': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '&') {
 					ReadNextChar();
@@ -289,7 +287,7 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::BIN_AND, tokStartPos, "")); }
 			}
 			case '|': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '|') {
 					ReadNextChar();
@@ -302,7 +300,7 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::BIN_OR, tokStartPos, "")); }
 			}
 			case '^': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '=') {
 					ReadNextChar();
@@ -311,12 +309,12 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::BIN_XOR, tokStartPos, "")); }
 			}
 			case '<': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '<') {
 					ReadNextChar();
 
-					if ((char)stream->peek() == '=') {
+					if ((char)PeekNextChar() == '=') {
 						ReadNextChar();
 						return LexerResult::GenSuccess(Token(TokenType::LSHIFT_EQ, tokStartPos, ""));
 					}
@@ -329,12 +327,12 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::LT, tokStartPos, "")); }
 			}
 			case '>': {
-				char peekedChar = (char)stream->peek();
+				char peekedChar = (char)PeekNextChar();
 
 				if (peekedChar == '>') {
 					ReadNextChar();
 
-					if ((char)stream->peek() == '=') {
+					if ((char)PeekNextChar() == '=') {
 						ReadNextChar();
 						return LexerResult::GenSuccess(Token(TokenType::RSHIFT_EQ, tokStartPos, ""));
 					}
@@ -347,14 +345,14 @@ namespace ramc {
 				else { return LexerResult::GenSuccess(Token(TokenType::GT, tokStartPos, "")); }
 			}
 			case '=': {
-				if ((char)stream->peek() == '=') {
+				if ((char)PeekNextChar() == '=') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::EQ_EQ, tokStartPos, ""));
 				}
 				else { return LexerResult::GenSuccess(Token(TokenType::EQ, tokStartPos, "")); }
 			}
 			case '!': {
-				if ((char)stream->peek() == '=') {
+				if ((char)PeekNextChar() == '=') {
 					ReadNextChar();
 					return LexerResult::GenSuccess(Token(TokenType::NEQ, tokStartPos, ""));
 				}

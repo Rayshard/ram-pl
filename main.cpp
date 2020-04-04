@@ -149,7 +149,7 @@ int CompilerMain()
 			std::cout << i << "\t" << instr->ToString() << std::endl;
 		}
 
-
+		return 0;
 		//Run VM
 		using namespace ramvm;
 

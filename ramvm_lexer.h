@@ -6,16 +6,17 @@ namespace ramvm {
 	enum class LexerResultType {
 		SUCCESS,
 		HEX_LIT_OOB,
-		HEX_LIT_INVALID,
+		BYTE_LIT_OOB,
+		INT_LIT_OOB,
+		FLOAT_LIT_OOB,
+		DOUBLE_LIT_OOB,
+		LONG_LIT_OOB,
+		TOO_MANY_DECIMALS,
 		INVAILD_LABEL_ID,
-		INSTR_OFFSET_OOB,
 		INVALID_REGISTER,
-		INVALID_REG_IDX,
-		INVALID_OFFSET,
-		MISSING_CLOSE_BRACKET,
-		COMMENT_CLOSE,
+		INVAILD_TYPE_POSTFIX,
+		MISSING_TYPE_CLOSE,
 		INVALID,
-		INVALID_STACK_POS,
 		UNKNOWN_TOKEN
 	};
 
@@ -36,10 +37,6 @@ namespace ramvm {
 	public:
 		Lexer(std::istream* _stream, int _tabSize)
 			: RTLexer(_stream, _tabSize) { }
-
-		static const std::regex REGEX_LABEL, REGEX_REG, REGEX_MEM_REG, REGEX_STACK_REG, REGEX_INSTR_OFFSET,
-			REGEX_SP_OFFSET, REGEX_HEX_LIT, REGEX_INT_LIT, REGEX_FLOAT_LIT, REGEX_DOUBLE_LIT, REGEX_SP,
-			REGEX_STACK_POS;
 
 		LexerResult GetNextToken() override;
 	};

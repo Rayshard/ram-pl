@@ -10,11 +10,11 @@ namespace ramvm {
 
 	enum class Binop {
 		ADD, SUB, MUL, DIV, MOD, POW,
-		LSHIFT, RSHIFT, BIT_AND, BIT_OR, BIT_XOR, LOG_AND, LOG_OR,
+		LSHIFT, RSHIFT, XOR, AND, OR,
 		LT, GT, LTEQ, GTEQ, EQ, NEQ,
 	};
 
-	enum class Unop { NEG, LOG_NOT, BIN_NOT };
+	enum class Unop { NEG, NOT };
 
 	ResultType DoBinop(Binop _op, DataVariant& _val1, DataVariant& _val2, DataVariant& _result);
 	ResultType DoUnop(Unop _op, DataVariant& _val, DataVariant& _result);

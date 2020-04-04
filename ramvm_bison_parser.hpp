@@ -368,66 +368,50 @@ namespace ramvm { namespace bison {
     union union_type
     {
       // ARGUMENT
-      // DEST_ARG
       char dummy1[sizeof (Argument*)];
 
-      // "MOV"
-      // "POP"
-      // "STORE"
-      // "PUSH"
-      char dummy2[sizeof (DataType)];
+      // BINOP
+      char dummy2[sizeof (Binop)];
 
-      // "NEG"
-      // "LNOT"
-      // "BNOT"
-      char dummy3[sizeof (DataTypeDouble)];
+      // "<T>"
+      char dummy3[sizeof (DataType)];
 
-      // "ADD"
-      // "SUB"
-      // "MUL"
-      // "DIV"
-      // "MOD"
-      // "POW"
-      // "LSHIFT"
-      // "RSHIFT"
-      // "BAND"
-      // "BOR"
-      // "BXOR"
-      // "LAND"
-      // "LOR"
-      // "LT"
-      // "GT"
-      // "LTEQ"
-      // "GTEQ"
-      // "EQ"
-      // "NEQ"
-      char dummy4[sizeof (DataTypeTriple)];
+      // "<TT>"
+      char dummy4[sizeof (DataTypeDouble)];
+
+      // "<TTT>"
+      char dummy5[sizeof (DataTypeTriple)];
 
       // "hex"
-      char dummy5[sizeof (DataValue)];
+      char dummy6[sizeof (DataValue)];
 
       // STMT
-      char dummy6[sizeof (Instruction*)];
-
-      // "reg"
-      // "mreg"
-      // "sreg"
-      // "spoff"
-      // "stpos"
-      // "ipOff"
-      char dummy7[sizeof (int)];
-
-      // BINOP
-      char dummy8[sizeof (std::pair<Binop, DataTypeTriple>)];
+      char dummy7[sizeof (Instruction*)];
 
       // UNOP
-      char dummy9[sizeof (std::pair<Unop, DataTypeDouble>)];
+      char dummy8[sizeof (Unop)];
+
+      // "byte"
+      char dummy9[sizeof (byte)];
+
+      // "double"
+      char dummy10[sizeof (double)];
+
+      // "float"
+      char dummy11[sizeof (float)];
+
+      // "int"
+      // "reg"
+      char dummy12[sizeof (int)];
+
+      // "long"
+      char dummy13[sizeof (rLong)];
 
       // "LABEL"
-      char dummy10[sizeof (std::string)];
+      char dummy14[sizeof (std::string)];
 
       // ARGUMENTS
-      char dummy11[sizeof (std::vector<Argument*>)];
+      char dummy15[sizeof (std::vector<Argument*>)];
     };
 
     /// The size of the largest semantic type.
@@ -468,50 +452,60 @@ namespace ramvm { namespace bison {
       {
         TOK_END_OF_FILE = 0,
         TOK_HEX_LIT = 258,
-        TOK_REG = 259,
-        TOK_MEM_REG = 260,
-        TOK_STACK_REG = 261,
-        TOK_SP_OFFSET = 262,
-        TOK_STACK_POS = 263,
-        TOK_LABEL = 264,
-        TOK_INSTR_OFFSET = 265,
-        TOK_SP = 266,
-        TOK_HALT = 267,
-        TOK_MALLOC = 268,
-        TOK_FREE = 269,
-        TOK_CALL = 270,
-        TOK_RET = 271,
-        TOK_COMPARE = 272,
-        TOK_PRINT = 273,
-        TOK_JUMP = 274,
-        TOK_JUMPT = 275,
-        TOK_JUMPF = 276,
-        TOK_MOV = 277,
-        TOK_POP = 278,
-        TOK_STORE = 279,
-        TOK_PUSH = 280,
-        TOK_ADD = 281,
-        TOK_SUB = 282,
-        TOK_MUL = 283,
-        TOK_DIV = 284,
-        TOK_MOD = 285,
-        TOK_POW = 286,
-        TOK_LSHIFT = 287,
-        TOK_RSHIFT = 288,
-        TOK_BAND = 289,
-        TOK_BOR = 290,
-        TOK_BXOR = 291,
-        TOK_LAND = 292,
-        TOK_LOR = 293,
-        TOK_LT = 294,
-        TOK_GT = 295,
-        TOK_LTEQ = 296,
-        TOK_GTEQ = 297,
-        TOK_EQ = 298,
-        TOK_NEQ = 299,
-        TOK_NEG = 300,
-        TOK_LNOT = 301,
-        TOK_BNOT = 302
+        TOK_BYTE_LIT = 259,
+        TOK_INT_LIT = 260,
+        TOK_FLOAT_LIT = 261,
+        TOK_DOUBLE_LIT = 262,
+        TOK_LONG_LIT = 263,
+        TOK_LSBRACKET = 264,
+        TOK_RSBRACKET = 265,
+        TOK_LCBRACKET = 266,
+        TOK_RCBRACKET = 267,
+        TOK_LPAREN = 268,
+        TOK_RPAREN = 269,
+        TOK_SEMICOLON = 270,
+        TOK_COMMA = 271,
+        TOK_PLUS = 272,
+        TOK_MINUS = 273,
+        TOK_SINGLE_TYPE = 274,
+        TOK_DOUBLE_TYPE = 275,
+        TOK_TRIPLE_TYPE = 276,
+        TOK_REG = 277,
+        TOK_LABEL = 278,
+        TOK_SP = 279,
+        TOK_HALT = 280,
+        TOK_MALLOC = 281,
+        TOK_FREE = 282,
+        TOK_CALL = 283,
+        TOK_RET = 284,
+        TOK_COMPARE = 285,
+        TOK_PRINT = 286,
+        TOK_JUMP = 287,
+        TOK_JUMPT = 288,
+        TOK_JUMPF = 289,
+        TOK_MOV = 290,
+        TOK_POP = 291,
+        TOK_STORE = 292,
+        TOK_PUSH = 293,
+        TOK_ADD = 294,
+        TOK_SUB = 295,
+        TOK_MUL = 296,
+        TOK_DIV = 297,
+        TOK_MOD = 298,
+        TOK_POW = 299,
+        TOK_LSHIFT = 300,
+        TOK_RSHIFT = 301,
+        TOK_AND = 302,
+        TOK_OR = 303,
+        TOK_XOR = 304,
+        TOK_LT = 305,
+        TOK_GT = 306,
+        TOK_LTEQ = 307,
+        TOK_GTEQ = 308,
+        TOK_EQ = 309,
+        TOK_NEQ = 310,
+        TOK_NEG = 311,
+        TOK_NOT = 312
       };
     };
 
@@ -574,6 +568,17 @@ namespace ramvm { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, Binop&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const Binop& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
       basic_symbol (typename Base::kind_type t, DataType&& v)
         : Base (t)
         , value (std::move (v))
@@ -629,6 +634,50 @@ namespace ramvm { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, Unop&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const Unop& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, byte&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const byte& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, double&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const double& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, float&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const float& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
       basic_symbol (typename Base::kind_type t, int&& v)
         : Base (t)
         , value (std::move (v))
@@ -640,23 +689,12 @@ namespace ramvm { namespace bison {
       {}
 #endif
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::pair<Binop, DataTypeTriple>&& v)
+      basic_symbol (typename Base::kind_type t, rLong&& v)
         : Base (t)
         , value (std::move (v))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const std::pair<Binop, DataTypeTriple>& v)
-        : Base (t)
-        , value (v)
-      {}
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::pair<Unop, DataTypeDouble>&& v)
-        : Base (t)
-        , value (std::move (v))
-      {}
-#else
-      basic_symbol (typename Base::kind_type t, const std::pair<Unop, DataTypeDouble>& v)
+      basic_symbol (typename Base::kind_type t, const rLong& v)
         : Base (t)
         , value (v)
       {}
@@ -706,43 +744,23 @@ namespace ramvm { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 52: // ARGUMENT
-      case 53: // DEST_ARG
+      case 62: // ARGUMENT
         value.template destroy< Argument* > ();
         break;
 
-      case 22: // "MOV"
-      case 23: // "POP"
-      case 24: // "STORE"
-      case 25: // "PUSH"
+      case 63: // BINOP
+        value.template destroy< Binop > ();
+        break;
+
+      case 19: // "<T>"
         value.template destroy< DataType > ();
         break;
 
-      case 45: // "NEG"
-      case 46: // "LNOT"
-      case 47: // "BNOT"
+      case 20: // "<TT>"
         value.template destroy< DataTypeDouble > ();
         break;
 
-      case 26: // "ADD"
-      case 27: // "SUB"
-      case 28: // "MUL"
-      case 29: // "DIV"
-      case 30: // "MOD"
-      case 31: // "POW"
-      case 32: // "LSHIFT"
-      case 33: // "RSHIFT"
-      case 34: // "BAND"
-      case 35: // "BOR"
-      case 36: // "BXOR"
-      case 37: // "LAND"
-      case 38: // "LOR"
-      case 39: // "LT"
-      case 40: // "GT"
-      case 41: // "LTEQ"
-      case 42: // "GTEQ"
-      case 43: // "EQ"
-      case 44: // "NEQ"
+      case 21: // "<TTT>"
         value.template destroy< DataTypeTriple > ();
         break;
 
@@ -750,32 +768,40 @@ switch (yytype)
         value.template destroy< DataValue > ();
         break;
 
-      case 51: // STMT
+      case 61: // STMT
         value.template destroy< Instruction* > ();
         break;
 
-      case 4: // "reg"
-      case 5: // "mreg"
-      case 6: // "sreg"
-      case 7: // "spoff"
-      case 8: // "stpos"
-      case 10: // "ipOff"
+      case 64: // UNOP
+        value.template destroy< Unop > ();
+        break;
+
+      case 4: // "byte"
+        value.template destroy< byte > ();
+        break;
+
+      case 7: // "double"
+        value.template destroy< double > ();
+        break;
+
+      case 6: // "float"
+        value.template destroy< float > ();
+        break;
+
+      case 5: // "int"
+      case 22: // "reg"
         value.template destroy< int > ();
         break;
 
-      case 54: // BINOP
-        value.template destroy< std::pair<Binop, DataTypeTriple> > ();
+      case 8: // "long"
+        value.template destroy< rLong > ();
         break;
 
-      case 55: // UNOP
-        value.template destroy< std::pair<Unop, DataTypeDouble> > ();
-        break;
-
-      case 9: // "LABEL"
+      case 23: // "LABEL"
         value.template destroy< std::string > ();
         break;
 
-      case 50: // ARGUMENTS
+      case 60: // ARGUMENTS
         value.template destroy< std::vector<Argument*> > ();
         break;
 
@@ -852,52 +878,52 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, DataType v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH);
+        YY_ASSERT (tok == token::TOK_SINGLE_TYPE);
       }
 #else
       symbol_type (int tok, const DataType& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH);
+        YY_ASSERT (tok == token::TOK_SINGLE_TYPE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, DataTypeDouble v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_NEG || tok == token::TOK_LNOT || tok == token::TOK_BNOT);
+        YY_ASSERT (tok == token::TOK_DOUBLE_TYPE);
       }
 #else
       symbol_type (int tok, const DataTypeDouble& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_NEG || tok == token::TOK_LNOT || tok == token::TOK_BNOT);
+        YY_ASSERT (tok == token::TOK_DOUBLE_TYPE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, DataTypeTriple v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_BAND || tok == token::TOK_BOR || tok == token::TOK_BXOR || tok == token::TOK_LAND || tok == token::TOK_LOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ);
+        YY_ASSERT (tok == token::TOK_TRIPLE_TYPE);
       }
 #else
       symbol_type (int tok, const DataTypeTriple& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_BAND || tok == token::TOK_BOR || tok == token::TOK_BXOR || tok == token::TOK_LAND || tok == token::TOK_LOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ);
+        YY_ASSERT (tok == token::TOK_TRIPLE_TYPE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -914,16 +940,68 @@ switch (yytype)
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
+      symbol_type (int tok, byte v)
+        : super_type(token_type (tok), std::move (v))
+      {
+        YY_ASSERT (tok == token::TOK_BYTE_LIT);
+      }
+#else
+      symbol_type (int tok, const byte& v)
+        : super_type(token_type (tok), v)
+      {
+        YY_ASSERT (tok == token::TOK_BYTE_LIT);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      symbol_type (int tok, double v)
+        : super_type(token_type (tok), std::move (v))
+      {
+        YY_ASSERT (tok == token::TOK_DOUBLE_LIT);
+      }
+#else
+      symbol_type (int tok, const double& v)
+        : super_type(token_type (tok), v)
+      {
+        YY_ASSERT (tok == token::TOK_DOUBLE_LIT);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      symbol_type (int tok, float v)
+        : super_type(token_type (tok), std::move (v))
+      {
+        YY_ASSERT (tok == token::TOK_FLOAT_LIT);
+      }
+#else
+      symbol_type (int tok, const float& v)
+        : super_type(token_type (tok), v)
+      {
+        YY_ASSERT (tok == token::TOK_FLOAT_LIT);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
       symbol_type (int tok, int v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_STACK_POS || tok == token::TOK_INSTR_OFFSET);
+        YY_ASSERT (tok == token::TOK_INT_LIT || tok == token::TOK_REG);
       }
 #else
       symbol_type (int tok, const int& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_REG || tok == token::TOK_MEM_REG || tok == token::TOK_STACK_REG || tok == token::TOK_SP_OFFSET || tok == token::TOK_STACK_POS || tok == token::TOK_INSTR_OFFSET);
+        YY_ASSERT (tok == token::TOK_INT_LIT || tok == token::TOK_REG);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      symbol_type (int tok, rLong v)
+        : super_type(token_type (tok), std::move (v))
+      {
+        YY_ASSERT (tok == token::TOK_LONG_LIT);
+      }
+#else
+      symbol_type (int tok, const rLong& v)
+        : super_type(token_type (tok), v)
+      {
+        YY_ASSERT (tok == token::TOK_LONG_LIT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1008,6 +1086,276 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
+      make_TOK_BYTE_LIT (byte v)
+      {
+        return symbol_type (token::TOK_BYTE_LIT, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_BYTE_LIT (const byte& v)
+      {
+        return symbol_type (token::TOK_BYTE_LIT, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_INT_LIT (int v)
+      {
+        return symbol_type (token::TOK_INT_LIT, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_INT_LIT (const int& v)
+      {
+        return symbol_type (token::TOK_INT_LIT, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_FLOAT_LIT (float v)
+      {
+        return symbol_type (token::TOK_FLOAT_LIT, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_FLOAT_LIT (const float& v)
+      {
+        return symbol_type (token::TOK_FLOAT_LIT, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_DOUBLE_LIT (double v)
+      {
+        return symbol_type (token::TOK_DOUBLE_LIT, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_DOUBLE_LIT (const double& v)
+      {
+        return symbol_type (token::TOK_DOUBLE_LIT, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_LONG_LIT (rLong v)
+      {
+        return symbol_type (token::TOK_LONG_LIT, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_LONG_LIT (const rLong& v)
+      {
+        return symbol_type (token::TOK_LONG_LIT, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_LSBRACKET ()
+      {
+        return symbol_type (token::TOK_LSBRACKET);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_LSBRACKET ()
+      {
+        return symbol_type (token::TOK_LSBRACKET);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_RSBRACKET ()
+      {
+        return symbol_type (token::TOK_RSBRACKET);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_RSBRACKET ()
+      {
+        return symbol_type (token::TOK_RSBRACKET);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_LCBRACKET ()
+      {
+        return symbol_type (token::TOK_LCBRACKET);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_LCBRACKET ()
+      {
+        return symbol_type (token::TOK_LCBRACKET);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_RCBRACKET ()
+      {
+        return symbol_type (token::TOK_RCBRACKET);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_RCBRACKET ()
+      {
+        return symbol_type (token::TOK_RCBRACKET);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_LPAREN ()
+      {
+        return symbol_type (token::TOK_LPAREN);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_LPAREN ()
+      {
+        return symbol_type (token::TOK_LPAREN);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_RPAREN ()
+      {
+        return symbol_type (token::TOK_RPAREN);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_RPAREN ()
+      {
+        return symbol_type (token::TOK_RPAREN);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_SEMICOLON ()
+      {
+        return symbol_type (token::TOK_SEMICOLON);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_SEMICOLON ()
+      {
+        return symbol_type (token::TOK_SEMICOLON);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_COMMA ()
+      {
+        return symbol_type (token::TOK_COMMA);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_COMMA ()
+      {
+        return symbol_type (token::TOK_COMMA);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_PLUS ()
+      {
+        return symbol_type (token::TOK_PLUS);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_PLUS ()
+      {
+        return symbol_type (token::TOK_PLUS);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_MINUS ()
+      {
+        return symbol_type (token::TOK_MINUS);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_MINUS ()
+      {
+        return symbol_type (token::TOK_MINUS);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_SINGLE_TYPE (DataType v)
+      {
+        return symbol_type (token::TOK_SINGLE_TYPE, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_SINGLE_TYPE (const DataType& v)
+      {
+        return symbol_type (token::TOK_SINGLE_TYPE, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_DOUBLE_TYPE (DataTypeDouble v)
+      {
+        return symbol_type (token::TOK_DOUBLE_TYPE, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_DOUBLE_TYPE (const DataTypeDouble& v)
+      {
+        return symbol_type (token::TOK_DOUBLE_TYPE, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_TRIPLE_TYPE (DataTypeTriple v)
+      {
+        return symbol_type (token::TOK_TRIPLE_TYPE, std::move (v));
+      }
+#else
+      static
+      symbol_type
+      make_TOK_TRIPLE_TYPE (const DataTypeTriple& v)
+      {
+        return symbol_type (token::TOK_TRIPLE_TYPE, v);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
       make_TOK_REG (int v)
       {
         return symbol_type (token::TOK_REG, std::move (v));
@@ -1018,66 +1366,6 @@ switch (yytype)
       make_TOK_REG (const int& v)
       {
         return symbol_type (token::TOK_REG, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_MEM_REG (int v)
-      {
-        return symbol_type (token::TOK_MEM_REG, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_MEM_REG (const int& v)
-      {
-        return symbol_type (token::TOK_MEM_REG, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_STACK_REG (int v)
-      {
-        return symbol_type (token::TOK_STACK_REG, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_STACK_REG (const int& v)
-      {
-        return symbol_type (token::TOK_STACK_REG, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_SP_OFFSET (int v)
-      {
-        return symbol_type (token::TOK_SP_OFFSET, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_SP_OFFSET (const int& v)
-      {
-        return symbol_type (token::TOK_SP_OFFSET, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_STACK_POS (int v)
-      {
-        return symbol_type (token::TOK_STACK_POS, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_STACK_POS (const int& v)
-      {
-        return symbol_type (token::TOK_STACK_POS, v);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1098,21 +1386,6 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_INSTR_OFFSET (int v)
-      {
-        return symbol_type (token::TOK_INSTR_OFFSET, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_INSTR_OFFSET (const int& v)
-      {
-        return symbol_type (token::TOK_INSTR_OFFSET, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
       make_TOK_SP ()
       {
         return symbol_type (token::TOK_SP);
@@ -1278,391 +1551,346 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_MOV (DataType v)
+      make_TOK_MOV ()
       {
-        return symbol_type (token::TOK_MOV, std::move (v));
+        return symbol_type (token::TOK_MOV);
       }
 #else
       static
       symbol_type
-      make_TOK_MOV (const DataType& v)
+      make_TOK_MOV ()
       {
-        return symbol_type (token::TOK_MOV, v);
+        return symbol_type (token::TOK_MOV);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_POP (DataType v)
+      make_TOK_POP ()
       {
-        return symbol_type (token::TOK_POP, std::move (v));
+        return symbol_type (token::TOK_POP);
       }
 #else
       static
       symbol_type
-      make_TOK_POP (const DataType& v)
+      make_TOK_POP ()
       {
-        return symbol_type (token::TOK_POP, v);
+        return symbol_type (token::TOK_POP);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_STORE (DataType v)
+      make_TOK_STORE ()
       {
-        return symbol_type (token::TOK_STORE, std::move (v));
+        return symbol_type (token::TOK_STORE);
       }
 #else
       static
       symbol_type
-      make_TOK_STORE (const DataType& v)
+      make_TOK_STORE ()
       {
-        return symbol_type (token::TOK_STORE, v);
+        return symbol_type (token::TOK_STORE);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_PUSH (DataType v)
+      make_TOK_PUSH ()
       {
-        return symbol_type (token::TOK_PUSH, std::move (v));
+        return symbol_type (token::TOK_PUSH);
       }
 #else
       static
       symbol_type
-      make_TOK_PUSH (const DataType& v)
+      make_TOK_PUSH ()
       {
-        return symbol_type (token::TOK_PUSH, v);
+        return symbol_type (token::TOK_PUSH);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_ADD (DataTypeTriple v)
+      make_TOK_ADD ()
       {
-        return symbol_type (token::TOK_ADD, std::move (v));
+        return symbol_type (token::TOK_ADD);
       }
 #else
       static
       symbol_type
-      make_TOK_ADD (const DataTypeTriple& v)
+      make_TOK_ADD ()
       {
-        return symbol_type (token::TOK_ADD, v);
+        return symbol_type (token::TOK_ADD);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_SUB (DataTypeTriple v)
+      make_TOK_SUB ()
       {
-        return symbol_type (token::TOK_SUB, std::move (v));
+        return symbol_type (token::TOK_SUB);
       }
 #else
       static
       symbol_type
-      make_TOK_SUB (const DataTypeTriple& v)
+      make_TOK_SUB ()
       {
-        return symbol_type (token::TOK_SUB, v);
+        return symbol_type (token::TOK_SUB);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_MUL (DataTypeTriple v)
+      make_TOK_MUL ()
       {
-        return symbol_type (token::TOK_MUL, std::move (v));
+        return symbol_type (token::TOK_MUL);
       }
 #else
       static
       symbol_type
-      make_TOK_MUL (const DataTypeTriple& v)
+      make_TOK_MUL ()
       {
-        return symbol_type (token::TOK_MUL, v);
+        return symbol_type (token::TOK_MUL);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_DIV (DataTypeTriple v)
+      make_TOK_DIV ()
       {
-        return symbol_type (token::TOK_DIV, std::move (v));
+        return symbol_type (token::TOK_DIV);
       }
 #else
       static
       symbol_type
-      make_TOK_DIV (const DataTypeTriple& v)
+      make_TOK_DIV ()
       {
-        return symbol_type (token::TOK_DIV, v);
+        return symbol_type (token::TOK_DIV);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_MOD (DataTypeTriple v)
+      make_TOK_MOD ()
       {
-        return symbol_type (token::TOK_MOD, std::move (v));
+        return symbol_type (token::TOK_MOD);
       }
 #else
       static
       symbol_type
-      make_TOK_MOD (const DataTypeTriple& v)
+      make_TOK_MOD ()
       {
-        return symbol_type (token::TOK_MOD, v);
+        return symbol_type (token::TOK_MOD);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_POW (DataTypeTriple v)
+      make_TOK_POW ()
       {
-        return symbol_type (token::TOK_POW, std::move (v));
+        return symbol_type (token::TOK_POW);
       }
 #else
       static
       symbol_type
-      make_TOK_POW (const DataTypeTriple& v)
+      make_TOK_POW ()
       {
-        return symbol_type (token::TOK_POW, v);
+        return symbol_type (token::TOK_POW);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_LSHIFT (DataTypeTriple v)
+      make_TOK_LSHIFT ()
       {
-        return symbol_type (token::TOK_LSHIFT, std::move (v));
+        return symbol_type (token::TOK_LSHIFT);
       }
 #else
       static
       symbol_type
-      make_TOK_LSHIFT (const DataTypeTriple& v)
+      make_TOK_LSHIFT ()
       {
-        return symbol_type (token::TOK_LSHIFT, v);
+        return symbol_type (token::TOK_LSHIFT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_RSHIFT (DataTypeTriple v)
+      make_TOK_RSHIFT ()
       {
-        return symbol_type (token::TOK_RSHIFT, std::move (v));
+        return symbol_type (token::TOK_RSHIFT);
       }
 #else
       static
       symbol_type
-      make_TOK_RSHIFT (const DataTypeTriple& v)
+      make_TOK_RSHIFT ()
       {
-        return symbol_type (token::TOK_RSHIFT, v);
+        return symbol_type (token::TOK_RSHIFT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_BAND (DataTypeTriple v)
+      make_TOK_AND ()
       {
-        return symbol_type (token::TOK_BAND, std::move (v));
+        return symbol_type (token::TOK_AND);
       }
 #else
       static
       symbol_type
-      make_TOK_BAND (const DataTypeTriple& v)
+      make_TOK_AND ()
       {
-        return symbol_type (token::TOK_BAND, v);
+        return symbol_type (token::TOK_AND);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_BOR (DataTypeTriple v)
+      make_TOK_OR ()
       {
-        return symbol_type (token::TOK_BOR, std::move (v));
+        return symbol_type (token::TOK_OR);
       }
 #else
       static
       symbol_type
-      make_TOK_BOR (const DataTypeTriple& v)
+      make_TOK_OR ()
       {
-        return symbol_type (token::TOK_BOR, v);
+        return symbol_type (token::TOK_OR);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_BXOR (DataTypeTriple v)
+      make_TOK_XOR ()
       {
-        return symbol_type (token::TOK_BXOR, std::move (v));
+        return symbol_type (token::TOK_XOR);
       }
 #else
       static
       symbol_type
-      make_TOK_BXOR (const DataTypeTriple& v)
+      make_TOK_XOR ()
       {
-        return symbol_type (token::TOK_BXOR, v);
+        return symbol_type (token::TOK_XOR);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_LAND (DataTypeTriple v)
+      make_TOK_LT ()
       {
-        return symbol_type (token::TOK_LAND, std::move (v));
+        return symbol_type (token::TOK_LT);
       }
 #else
       static
       symbol_type
-      make_TOK_LAND (const DataTypeTriple& v)
+      make_TOK_LT ()
       {
-        return symbol_type (token::TOK_LAND, v);
+        return symbol_type (token::TOK_LT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_LOR (DataTypeTriple v)
+      make_TOK_GT ()
       {
-        return symbol_type (token::TOK_LOR, std::move (v));
+        return symbol_type (token::TOK_GT);
       }
 #else
       static
       symbol_type
-      make_TOK_LOR (const DataTypeTriple& v)
+      make_TOK_GT ()
       {
-        return symbol_type (token::TOK_LOR, v);
+        return symbol_type (token::TOK_GT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_LT (DataTypeTriple v)
+      make_TOK_LTEQ ()
       {
-        return symbol_type (token::TOK_LT, std::move (v));
+        return symbol_type (token::TOK_LTEQ);
       }
 #else
       static
       symbol_type
-      make_TOK_LT (const DataTypeTriple& v)
+      make_TOK_LTEQ ()
       {
-        return symbol_type (token::TOK_LT, v);
+        return symbol_type (token::TOK_LTEQ);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_GT (DataTypeTriple v)
+      make_TOK_GTEQ ()
       {
-        return symbol_type (token::TOK_GT, std::move (v));
+        return symbol_type (token::TOK_GTEQ);
       }
 #else
       static
       symbol_type
-      make_TOK_GT (const DataTypeTriple& v)
+      make_TOK_GTEQ ()
       {
-        return symbol_type (token::TOK_GT, v);
+        return symbol_type (token::TOK_GTEQ);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_LTEQ (DataTypeTriple v)
+      make_TOK_EQ ()
       {
-        return symbol_type (token::TOK_LTEQ, std::move (v));
+        return symbol_type (token::TOK_EQ);
       }
 #else
       static
       symbol_type
-      make_TOK_LTEQ (const DataTypeTriple& v)
+      make_TOK_EQ ()
       {
-        return symbol_type (token::TOK_LTEQ, v);
+        return symbol_type (token::TOK_EQ);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_GTEQ (DataTypeTriple v)
+      make_TOK_NEQ ()
       {
-        return symbol_type (token::TOK_GTEQ, std::move (v));
+        return symbol_type (token::TOK_NEQ);
       }
 #else
       static
       symbol_type
-      make_TOK_GTEQ (const DataTypeTriple& v)
+      make_TOK_NEQ ()
       {
-        return symbol_type (token::TOK_GTEQ, v);
+        return symbol_type (token::TOK_NEQ);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_EQ (DataTypeTriple v)
+      make_TOK_NEG ()
       {
-        return symbol_type (token::TOK_EQ, std::move (v));
+        return symbol_type (token::TOK_NEG);
       }
 #else
       static
       symbol_type
-      make_TOK_EQ (const DataTypeTriple& v)
+      make_TOK_NEG ()
       {
-        return symbol_type (token::TOK_EQ, v);
+        return symbol_type (token::TOK_NEG);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_NEQ (DataTypeTriple v)
+      make_TOK_NOT ()
       {
-        return symbol_type (token::TOK_NEQ, std::move (v));
+        return symbol_type (token::TOK_NOT);
       }
 #else
       static
       symbol_type
-      make_TOK_NEQ (const DataTypeTriple& v)
+      make_TOK_NOT ()
       {
-        return symbol_type (token::TOK_NEQ, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_NEG (DataTypeDouble v)
-      {
-        return symbol_type (token::TOK_NEG, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_NEG (const DataTypeDouble& v)
-      {
-        return symbol_type (token::TOK_NEG, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_LNOT (DataTypeDouble v)
-      {
-        return symbol_type (token::TOK_LNOT, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_LNOT (const DataTypeDouble& v)
-      {
-        return symbol_type (token::TOK_LNOT, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
-      make_TOK_BNOT (DataTypeDouble v)
-      {
-        return symbol_type (token::TOK_BNOT, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_BNOT (const DataTypeDouble& v)
-      {
-        return symbol_type (token::TOK_BNOT, v);
+        return symbol_type (token::TOK_NOT);
       }
 #endif
 
@@ -1684,7 +1912,7 @@ switch (yytype)
     void yy_lac_discard_ (const char* event);
 
     /// Stored state numbers (used for stacks).
-    typedef signed char state_type;
+    typedef unsigned char state_type;
 
     /// Generate an error message.
     /// \param yystate   the state where the error occurred.
@@ -1732,9 +1960,9 @@ switch (yytype)
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
     // number is the opposite.  If YYTABLE_NINF, syntax error.
-    static const signed char yytable_[];
+    static const unsigned char yytable_[];
 
-    static const signed char yycheck_[];
+    static const short yycheck_[];
 
     // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
     // symbol of state STATE-NUM.
@@ -1755,7 +1983,7 @@ switch (yytype)
     static const char* const yytname_[];
 #if YYDEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-    static const unsigned char yyrline_[];
+    static const short yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r);
     /// Print the state stack on the debug stream.
@@ -1991,10 +2219,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 149,     ///< Last index in yytable_.
-      yynnts_ = 9,  ///< Number of nonterminal symbols.
-      yyfinal_ = 43, ///< Termination state number.
-      yyntokens_ = 48  ///< Number of tokens.
+      yylast_ = 147,     ///< Last index in yytable_.
+      yynnts_ = 8,  ///< Number of nonterminal symbols.
+      yyfinal_ = 40, ///< Termination state number.
+      yyntokens_ = 58  ///< Number of tokens.
     };
 
 
@@ -2045,9 +2273,10 @@ switch (yytype)
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
-      45,    46,    47
+      45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
+      55,    56,    57
     };
-    const int user_token_number_max_ = 302;
+    const int user_token_number_max_ = 312;
 
     if (t <= 0)
       return yyeof_;
@@ -2066,43 +2295,23 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 52: // ARGUMENT
-      case 53: // DEST_ARG
+      case 62: // ARGUMENT
         value.move< Argument* > (std::move (that.value));
         break;
 
-      case 22: // "MOV"
-      case 23: // "POP"
-      case 24: // "STORE"
-      case 25: // "PUSH"
+      case 63: // BINOP
+        value.move< Binop > (std::move (that.value));
+        break;
+
+      case 19: // "<T>"
         value.move< DataType > (std::move (that.value));
         break;
 
-      case 45: // "NEG"
-      case 46: // "LNOT"
-      case 47: // "BNOT"
+      case 20: // "<TT>"
         value.move< DataTypeDouble > (std::move (that.value));
         break;
 
-      case 26: // "ADD"
-      case 27: // "SUB"
-      case 28: // "MUL"
-      case 29: // "DIV"
-      case 30: // "MOD"
-      case 31: // "POW"
-      case 32: // "LSHIFT"
-      case 33: // "RSHIFT"
-      case 34: // "BAND"
-      case 35: // "BOR"
-      case 36: // "BXOR"
-      case 37: // "LAND"
-      case 38: // "LOR"
-      case 39: // "LT"
-      case 40: // "GT"
-      case 41: // "LTEQ"
-      case 42: // "GTEQ"
-      case 43: // "EQ"
-      case 44: // "NEQ"
+      case 21: // "<TTT>"
         value.move< DataTypeTriple > (std::move (that.value));
         break;
 
@@ -2110,32 +2319,40 @@ switch (yytype)
         value.move< DataValue > (std::move (that.value));
         break;
 
-      case 51: // STMT
+      case 61: // STMT
         value.move< Instruction* > (std::move (that.value));
         break;
 
-      case 4: // "reg"
-      case 5: // "mreg"
-      case 6: // "sreg"
-      case 7: // "spoff"
-      case 8: // "stpos"
-      case 10: // "ipOff"
+      case 64: // UNOP
+        value.move< Unop > (std::move (that.value));
+        break;
+
+      case 4: // "byte"
+        value.move< byte > (std::move (that.value));
+        break;
+
+      case 7: // "double"
+        value.move< double > (std::move (that.value));
+        break;
+
+      case 6: // "float"
+        value.move< float > (std::move (that.value));
+        break;
+
+      case 5: // "int"
+      case 22: // "reg"
         value.move< int > (std::move (that.value));
         break;
 
-      case 54: // BINOP
-        value.move< std::pair<Binop, DataTypeTriple> > (std::move (that.value));
+      case 8: // "long"
+        value.move< rLong > (std::move (that.value));
         break;
 
-      case 55: // UNOP
-        value.move< std::pair<Unop, DataTypeDouble> > (std::move (that.value));
-        break;
-
-      case 9: // "LABEL"
+      case 23: // "LABEL"
         value.move< std::string > (std::move (that.value));
         break;
 
-      case 50: // ARGUMENTS
+      case 60: // ARGUMENTS
         value.move< std::vector<Argument*> > (std::move (that.value));
         break;
 
@@ -2153,43 +2370,23 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 52: // ARGUMENT
-      case 53: // DEST_ARG
+      case 62: // ARGUMENT
         value.copy< Argument* > (YY_MOVE (that.value));
         break;
 
-      case 22: // "MOV"
-      case 23: // "POP"
-      case 24: // "STORE"
-      case 25: // "PUSH"
+      case 63: // BINOP
+        value.copy< Binop > (YY_MOVE (that.value));
+        break;
+
+      case 19: // "<T>"
         value.copy< DataType > (YY_MOVE (that.value));
         break;
 
-      case 45: // "NEG"
-      case 46: // "LNOT"
-      case 47: // "BNOT"
+      case 20: // "<TT>"
         value.copy< DataTypeDouble > (YY_MOVE (that.value));
         break;
 
-      case 26: // "ADD"
-      case 27: // "SUB"
-      case 28: // "MUL"
-      case 29: // "DIV"
-      case 30: // "MOD"
-      case 31: // "POW"
-      case 32: // "LSHIFT"
-      case 33: // "RSHIFT"
-      case 34: // "BAND"
-      case 35: // "BOR"
-      case 36: // "BXOR"
-      case 37: // "LAND"
-      case 38: // "LOR"
-      case 39: // "LT"
-      case 40: // "GT"
-      case 41: // "LTEQ"
-      case 42: // "GTEQ"
-      case 43: // "EQ"
-      case 44: // "NEQ"
+      case 21: // "<TTT>"
         value.copy< DataTypeTriple > (YY_MOVE (that.value));
         break;
 
@@ -2197,32 +2394,40 @@ switch (yytype)
         value.copy< DataValue > (YY_MOVE (that.value));
         break;
 
-      case 51: // STMT
+      case 61: // STMT
         value.copy< Instruction* > (YY_MOVE (that.value));
         break;
 
-      case 4: // "reg"
-      case 5: // "mreg"
-      case 6: // "sreg"
-      case 7: // "spoff"
-      case 8: // "stpos"
-      case 10: // "ipOff"
+      case 64: // UNOP
+        value.copy< Unop > (YY_MOVE (that.value));
+        break;
+
+      case 4: // "byte"
+        value.copy< byte > (YY_MOVE (that.value));
+        break;
+
+      case 7: // "double"
+        value.copy< double > (YY_MOVE (that.value));
+        break;
+
+      case 6: // "float"
+        value.copy< float > (YY_MOVE (that.value));
+        break;
+
+      case 5: // "int"
+      case 22: // "reg"
         value.copy< int > (YY_MOVE (that.value));
         break;
 
-      case 54: // BINOP
-        value.copy< std::pair<Binop, DataTypeTriple> > (YY_MOVE (that.value));
+      case 8: // "long"
+        value.copy< rLong > (YY_MOVE (that.value));
         break;
 
-      case 55: // UNOP
-        value.copy< std::pair<Unop, DataTypeDouble> > (YY_MOVE (that.value));
-        break;
-
-      case 9: // "LABEL"
+      case 23: // "LABEL"
         value.copy< std::string > (YY_MOVE (that.value));
         break;
 
-      case 50: // ARGUMENTS
+      case 60: // ARGUMENTS
         value.copy< std::vector<Argument*> > (YY_MOVE (that.value));
         break;
 
@@ -2248,43 +2453,23 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 52: // ARGUMENT
-      case 53: // DEST_ARG
+      case 62: // ARGUMENT
         value.move< Argument* > (YY_MOVE (s.value));
         break;
 
-      case 22: // "MOV"
-      case 23: // "POP"
-      case 24: // "STORE"
-      case 25: // "PUSH"
+      case 63: // BINOP
+        value.move< Binop > (YY_MOVE (s.value));
+        break;
+
+      case 19: // "<T>"
         value.move< DataType > (YY_MOVE (s.value));
         break;
 
-      case 45: // "NEG"
-      case 46: // "LNOT"
-      case 47: // "BNOT"
+      case 20: // "<TT>"
         value.move< DataTypeDouble > (YY_MOVE (s.value));
         break;
 
-      case 26: // "ADD"
-      case 27: // "SUB"
-      case 28: // "MUL"
-      case 29: // "DIV"
-      case 30: // "MOD"
-      case 31: // "POW"
-      case 32: // "LSHIFT"
-      case 33: // "RSHIFT"
-      case 34: // "BAND"
-      case 35: // "BOR"
-      case 36: // "BXOR"
-      case 37: // "LAND"
-      case 38: // "LOR"
-      case 39: // "LT"
-      case 40: // "GT"
-      case 41: // "LTEQ"
-      case 42: // "GTEQ"
-      case 43: // "EQ"
-      case 44: // "NEQ"
+      case 21: // "<TTT>"
         value.move< DataTypeTriple > (YY_MOVE (s.value));
         break;
 
@@ -2292,32 +2477,40 @@ switch (yytype)
         value.move< DataValue > (YY_MOVE (s.value));
         break;
 
-      case 51: // STMT
+      case 61: // STMT
         value.move< Instruction* > (YY_MOVE (s.value));
         break;
 
-      case 4: // "reg"
-      case 5: // "mreg"
-      case 6: // "sreg"
-      case 7: // "spoff"
-      case 8: // "stpos"
-      case 10: // "ipOff"
+      case 64: // UNOP
+        value.move< Unop > (YY_MOVE (s.value));
+        break;
+
+      case 4: // "byte"
+        value.move< byte > (YY_MOVE (s.value));
+        break;
+
+      case 7: // "double"
+        value.move< double > (YY_MOVE (s.value));
+        break;
+
+      case 6: // "float"
+        value.move< float > (YY_MOVE (s.value));
+        break;
+
+      case 5: // "int"
+      case 22: // "reg"
         value.move< int > (YY_MOVE (s.value));
         break;
 
-      case 54: // BINOP
-        value.move< std::pair<Binop, DataTypeTriple> > (YY_MOVE (s.value));
+      case 8: // "long"
+        value.move< rLong > (YY_MOVE (s.value));
         break;
 
-      case 55: // UNOP
-        value.move< std::pair<Unop, DataTypeDouble> > (YY_MOVE (s.value));
-        break;
-
-      case 9: // "LABEL"
+      case 23: // "LABEL"
         value.move< std::string > (YY_MOVE (s.value));
         break;
 
-      case 50: // ARGUMENTS
+      case 60: // ARGUMENTS
         value.move< std::vector<Argument*> > (YY_MOVE (s.value));
         break;
 
@@ -2376,7 +2569,7 @@ switch (yytype)
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 2380 "ramvm_bison_parser.hpp"
+#line 2573 "ramvm_bison_parser.hpp"
 
 
 
