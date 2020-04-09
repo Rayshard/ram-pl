@@ -206,6 +206,7 @@
 %nterm <ASTStmt*> CLOSED_STMT;
 %nterm <ASTAssignment*> ASSIGNMENT;
 %nterm <ASTVarDecl*> VARDECL;
+%nterm <ASTBlock*> BLOCK;
 %nterm <ASTFuncDecl*> FUNCDECL;
 %nterm <ASTStmt*> WHILE_STMT;
 %nterm <ASTStmt*> FOR_STMT;
@@ -251,8 +252,8 @@ TL_FUNCDECLS: %empty				{ $$ = { }; }
 		    | FUNCDECL TL_FUNCDECLS	{ $2.insert($2.begin(), $1); $$ = $2; }
 ;
 
-FUNCDECL: "func" "ID" ":" "(" PARAM_STAR ")" "->" TYPE_PLUS "=" STMT { $$ = new ASTFuncDecl($2.first, $5, $8, $10, $1); }
-		| "func" "ID" ":" "(" PARAM_STAR ")" "=" STMT				 { $$ = new ASTFuncDecl($2.first, $5, { }, $8, $1); }
+FUNCDECL: "func" "ID" ":" "(" PARAM_STAR ")" "->" TYPE_PLUS "=" BLOCK { $$ = new ASTFuncDecl($2.first, $5, $8, $10, $1); }
+		| "func" "ID" ":" "(" PARAM_STAR ")" "=" BLOCK				  { $$ = new ASTFuncDecl($2.first, $5, { }, $8, $1); }
 
 PARAM_STAR: %empty	   { $$ = { }; }
 		  | PARAM_PLUS { $$ = $1; }
@@ -279,23 +280,24 @@ OPEN_STMT: "if" EXPR1 "then" STMT					        { $$ = new ASTIfStmt($2, $4, nullp
 
 CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 		   | VARDECL											{ $$ = $1; }
-		   | "{" STMT ";" STMTS "}"								{ $4.insert($4.begin(), $2); $$ = new ASTBlock($4, $1); }
+		   | BLOCK												{ $$ = $1; }
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
-		   | "break"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
-		   | "continue"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(false, $1) : throw std::runtime_error("Cannot have 'continue' outside of a loop!"); }
+		   | "break"											{ ASSERT(IsInLoop, "Cannot have 'break' outside of a loop!"); $$ = new ASTBreakContinueStmt(true, $1); }
+		   | "continue"											{ ASSERT(IsInLoop, "Cannot have 'continue' outside of a loop!"); $$ = new ASTBreakContinueStmt(false, $1); }
 		   | "return" EXPR_STAR									{ $$ = new ASTReturnStmt($2, $1); }
 ;
+
+BLOCK: "{" STMT ";" STMTS "}" { $4.insert($4.begin(), $2); $$ = new ASTBlock($4, $1); }
 
 WHILE_STMT: "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; $$ = new ASTWhileStmt($2, $5, $1); }
 
 FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2.first, $4, $6, false, $1), $9, $12, $15, $1); }
 		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2.first, $4, false, $1), $7, $10, $13, $1); }
 
-VARDECL:
-    "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2.first, $4, InTopLvl, $1); }
-  | "let" "ID" ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2.first, $4, $6, InTopLvl, $1); }
-  | "let" "_" "=" EXPR					  { !InTopLvl ? $$ = new ASTVarDecl($4, $1) : throw std::runtime_error("Cannot declare throw away in top level!"); }
+VARDECL: "let" "ID" "=" EXPR            { $$ = new ASTVarDecl($2.first, $4, InTopLvl, $1); }
+	   | "let" "ID" ":" TYPE "=" EXPR   { $$ = new ASTVarDecl($2.first, $4, $6, InTopLvl, $1); }
+	   | "let" "_" "=" EXPR				{ !InTopLvl ? $$ = new ASTVarDecl($4, $1) : throw std::runtime_error("Cannot declare throw away in top level!"); }
 ;
 
 TYPE_PLUS: TYPE			      { $$ = { $1 }; }

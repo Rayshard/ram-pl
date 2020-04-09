@@ -782,8 +782,8 @@ namespace ramvm {
 		for (auto src : srcs)
 			ss << src->ToString() << ", ";
 
-		ss.seekp(-1, ss.cur);
-		ss << '}';
+		ss.seekp(-2, ss.cur);
+		ss << ')';
 		return ss.str();
 	}
 #pragma endregion

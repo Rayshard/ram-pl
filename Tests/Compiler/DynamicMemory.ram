@@ -1,6 +1,12 @@
-let y : int[4] = [3, 5, 9, 14];
-let p = y[2];
+let k : int = 5;
 
 func Main: () = {
-	return;
+	let myVar : int = 90;
+
+	{
+		let other : int = 19;
+	};
+
+	let ol = 10;
+	k = ol;
 }

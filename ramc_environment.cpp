@@ -91,6 +91,8 @@ namespace ramc {
 		else { return TypeResult::GenSuccess(((FuncType*)search->second.type)->GetRetType()->GetCopy()); }
 	}
 
+	int Environment::GetVarFPOffset() { return varFPOffset; }
+
 	int Environment::GetNextVarFPOffset(Type* _varType)
 	{
 		int offset = varFPOffset;

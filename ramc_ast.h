@@ -180,7 +180,7 @@ namespace ramc {
 		std::vector<ASTStmt*> stmts;
 
 		//Set during type checking
-		Argument* retSPSrc;
+		int stackOffset; //The amount the stack has been offset since the block started executing
 	public:
 		ASTBlock(const std::vector<ASTStmt*>& _stmts, Position _pos);
 		~ASTBlock();

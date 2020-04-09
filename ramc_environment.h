@@ -30,6 +30,7 @@ namespace ramc {
 		TypeResult AddFunction(std::string _id, Type* _type, std::string& _label, Position _execPos);
 		TypeResult GetFunctionRetType(std::string _id, Type* _paramsType, Position _execPos);
 
+		int GetVarFPOffset();
 		int GetNextVarFPOffset(Type* _varType);
 
 		static int GetNextVarGPOffset(Type* _varType);

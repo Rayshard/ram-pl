@@ -30,7 +30,7 @@ namespace ramvm {
 			ExecutionFrame& execFrame = execFrames.back();
 			Instruction* curInstr = instructions[instrPtr];
 
-			//std::cout << ip << ":" << curInstr->ToString() << std::endl;
+			std::cout << instrPtr << ":" << curInstr->ToString() << std::endl;
 
 			switch (curInstr->GetType())
 			{
@@ -144,7 +144,7 @@ namespace ramvm {
 						resType = ReadStack(GetSP() - retBufferSize + 1, retBufferSize, retBuffer);
 						if (IsErrorResult(resType))
 							return resType;
-						PrintStack();
+						
 						//Revert Stack back to position before this frame was created
 						stack.erase(stack.begin() + execFrame.GetFramePtr(), stack.end());
 
@@ -324,6 +324,7 @@ namespace ramvm {
 			}
 
 			instrPtr++;
+			PrintStack();
 		}
 	}
 

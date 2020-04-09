@@ -109,7 +109,7 @@ int CompilerMain()
 {
 	using namespace ramc;
 
-	std::ifstream stream("Tests/Compiler/test_lex.ram");
+	std::ifstream stream("Tests/Compiler/DynamicMemory.ram");
 	ParseResult result = ParseFile(&stream, "test.ram", 4);
 
 	if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }

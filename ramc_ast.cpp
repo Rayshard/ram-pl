@@ -147,8 +147,9 @@ namespace ramc {
 	{
 		InstructionSet instrs;
 
-		//Allocate memory for global variables
-		instrs.push_back(new InstrMalloc(new ValueArgument(globalsByteSize), new RegisterArgument(RegisterType::GP)));
+		//Allocate memory for global variables if there are any
+		if (globalsByteSize > 0)
+			instrs.push_back(new InstrMalloc(new ValueArgument(globalsByteSize), new RegisterArgument(RegisterType::GP)));
 
 		//Add Top Level Variables
 		for (auto const& varDecl : varDecls)
@@ -2019,15 +2020,12 @@ namespace ramc {
 
 #pragma region Block
 	ASTBlock::ASTBlock(const std::vector<ASTStmt*>& _stmts, Position _pos)
-		: ASTStmt(ASTStmtType::BLOCK, _pos), stmts(_stmts) { }
+		: ASTStmt(ASTStmtType::BLOCK, _pos), stmts(_stmts), stackOffset(0) { }
 
 	ASTBlock::~ASTBlock()
 	{
 		for (auto it = stmts.begin(); it != stmts.end(); it++)
 			delete (*it);
-
-		if (retSPSrc)
-			delete retSPSrc;
 	}
 
 	std::string ASTBlock::ToString(int _indentLvl, std::string _prefix)
@@ -2054,18 +2052,26 @@ namespace ramc {
 
 	TypeResult ASTBlock::_TypeCheck(Environment* _env)
 	{
-		//This creates space for us to put the current stack pointer before
-		//we enter the block so that when the block is done, we can read form
-		//this spot on the stack and pop the right amount of bytes off the stack.
-		retSPSrc = new StackArgument(new RegisterArgument(RegisterType::FP), _env->GetNextVarFPOffset(std::shared_ptr<Type>(Type::INT()).get()));
+		int envStartFP = _env->GetVarFPOffset();
 
 		//Type check the statements of the block
-		for (auto it = stmts.begin(); it != stmts.end(); it++)
+		for (auto const& stmt : stmts)
 		{
-			TypeResult typeRes = (*it)->TypeCheck(_env);
+			TypeResult typeRes = TypeResult::GenSuccess(nullptr);
+
+			if (stmt->GetStmtType() == ASTStmtType::BLOCK)
+			{
+				Environment subEnv(_env);
+				typeRes = stmt->TypeCheck(&subEnv);
+			}
+			else { typeRes = stmt->TypeCheck(_env); }
+
 			if (!typeRes.IsSuccess())
 				return typeRes;
 		}
+
+		//Set stack offset
+		stackOffset = _env->GetVarFPOffset() - envStartFP;
 
 		return TypeResult::GenSuccess(Type::UNIT());
 	}
@@ -2073,10 +2079,6 @@ namespace ramc {
 	InstructionSet ASTBlock::GenerateCode(ProgramInfo& _progInfo)
 	{
 		InstructionSet instrs;
-
-		//Push current stack pointer onto the stack
-		instrs.push_back(new InstrPush(DataType::INT, { new RegisterArgument(RegisterType::SP) }));
-		instrs.push_back(new InstrBinop(Binop::ADD, { DataType::INT, DataType::INT, DataType::INT }, retSPSrc->GetCopy(), new ValueArgument(1), retSPSrc->GetCopy()));
 
 		//Statements
 		for (auto it = stmts.begin(); it != stmts.end(); it++)
@@ -2086,10 +2088,7 @@ namespace ramc {
 		}
 
 		//Return stack pointer to before the block started executing
-		instrs.push_back(new InstrBinop(Binop::SUB, { DataType::INT, DataType::INT, DataType::INT }, new RegisterArgument(RegisterType::SP), retSPSrc->GetCopy(), StackArgument::GenStackTop()));
-		instrs.push_back(new InstrPop(DataType::BYTE, new StackArgument(new RegisterArgument(RegisterType::SP), -INT_SIZE + 1)));
-		instrs.push_back(new InstrPop(DataType::INT, new ValueArgument(1)));
-		instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(1)));
+		instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(stackOffset)));
 
 		return instrs;
 	}
