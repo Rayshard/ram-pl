@@ -1,0 +1,6 @@
+let y : int[4] = [3, 5, 9, 14];
+let p = y[2];
+
+func Main: () = {
+	return;
+}

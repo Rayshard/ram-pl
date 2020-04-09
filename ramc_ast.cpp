@@ -11,7 +11,7 @@ using ramvm::ValueArgument;
 using ramvm::MemoryArgument;
 using ramvm::RegisterArgument;
 using ramvm::StackArgument;
-using ramvm::StackArgType;
+using ramvm::RegisterType;
 using ramvm::ArgType;
 using ramvm::InstrBinop;
 using ramvm::InstrUnop;
@@ -122,13 +122,17 @@ namespace ramc {
 
 	TypeResult ASTProgram::_TypeCheck(Environment* _env)
 	{
+		//Type Check Top Level Variables
 		for (auto const& varDecl : varDecls)
 		{
 			TypeResult declTypeRes = varDecl->TypeCheck(_env);
 			if (!declTypeRes.IsSuccess())
 				return declTypeRes;
+
+			globalsByteSize += varDecl->GetRestraint()->GetByteSize();
 		}
 
+		//Type Check Functions
 		for (auto const& funcDecl : funcDecls)
 		{
 			TypeResult declTypeRes = funcDecl->TypeCheck(_env);
@@ -143,23 +147,31 @@ namespace ramc {
 	{
 		InstructionSet instrs;
 
-		//Add Top Level Variable Declarations
+		//Allocate memory for global variables
+		instrs.push_back(new InstrMalloc(new ValueArgument(globalsByteSize), new RegisterArgument(RegisterType::GP)));
+
+		//Add Top Level Variables
 		for (auto const& varDecl : varDecls)
 		{
 			auto declInstrs = varDecl->GenerateCode(info);
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
-		//Forward declare and add Top Level Functions
+		//Forward Declare Built In Functions
+		//info.AddFuncDecl(ProgramInfo::PRINT_FUNC_LABEL, 0);
+		////////////////////////////////////
+
+		//Forward Declare Top Level Functions
 		for (auto const& funcDecl : funcDecls)
-			info.AddFuncDecl(funcDecl->GetLabel(), funcDecl->GetRegCount());
+			info.AddFuncDecl(funcDecl->GetLabel());
 
 		//Add Main Function Call
-		instrs.push_back(new InstrCall(ProgramInfo::MAIN_FUNC_LABEL, new ValueArgument(info.GetFuncRegCount(ProgramInfo::MAIN_FUNC_LABEL)), new ValueArgument(0)));
+		instrs.push_back(new InstrCall(ProgramInfo::MAIN_FUNC_LABEL, new ValueArgument(0)));
 
 		//Halt so that functions don't get run without being called
 		instrs.push_back(new InstrHalt());
 
+		//Add Top Level Functions
 		for (auto const& funcDecl : funcDecls)
 		{
 			auto declInstrs = funcDecl->GenerateCode(_env, info);
@@ -197,6 +209,9 @@ namespace ramc {
 
 		delete funcType;
 		delete body;
+
+		for (auto const& paramSrc : paramSrcs)
+			delete paramSrc.second;
 	}
 
 	std::string ASTFuncDecl::ToString(int _indentLvl, std::string _prefix)
@@ -226,13 +241,16 @@ namespace ramc {
 		if (!declTypeRes.IsSuccess())
 			return declTypeRes;
 
-		Environment subEnv(_env, false); //Local function environment
+		Environment subEnv(_env); //Local function environment
 
 		//Type check parameters in local environment
 		for (auto const& it : params)
 		{
-			auto source = RegisterArgument::CreateRegular(subEnv.GetNextRegIdx());
-			TypeResult paramTypeRes = subEnv.AddVariable(it.name, it.type, source, it.position);
+			int paramFPOff = subEnv.GetNextVarFPOffset(it.type);
+			auto paramArgSrc = new StackArgument(new RegisterArgument(RegisterType::FP), paramFPOff);
+			paramSrcs.push_back({ paramFPOff, paramArgSrc });
+
+			TypeResult paramTypeRes = subEnv.AddVariable(it.name, it.type, paramArgSrc, it.position);
 			if (!paramTypeRes.IsSuccess())
 				return paramTypeRes;
 		}
@@ -251,31 +269,13 @@ namespace ramc {
 			else if (!Type::Matches(funcType->GetRetType(), stmt->GetTypeSysType())) { return TypeResult::GenExpectation(funcType->GetRetType()->ToString(0), stmt->GetTypeSysType()->ToString(0), stmt->GetPosition()); }
 		}
 
-		regCnt = subEnv.GetNumRegNeeded();
 		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
 	InstructionSet ASTFuncDecl::GenerateCode(Environment* _env, ProgramInfo& _progInfo)
 	{
-		InstructionSet instrs;
-
-		//Put the values of the arguments that were pushed onto the stack by the
-		//caller into the initial registers which are counted in the register count
-		int paramsTotalByteSize = 0;
-
-		for (int i = 0; i < (int)params.size(); i++)
-		{
-			int byteSize = params[i].type->GetByteSize();
-			auto offsetArg = new StackArgument(StackArgType::SP_OFFSETED, -paramsTotalByteSize - byteSize + 1);
-			auto destReg = RegisterArgument::CreateRegular(i);
-
-			instrs.push_back(new InstrMove(DataType::INT, offsetArg, destReg));
-			paramsTotalByteSize += byteSize;
-		}
-
 		//Add body instructions
-		InstructionSet bodyInstrs = body->GenerateCode(_progInfo);
-		instrs.insert(instrs.end(), bodyInstrs.begin(), bodyInstrs.end());
+		InstructionSet instrs = body->GenerateCode(_progInfo);
 
 		//Add a return to the end if it is a procedure and does not have one
 		//since they can optionally have returns. This is to ensure that the
@@ -284,14 +284,16 @@ namespace ramc {
 			instrs.push_back(new InstrReturn(new ValueArgument(0)));
 
 		//Add the function declaration
-		_progInfo.SetFuncDeclStart(Environment::GenFuncLabel(name, funcType->GetParamsType()), instrs.front());
+		_progInfo.SetFuncDeclStart(label, instrs.front());
 
 		return instrs;
 	}
+
+	std::string ASTFuncDecl::GetLabel() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTFuncDecl::GetLabel - Node was not typecheked!"); return label; }
 #pragma endregion
 
 #pragma region VarDecl
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos)
+	ASTVarDecl::ASTVarDecl(std::string _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos)
 		: ASTStmt(ASTStmtType::VARDECL, _pos)
 	{
 		id = _id;
@@ -299,24 +301,24 @@ namespace ramc {
 		isUnderscore = false;
 		restraint = _restraint;
 		isGlobal = _isGlobal;
+		idSource = nullptr;
 	}
 
-	ASTVarDecl::ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, bool _isGlobal, Position _pos)
+	ASTVarDecl::ASTVarDecl(std::string _id, ASTExpr* _expr, bool _isGlobal, Position _pos)
 		: ASTVarDecl(_id, nullptr, _expr, _isGlobal, _pos) { }
 
 	ASTVarDecl::ASTVarDecl(ASTExpr* _expr, Position _pos)
-		: ASTVarDecl(nullptr, nullptr, _expr, false, _pos)
+		: ASTVarDecl("", nullptr, _expr, false, _pos)
 	{
 		isUnderscore = true;
 	}
 
 	ASTVarDecl::~ASTVarDecl()
 	{
-		delete id;
 		delete expr;
 
-		if (restraint)
-			delete restraint;
+		if (restraint) { delete restraint; }
+		if (idSource) { delete idSource; }
 	}
 
 	std::string ASTVarDecl::ToString(int _indentLvl, std::string _prefix)
@@ -324,7 +326,7 @@ namespace ramc {
 		std::stringstream ss;
 
 		ss << CreateIndent(_indentLvl) << _prefix << "Var Declaration:" << std::endl;
-		ss << (isUnderscore ? CreateIndent(_indentLvl + 1) + "UNDERSCORE" : id->ToString(_indentLvl + 1)) << std::endl;
+		ss << (isUnderscore ? CreateIndent(_indentLvl + 1) + "UNDERSCORE" : id) << std::endl;
 		ss << CreateIndent(_indentLvl + 1) << "Restraint: " << (restraint ? restraint->ToString(0) : "variable") << std::endl;
 		ss << expr->ToString(_indentLvl + 1);
 
@@ -340,17 +342,23 @@ namespace ramc {
 		else if (restraint && !Type::Matches(*exprTypeRes.GetValue(), restraint)) { return TypeResult::GenExpectation(restraint->ToString(0), (*exprTypeRes.GetValue())->ToString(0), GetPosition()); }
 		else
 		{
-			int valByteLen = (*exprTypeRes.GetValue())->GetByteSize();
+			if (!restraint)
+				restraint = (*exprTypeRes.GetValue())->GetCopy();
+
+			int varOff = isGlobal ? _env->GetNextVarGPOffset(restraint) : _env->GetNextVarFPOffset(restraint);
 			Argument* source = nullptr;
 
-			if (isGlobal) { source = new StackArgument(StackArgType::ABSOLUTE, _env->GetNextGlobalStackPos(valByteLen)); }
-			else { source = RegisterArgument::CreateRegular(_env->GetNextRegIdx()); }
+			if (isGlobal) { source = new MemoryArgument(new RegisterArgument(RegisterType::GP), varOff); }
+			else { source = new StackArgument(new RegisterArgument(RegisterType::FP), varOff); }
 
-			TypeResult idRes = _env->AddVariable(id->GetID(), *exprTypeRes.GetValue(), source, GetPosition());
+			TypeResult idRes = _env->AddVariable(id, restraint, source, GetPosition());
 			if (!idRes.IsSuccess())
+			{
+				delete source;
 				return idRes;
+			}
 
-			IGNORE(id->TypeCheck(_env)); //Set the info for the id for code generation later
+			idSource = source;
 			return TypeResult::GenSuccess(Type::UNIT());
 		}
 	}
@@ -361,17 +369,22 @@ namespace ramc {
 		{
 			InstructionSet instrs = expr->GenerateCode(std::shared_ptr<Argument>(StackArgument::GenStackTop()), _progInfo); //Push value onto the stack
 			instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(expr->GetTypeSysType()->GetByteSize()))); //Pop it off to trash it
+
 			return instrs;
 		}
 		else
 		{
-			if (isGlobal) { return expr->GenerateCode(std::shared_ptr<Argument>(StackArgument::GenStackTop()), _progInfo); } //Global declarations go on the top of the stack
-			else { return expr->GenerateCode(std::shared_ptr<Argument>(id->GetSource()->GetCopy()), _progInfo); } //Put value in the id's source
+			if (isGlobal) { return expr->GenerateCode(idSource->GetSharedCopy(), _progInfo); }
+			else { return expr->GenerateCode(std::shared_ptr<Argument>(StackArgument::GenStackTop()), _progInfo); }
+
 		}
 	}
 
-	ASTNode* ASTVarDecl::GetCopy() { return new ASTVarDecl((ASTIdentifier*)id->GetCopy(), restraint ? restraint->GetCopy() : nullptr, expr ? (ASTExpr*)expr->GetCopy() : nullptr, isGlobal, GetPosition()); }
+	ASTNode* ASTVarDecl::GetCopy() { return new ASTVarDecl(id, restraint ? restraint->GetCopy() : nullptr, expr ? (ASTExpr*)expr->GetCopy() : nullptr, isGlobal, GetPosition()); }
 	CodePathNode* ASTVarDecl::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, true); }
+
+	Type* ASTVarDecl::GetRestraint() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTVarDecl::GetGetRestraint - Node was not typecheked!"); return restraint; }
+	Argument* ASTVarDecl::GetIDSource() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTVarDecl::GetGetIDSource - Node was not typecheked!"); return idSource; }
 #pragma endregion
 
 #pragma region Assignment
@@ -456,7 +469,7 @@ namespace ramc {
 	}
 
 	ASTNode* ASTAssignment::GetCopy() { return new ASTAssignment((ASTIdentifier*)id->GetCopy(), (ASTExpr*)expr->GetCopy(), assignType); }
-	InstructionSet ASTAssignment::GenerateCode(ProgramInfo& _progInfo) { return expr->GenerateCode(std::shared_ptr<Argument>(id->GetSource()->GetCopy()), _progInfo); }
+	InstructionSet ASTAssignment::GenerateCode(ProgramInfo& _progInfo) { return expr->GenerateCode(id->GetSource()->GetSharedCopy(), _progInfo); }
 	CodePathNode* ASTAssignment::GetCodePath() { return new CodePathNode(nullptr, nullptr, this, true); }
 #pragma endregion
 
@@ -484,7 +497,9 @@ namespace ramc {
 			{ BinopType::EQ_EQ, "Equal Eqaul" },
 			{ BinopType::NEQ, "Not Equal" },
 			{ BinopType::LOG_AND, "Logical And" },
-			{ BinopType::LOG_OR, "Logical Or" }
+			{ BinopType::LOG_OR, "Logical Or" },
+
+			{ BinopType::INDEX, "Index" }
 		};
 
 		auto search = strings.find(_type);
@@ -520,12 +535,10 @@ namespace ramc {
 	TypeResult ASTBinopExpr::_TypeCheck(Environment* _env)
 	{
 		TypeResult leftTypeRes = left->TypeCheck(_env);
-
 		if (!leftTypeRes.IsSuccess())
 			return leftTypeRes;
 
 		TypeResult rightTypeRes = right->TypeCheck(_env);
-
 		if (!rightTypeRes.IsSuccess())
 			return rightTypeRes;
 
@@ -1334,6 +1347,11 @@ namespace ramc {
 			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::DOUBLE): return TypeResult::GenSuccess(Type::BOOL());
 			case ConcatTriple((byte)BinopType::LOG_OR, (byte)TypeSystemType::LONG, (byte)TypeSystemType::LONG): return TypeResult::GenSuccess(Type::BOOL());
 #pragma endregion
+
+#pragma region INDEX
+			case ConcatTriple((byte)BinopType::INDEX, (byte)TypeSystemType::ARRAY, (byte)TypeSystemType::INT): return TypeResult::GenSuccess(((ArrayType*)leftType)->GetStorageType()->GetCopy());
+#pragma endregion
+
 			default: return TypeResult::GenMismatch("Cannot perform operation on " + leftType->ToString(false) + " and " + rightType->ToString(false), GetPosition());
 		}
 	}
@@ -1364,9 +1382,9 @@ namespace ramc {
 		if (sizeDiff > 0)
 			instrs.push_back(new InstrPush(DataType::BYTE, { new ValueArgument(sizeDiff) }));
 
-		auto src2 = new StackArgument(StackArgType::SP_OFFSETED, -1 * src2ByteSize + 1);
-		auto src1 = new StackArgument(StackArgType::SP_OFFSETED, src2->GetValue() - src1ByteSize);
-		auto stackDest = new StackArgument(StackArgType::SP_OFFSETED, src1->GetValue());
+		auto src2 = new StackArgument(new RegisterArgument(RegisterType::SP), -1 * src2ByteSize + 1);
+		auto src1 = new StackArgument(new RegisterArgument(RegisterType::SP), src2->GetOffset() - src1ByteSize);
+		auto stackDest = new StackArgument(new RegisterArgument(RegisterType::SP), src1->GetOffset());
 
 		switch (op)
 		{
@@ -1389,6 +1407,15 @@ namespace ramc {
 			case BinopType::NEQ: instrs.push_back(new InstrBinop(Binop::NEQ, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::LOG_AND: instrs.push_back(new InstrBinop(Binop::AND, opDataTypes, src1, src2, stackDest)); break;
 			case BinopType::LOG_OR: instrs.push_back(new InstrBinop(Binop::OR, opDataTypes, src1, src2, stackDest)); break;
+			case BinopType::INDEX: {
+				ArrayType* arrayType = (ArrayType*)(left->GetTypeSysType());
+				int elemByteSize = arrayType->GetStorageType()->GetByteSize();
+
+				instrs.push_back(new InstrMove(TypeSysTypeToDataType(arrayType->GetStorageType()->GetType()), new ValueArgument(9), stackDest));
+
+				delete src1;
+				delete src2;
+			} break;
 			default: ASSERT_MSG(false, "BinopExpr::GenerateCode - BinopType not handled!");
 		}
 
@@ -1399,7 +1426,7 @@ namespace ramc {
 		//Create Move to move result to destination
 		if (!_dest->IsStackTop())
 		{
-			instrs.push_back(new InstrMove(destDataType, new StackArgument(StackArgType::SP_OFFSETED, -1 * destByteSize + 1), _dest->GetCopy()));
+			instrs.push_back(new InstrMove(destDataType, new StackArgument(new RegisterArgument(RegisterType::SP), -1 * destByteSize + 1), _dest->GetCopy()));
 			instrs.push_back(new InstrPop(destDataType, new ValueArgument(1)));
 		}
 
@@ -1492,8 +1519,8 @@ namespace ramc {
 		if (sizeDiff > 0)
 			instrs.push_back(new InstrPush(DataType::BYTE, { new ValueArgument(sizeDiff) }));
 
-		auto src = new StackArgument(StackArgType::SP_OFFSETED, -1 * srcByteSize + 1);
-		auto stackDest = new StackArgument(StackArgType::SP_OFFSETED, src->GetValue() - fmax(0, sizeDiff));
+		auto src = new StackArgument(new RegisterArgument(RegisterType::SP), -1 * srcByteSize + 1);
+		auto stackDest = new StackArgument(new RegisterArgument(RegisterType::SP), src->GetOffset() - fmax(0, sizeDiff));
 
 		switch (op)
 		{
@@ -1510,7 +1537,7 @@ namespace ramc {
 		//Create Move to move result to destination
 		if (!_dest->IsStackTop())
 		{
-			instrs.push_back(new InstrMove(destDataType, new StackArgument(StackArgType::SP_OFFSETED, -1 * destByteSize + 1), _dest->GetCopy()));
+			instrs.push_back(new InstrMove(destDataType, new StackArgument(new RegisterArgument(RegisterType::SP), -1 * destByteSize + 1), _dest->GetCopy()));
 			instrs.push_back(new InstrPop(destDataType, new ValueArgument(1)));
 		}
 
@@ -1532,7 +1559,7 @@ namespace ramc {
 		TypeResult result = _env->GetVariableType(id, GetPosition());
 
 		if (result.IsSuccess())
-			source = _env->GetVarSource(id)->GetCopy();
+			source = _env->GetVariableSource(id)->GetCopy();
 
 		return result;
 	}
@@ -1627,9 +1654,8 @@ namespace ramc {
 		InstructionSet instrs;
 		int argsByteLen = 0;
 
-		//Push arguments onto stack in reverse order so first arg is on top
-		//when the callee starts reading them
-		for (int i = args.size() - 1; i >= 0; i--)
+		//Push args onto the stack
+		for (int i = 0; i < args.size(); i++)
 		{
 			ASTExpr* arg = args[i];
 			auto argInstrs = arg->GenerateCode(std::shared_ptr<Argument>(StackArgument::GenStackTop()), _progInfo);
@@ -1639,15 +1665,14 @@ namespace ramc {
 		}
 
 		//Insert Call
-		int funcRegCnt = _progInfo.GetFuncRegCount(funcLabel);
-		instrs.push_back(new InstrCall(funcLabel, new ValueArgument(funcRegCnt), new ValueArgument(argsByteLen)));
+		instrs.push_back(new InstrCall(funcLabel, new ValueArgument(argsByteLen)));
 
 		//Move value to destination
 		if (!_dest->IsStackTop())
 		{
 			auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
 			int retByteSize = this->GetTypeSysType()->GetByteSize();
-			instrs.push_back(new InstrMove(destDataType, new StackArgument(StackArgType::SP_OFFSETED, -retByteSize + 1), _dest->GetCopy()));
+			instrs.push_back(new InstrMove(destDataType, new StackArgument(new RegisterArgument(RegisterType::SP), -retByteSize + 1), _dest->GetCopy()));
 			instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(retByteSize)));
 		}
 
@@ -1693,14 +1718,14 @@ namespace ramc {
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
 		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
-		Environment thenSubEnv(_env, true);
+		Environment thenSubEnv(_env);
 		TypeResult thenTypeRes = thenStmt->TypeCheck(&thenSubEnv);
 		if (!thenTypeRes.IsSuccess())
 			return thenTypeRes;
 
 		if (elseStmt)
 		{
-			Environment elseSubEnv(_env, true);
+			Environment elseSubEnv(_env);
 			TypeResult elseTypeRes = elseStmt->TypeCheck(&elseSubEnv);
 			if (!elseTypeRes.IsSuccess())
 				return elseTypeRes;
@@ -1727,9 +1752,9 @@ namespace ramc {
 
 			//If cond == false
 			instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(condByteSize))); //Pop off condition
+			_progInfo.SetLabelInstr(ifLabels.elseClause, instrs.back()); //Set Else Begin
 
 			InstructionSet elseInstrs = elseStmt->GenerateCode(_progInfo);
-			_progInfo.SetLabelInstr(ifLabels.elseClause, elseInstrs.front()); //Set Else Begin
 			instrs.insert(instrs.end(), elseInstrs.begin(), elseInstrs.end()); //Insert Else Instructions
 			instrs.push_back(new InstrJump(ifLabels.elseClause)); //Jump to If End
 		}
@@ -1737,8 +1762,8 @@ namespace ramc {
 
 		//If cond == true
 		instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(condByteSize))); //Pop off condition
+		_progInfo.SetLabelInstr(ifLabels.thenClause, instrs.back()); //Set Then Begin
 		instrs.insert(instrs.end(), thenInstrs.begin(), thenInstrs.end()); //Insert Then Instructions
-		_progInfo.SetLabelInstr(ifLabels.thenClause, thenInstrs.front()); //Set Then Begin
 
 		//To Set the End Label to the right spot
 		if (elseStmt) { instrs.push_back(new InstrNoOp()); }
@@ -1829,7 +1854,7 @@ namespace ramc {
 		if (!_dest->IsStackTop())
 		{
 			auto destDataType = TypeSysTypeToDataType(this->GetTypeSysType()->GetType());
-			instrs.push_back(new InstrMove(destDataType, new StackArgument(StackArgType::SP_OFFSETED, -resultByteSize + 1), _dest->GetCopy()));
+			instrs.push_back(new InstrMove(destDataType, new StackArgument(new RegisterArgument(RegisterType::SP), -resultByteSize + 1), _dest->GetCopy()));
 			instrs.push_back(new InstrPop(destDataType, new ValueArgument(1)));
 		}
 
@@ -1868,7 +1893,7 @@ namespace ramc {
 		if (!condTypeRes.IsSuccess()) { return condTypeRes; }
 		else if (!(*condTypeRes.GetValue())->Matches(Type::BOOL())) { return TypeResult::GenExpectation(Type::BOOL()->ToString(0), (*condTypeRes.GetValue())->ToString(0), condExpr->GetPosition()); }
 
-		Environment subEnv(_env, true);
+		Environment subEnv(_env);
 		return body->TypeCheck(&subEnv);
 	}
 
@@ -1937,7 +1962,7 @@ namespace ramc {
 
 	TypeResult ASTForStmt::_TypeCheck(Environment* _env)
 	{
-		Environment subEnv(_env, true);
+		Environment subEnv(_env);
 
 		TypeResult initTypeRes = initStmt->TypeCheck(&subEnv);
 		if (!initTypeRes.IsSuccess())
@@ -2000,6 +2025,9 @@ namespace ramc {
 	{
 		for (auto it = stmts.begin(); it != stmts.end(); it++)
 			delete (*it);
+
+		if (retSPSrc)
+			delete retSPSrc;
 	}
 
 	std::string ASTBlock::ToString(int _indentLvl, std::string _prefix)
@@ -2026,6 +2054,12 @@ namespace ramc {
 
 	TypeResult ASTBlock::_TypeCheck(Environment* _env)
 	{
+		//This creates space for us to put the current stack pointer before
+		//we enter the block so that when the block is done, we can read form
+		//this spot on the stack and pop the right amount of bytes off the stack.
+		retSPSrc = new StackArgument(new RegisterArgument(RegisterType::FP), _env->GetNextVarFPOffset(std::shared_ptr<Type>(Type::INT()).get()));
+
+		//Type check the statements of the block
 		for (auto it = stmts.begin(); it != stmts.end(); it++)
 		{
 			TypeResult typeRes = (*it)->TypeCheck(_env);
@@ -2040,11 +2074,22 @@ namespace ramc {
 	{
 		InstructionSet instrs;
 
+		//Push current stack pointer onto the stack
+		instrs.push_back(new InstrPush(DataType::INT, { new RegisterArgument(RegisterType::SP) }));
+		instrs.push_back(new InstrBinop(Binop::ADD, { DataType::INT, DataType::INT, DataType::INT }, retSPSrc->GetCopy(), new ValueArgument(1), retSPSrc->GetCopy()));
+
+		//Statements
 		for (auto it = stmts.begin(); it != stmts.end(); it++)
 		{
 			InstructionSet stmtInstrs = (*it)->GenerateCode(_progInfo);
 			instrs.insert(instrs.end(), stmtInstrs.begin(), stmtInstrs.end());
 		}
+
+		//Return stack pointer to before the block started executing
+		instrs.push_back(new InstrBinop(Binop::SUB, { DataType::INT, DataType::INT, DataType::INT }, new RegisterArgument(RegisterType::SP), retSPSrc->GetCopy(), StackArgument::GenStackTop()));
+		instrs.push_back(new InstrPop(DataType::BYTE, new StackArgument(new RegisterArgument(RegisterType::SP), -INT_SIZE + 1)));
+		instrs.push_back(new InstrPop(DataType::INT, new ValueArgument(1)));
+		instrs.push_back(new InstrPop(DataType::BYTE, new ValueArgument(1)));
 
 		return instrs;
 	}
@@ -2172,7 +2217,7 @@ namespace ramc {
 	{
 		std::stringstream ss;
 		ss << CreateIndent(_indentLvl) + _prefix;
-		ss << "Array Initializer" << (elemExprs.size() == 0 ? "" : ": ");
+		ss << "Array Initializer:";
 
 		for (auto const& it : elemExprs)
 			ss << std::endl << it->ToString(_indentLvl + 1);
@@ -2206,35 +2251,26 @@ namespace ramc {
 			else if (!Type::Matches(restraint, *exprTypeRes.GetValue())) { return TypeResult::GenExpectation(restraint->ToString(0), (*exprTypeRes.GetValue())->ToString(0), elemExpr->GetPosition()); }
 		}
 
-		return TypeResult::GenSuccess(new ArrayType(restraint));
+		return TypeResult::GenSuccess(new ArrayType(restraint, elemExprs.size()));
 	}
 
 	InstructionSet ASTArrayInit::GenerateCode(std::shared_ptr<Argument> _dest, ProgramInfo& _progInfo)
 	{
-		int mallocLength = restraint->GetByteSize() * elemExprs.size();
 		InstructionSet instrs;
 
-		instrs.push_back(new InstrMalloc(new ValueArgument(mallocLength), StackArgument::GenStackTop())); //Allocate memory
+		//Move the current SP to the destination if not top of stack
+		if (!_dest->IsStackTop())
+			instrs.push_back(new InstrMove(DataType::INT, new RegisterArgument(RegisterType::SP), _dest->GetCopy()));
+
+		//Store size
+		instrs.push_back(new InstrPush(DataType::INT, { new ValueArgument((int)elemExprs.size()) }));
 
 		//Store values
-		int offset = 1;
-
 		for (int i = 0; i < (int)elemExprs.size(); i++)
 		{
-			auto addr = std::shared_ptr<Argument>(new MemoryArgument(StackArgument::GenStackCur(), i * restraint->GetByteSize() - 1));
-			InstructionSet code = elemExprs[i]->GenerateCode(addr, _progInfo);
-
-			instrs.insert(instrs.end(), code.begin(), code.end());
+			InstructionSet elemInstrs = elemExprs[i]->GenerateCode(std::shared_ptr<Argument>(StackArgument::GenStackTop()), _progInfo);
+			instrs.insert(instrs.end(), elemInstrs.begin(), elemInstrs.end());
 		}
-
-		//Create Move to move address to destination
-		if (!_dest->IsStackTop())
-		{
-			instrs.push_back(new InstrMove(DataType::INT, new StackArgument(StackArgType::SP_OFFSETED, -INT_SIZE + 1), _dest->GetCopy()));
-			instrs.push_back(new InstrPop(DataType::INT, new ValueArgument(1)));
-		}
-
-		//TODO: Add address to functions garbage collector
 
 		return instrs;
 	}
@@ -2242,6 +2278,7 @@ namespace ramc {
 
 #pragma region Program Info
 	std::string ProgramInfo::MAIN_FUNC_LABEL = Environment::GenFuncLabel("Main", *std::make_shared<TupleType*>(new TupleType({})));
+	std::string ProgramInfo::PRINT_FUNC_LABEL = Environment::GenFuncLabel("Print", *std::make_shared<Type*>(Type::STRING()));
 
 	ProgramInfo::LabeledLoop ProgramInfo::GenLoopLabels()
 	{
@@ -2271,24 +2308,20 @@ namespace ramc {
 		return { beginLabel, thenLabel, elseLabel, endLabel };
 	}
 
-	void ProgramInfo::AddFuncDecl(std::string _label, int _regCnt)
+	void ProgramInfo::AddFuncDecl(std::string _label)
 	{
-		ASSERT_MSG(funcDecls.find(_label) == funcDecls.end(), "ProgramInfo::AddFuncDecl - Function delcaration '" + _label + "' already exists!");
+		auto search = std::find(funcDecls.begin(), funcDecls.end(), _label);
+		ASSERT_MSG(search == funcDecls.end(), "ProgramInfo::AddFuncDecl - Function delcaration '" + _label + "' already exists!");
 		ASSERT_MSG(labelledInstrs.find(_label) == labelledInstrs.end(), "ProgramInfo::SetFuncDeclStart - Label '" + _label + "' already in use!");
-		funcDecls.insert_or_assign(_label, _regCnt);
+		funcDecls.push_back(_label);
 		SetLabelInstr(_label, nullptr);
 	}
 
 	void ProgramInfo::SetFuncDeclStart(std::string _label, Instruction* _start)
 	{
-		ASSERT_MSG(funcDecls.find(_label) != funcDecls.end(), "ProgramInfo::SetFuncDeclStart - Function delcaration '" + _label + "' does not exist!");
+		auto search = std::find(funcDecls.begin(), funcDecls.end(), _label);
+		ASSERT_MSG(search != funcDecls.end(), "ProgramInfo::SetFuncDeclStart - Function delcaration '" + _label + "' does not exist!");
 		SetLabelInstr(_label, _start);
-	}
-
-	int ProgramInfo::GetFuncRegCount(std::string _label)
-	{
-		ASSERT_MSG(funcDecls.find(_label) != funcDecls.end(), "ProgramInfo::GetFuncDecl - Function delcaration '" + _label + "' does not exist!");
-		return funcDecls[_label];
 	}
 
 	void ProgramInfo::SetLabelInstr(std::string _label, Instruction* _instr)

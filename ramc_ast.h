@@ -25,7 +25,9 @@ namespace ramc {
 	enum class BinopType {
 		ADD, SUB, MUL, DIV, MOD, POW,
 		BIN_AND, BIN_OR, BIN_XOR, LSHIFT, RSHIFT,
-		LT, GT, LT_EQ, GT_EQ, EQ_EQ, NEQ, LOG_AND, LOG_OR
+		LT, GT, LT_EQ, GT_EQ, EQ_EQ, NEQ, LOG_AND, LOG_OR,
+
+		INDEX
 	};
 
 	enum class AssignmentType {
@@ -70,20 +72,20 @@ namespace ramc {
 	{
 	public:
 		static std::string MAIN_FUNC_LABEL;
+		static std::string PRINT_FUNC_LABEL;
 
 		struct LabeledLoop { std::string begin, pop, reset, end; };
 		struct LabeledIf { std::string begin, thenClause, elseClause, end; };
 	private:
 		std::unordered_map<std::string, Instruction*> labelledInstrs;
 		std::vector<LabeledLoop*> labelledLoopStack;
-		std::unordered_map<std::string, int> funcDecls;
+		std::vector<std::string> funcDecls;
 	public:
 		LabeledLoop GenLoopLabels();
 		LabeledIf GenIfLabels(bool _hasElse);
 
-		void AddFuncDecl(std::string _label, int _regCnt);
+		void AddFuncDecl(std::string _label);
 		void SetFuncDeclStart(std::string _label, Instruction* _start);
-		int GetFuncRegCount(std::string _label);
 		void SetLabelInstr(std::string _label, Instruction* _instr);
 		void PushCurLoopLabels(LabeledLoop* _labels);
 		void PopCurLoopLabels();
@@ -97,6 +99,9 @@ namespace ramc {
 		std::string fileName;
 		std::vector<ASTVarDecl*> varDecls;
 		std::vector<ASTFuncDecl*> funcDecls;
+
+		//Set during type checking
+		int globalsByteSize;
 	public:
 		ASTProgram(std::string _fileName, std::vector<ASTVarDecl*> _varDecls, std::vector<ASTFuncDecl*> _funcDecls);
 		~ASTProgram();
@@ -119,7 +124,7 @@ namespace ramc {
 
 		//These will get set during type checking
 		std::string label;
-		int regCnt;
+		std::vector<std::pair<int, Argument*>> paramSrcs;
 	public:
 		ASTFuncDecl(std::string _name, ParamList _params, TypeList _retTypes, ASTStmt* _body, Position _pos);
 		~ASTFuncDecl();
@@ -129,8 +134,7 @@ namespace ramc {
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(Environment* _env, ProgramInfo& _progInfo);
 
-		std::string GetLabel() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTFuncDecl::GetLabel - Node was not typecheked!"); return label; }
-		int GetRegCount() { ASSERT_MSG(GetTypeSysType() != nullptr, "ASTFuncDecl::GetRegCount - Node was not typecheked!"); return regCnt; }
+		std::string GetLabel();
 	};
 #pragma endregion
 
@@ -174,6 +178,9 @@ namespace ramc {
 #pragma region Block
 	class ASTBlock : public ASTStmt {
 		std::vector<ASTStmt*> stmts;
+
+		//Set during type checking
+		Argument* retSPSrc;
 	public:
 		ASTBlock(const std::vector<ASTStmt*>& _stmts, Position _pos);
 		~ASTBlock();
@@ -188,22 +195,28 @@ namespace ramc {
 
 #pragma region VarDeclaration
 	class ASTVarDecl : public ASTStmt {
-		ASTIdentifier* id;
+		std::string id;
 		ASTExpr* expr;
 		bool isUnderscore, isGlobal;
 		Type* restraint;
+
+		//Set during type checking
+		Argument* idSource;
+
 	public:
-		ASTVarDecl(ASTIdentifier* _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos);
-		ASTVarDecl(ASTIdentifier* _id, ASTExpr* _expr, bool _isGlobal, Position _pos);
+		ASTVarDecl(std::string _id, Type* _restraint, ASTExpr* _expr, bool _isGlobal, Position _pos);
+		ASTVarDecl(std::string _id, ASTExpr* _expr, bool _isGlobal, Position _pos);
 		ASTVarDecl(ASTExpr* _expr, Position _pos);
 		~ASTVarDecl();
-
 
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
 		InstructionSet GenerateCode(ProgramInfo& _progInfo) override;
 		CodePathNode* GetCodePath() override;
+
+		Type* GetRestraint();
+		Argument* GetIDSource();
 	};
 #pragma endregion
 

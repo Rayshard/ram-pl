@@ -3,13 +3,15 @@
 #include "ramvm_instruction.h"
 
 namespace ramvm {
-	VM::VM(int _numCMDLineArgs, int _maxMemory, const std::vector<Instruction*>& _instrs, const std::unordered_map<std::string, int>& _labels)
+	VM::VM(int _maxMemory, const std::vector<Instruction*>& _instrs, const std::unordered_map<std::string, int>& _labels)
 	{
 		memory = Memory(_maxMemory);
 		instructions = _instrs;
 		labels = _labels;
-		ip = 0;
-		topLevelExecFrame = ExecutionFrame(0, 0, _numCMDLineArgs);
+		instrPtr = 0;
+		globalPtr = -1;
+
+		execFrames.push_back(ExecutionFrame(0, 0));
 	}
 
 	VM::~VM()
@@ -22,11 +24,13 @@ namespace ramvm {
 	{
 		while (true)
 		{
-			if (ip < 0 || ip >= (int)instructions.size())
+			if (instrPtr < 0 || instrPtr >= (int)instructions.size())
 				return ResultType::ERR_INVALID_IP;
 
-			ExecutionFrame& execFrame = execFrames.empty() ? topLevelExecFrame : execFrames.back();
-			Instruction* curInstr = instructions[ip];
+			ExecutionFrame& execFrame = execFrames.back();
+			Instruction* curInstr = instructions[instrPtr];
+
+			//std::cout << ip << ":" << curInstr->ToString() << std::endl;
 
 			switch (curInstr->GetType())
 			{
@@ -37,11 +41,11 @@ namespace ramvm {
 					ResultType resType = ResultType::SUCCESS;
 					DataVariant movVal(instr->dataType);
 
-					resType = ReadFromSrcArg(execFrame, instr->src, movVal, _info);
+					resType = ReadFromSrcArg(instr->src, movVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					resType = WriteToDestArg(execFrame, instr->dest, movVal, _info);
+					resType = WriteToDestArg(instr->dest, movVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -51,7 +55,7 @@ namespace ramvm {
 
 					//Get Size
 					DataVariant size(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->size, size, _info);
+					resType = ReadFromSrcArg(instr->size, size, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -62,7 +66,7 @@ namespace ramvm {
 						return resType;
 
 					//Write Addr to Destination
-					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(memAddr), _info);
+					resType = WriteToDestArg(instr->dest, DataVariant(memAddr), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -72,7 +76,7 @@ namespace ramvm {
 
 					//Get Address
 					DataVariant addr(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->addr, addr, _info);
+					resType = ReadFromSrcArg(instr->addr, addr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -86,12 +90,12 @@ namespace ramvm {
 					ResultType resType = ResultType::SUCCESS;
 
 					DataVariant memAddr(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->start, memAddr, _info);
+					resType = ReadFromSrcArg(instr->start, memAddr, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					DataVariant length(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->length, length, _info);
+					resType = ReadFromSrcArg(instr->length, length, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -106,32 +110,32 @@ namespace ramvm {
 					//Print
 					printf(chars.data());
 				} break;
-				case InstructionType::JUMP: ip = GetLabelInstrIdx(((InstrJump*)curInstr)->label); continue;
+				case InstructionType::JUMP: instrPtr = GetLabelInstrIdx(((InstrJump*)curInstr)->label); continue;
 				case InstructionType::CJUMP: {
 					InstrCJump* instr = (InstrCJump*)curInstr;
 					DataVariant condVal(DataType::BYTE);
-					ResultType resType = ReadFromSrcArg(execFrame, instr->cond, condVal, _info);
+					ResultType resType = ReadFromSrcArg(instr->cond, condVal, _info);
 
 					if (IsErrorResult(resType)) { return resType; }
 					else if ((condVal.B() == 0 && instr->jumpOnFalse) || (condVal.B() != 0 && !instr->jumpOnFalse))
 					{
-						ip = GetLabelInstrIdx(instr->label);
+						instrPtr = GetLabelInstrIdx(instr->label);
 						continue;
 					}
 				} break;
 				case InstructionType::RETURN: {
-					if (execFrames.empty()) { return ResultType::ERR_RET_TOP_LEVEL; }
+					if (execFrames.size() == 1) { return ResultType::ERR_RET_TOP_LEVEL; }
 					else
 					{
 						InstrReturn* instr = (InstrReturn*)curInstr;
-						ExecutionFrame& parentExecFrame = execFrames.size() == 1 ? topLevelExecFrame : execFrames[execFrames.size() - 2];
+						ExecutionFrame& parentExecFrame = execFrames[execFrames.size() - 2];
 						ResultType resType = ResultType::SUCCESS;
 
 						//Read return values from the stack so that when the
 						//stack pointer is reset, we can push this onto the
 						//top of the stack
 						DataVariant amtVal(DataType::INT);
-						resType = ReadFromSrcArg(execFrame, instr->amt, amtVal, _info);
+						resType = ReadFromSrcArg(instr->amt, amtVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
@@ -140,9 +144,9 @@ namespace ramvm {
 						resType = ReadStack(GetSP() - retBufferSize + 1, retBufferSize, retBuffer);
 						if (IsErrorResult(resType))
 							return resType;
-
+						PrintStack();
 						//Revert Stack back to position before this frame was created
-						stack.erase(stack.begin() + execFrame.GetRetSP(), stack.end());
+						stack.erase(stack.begin() + execFrame.GetFramePtr(), stack.end());
 
 						//Push Return Buffer to Stack
 						stack.insert(stack.end(), retBuffer, retBuffer + retBufferSize);
@@ -150,31 +154,23 @@ namespace ramvm {
 
 						//Restore old frame
 						execFrames.pop_back();
-						ip = execFrame.GetRetIP();
+						instrPtr = execFrame.GetRetIP();
 						continue;
 					}
 				} break;
 				case InstructionType::CALL: {
 					InstrCall* instr = (InstrCall*)curInstr;
 					ResultType resType = ResultType::SUCCESS;
-					
+
 					DataVariant argsByteLenVal(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->argsByteLength, argsByteLenVal, _info);
+					resType = ReadFromSrcArg(instr->argsByteLength, argsByteLenVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					DataVariant regCntVal(DataType::INT);
-					resType = ReadFromSrcArg(execFrame, instr->regCnt, regCntVal, _info);
-					if (IsErrorResult(resType))
-						return resType;
-
-					//Create new execution frame to reset the stack pointer
-					//to right before the arguments that were pushed onto
-					//the stack (represented by the byte length value)
-					ExecutionFrame newExecFrame = ExecutionFrame(ip + 1, GetSP() - argsByteLenVal.I() + 1, regCntVal.I());
+					ExecutionFrame newExecFrame = ExecutionFrame(instrPtr + 1, GetSP() - argsByteLenVal.I() + 1);
 					execFrames.push_back(newExecFrame);
 
-					ip = GetLabelInstrIdx(instr->label);
+					instrPtr = GetLabelInstrIdx(instr->label);
 					continue;
 				} break;
 				case InstructionType::BINOP: {
@@ -183,11 +179,11 @@ namespace ramvm {
 					DataVariant val1(instr->GetSrc1DataType()), val2(instr->GetSrc2DataType());
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr->src1, val1, _info);
+					resType = ReadFromSrcArg(instr->src1, val1, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
-					resType = ReadFromSrcArg(execFrame, instr->src2, val2, _info);
+					resType = ReadFromSrcArg(instr->src2, val2, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -198,7 +194,8 @@ namespace ramvm {
 					if (IsErrorResult(resType)) { return resType; }
 					else { resVal = resVal.To(instr->GetDestDataType()); } //Set the type for the result
 
-					resType = WriteToDestArg(execFrame, instr->dest, resVal, _info);
+					//Write
+					resType = WriteToDestArg(instr->dest, resVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -208,7 +205,7 @@ namespace ramvm {
 					DataVariant val(instr->GetSrcDataType());
 
 					//Read
-					resType = ReadFromSrcArg(execFrame, instr->src, val, _info);
+					resType = ReadFromSrcArg(instr->src, val, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -216,9 +213,11 @@ namespace ramvm {
 					DataVariant resVal;
 
 					resType = DoUnop(instr->op, val, resVal);
-					if (IsErrorResult(resType)) { return resType; }
+					if (!IsErrorResult(resType)) { return resType; }
 					else { resVal = resVal.To(instr->GetDestDataType()); }
 
+					//Write
+					resType = WriteToDestArg(instr->dest, resVal, _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -234,7 +233,7 @@ namespace ramvm {
 						DataVariant storeVal(instr->dataType);
 
 						//Read Value
-						resType = ReadFromSrcArg(execFrame, src, storeVal, _info);
+						resType = ReadFromSrcArg(src, storeVal, _info);
 						if (IsErrorResult(resType)) { return resType; }
 						else { buffer.insert(buffer.end(), storeVal.Bytes(), storeVal.Bytes() + storeVal.GetSize()); }
 					}
@@ -249,7 +248,7 @@ namespace ramvm {
 					memory.WriteBuffer(memAddr, buffer.size(), buffer.data(), _info);
 
 					//Write Addr to Destination
-					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(memAddr), _info);
+					resType = WriteToDestArg(instr->dest, DataVariant(memAddr), _info);
 					if (IsErrorResult(resType))
 						return resType;
 				} break;
@@ -259,7 +258,7 @@ namespace ramvm {
 					DataVariant cmpAmt(DataType::INT);
 
 					//Get Length
-					resType = ReadFromSrcArg(execFrame, instr->length, cmpAmt, _info);
+					resType = ReadFromSrcArg(instr->length, cmpAmt, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -268,18 +267,18 @@ namespace ramvm {
 					byte* src2Bytes = new byte[length];
 
 					//Get Src1 Bytes
-					resType = ReadFromSrcArg(execFrame, instr->src1, src1Bytes, length, _info);
+					resType = ReadFromSrcArg(instr->src1, src1Bytes, length, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Get Src1 Bytes
-					resType = ReadFromSrcArg(execFrame, instr->src2, src2Bytes, length, _info);
+					resType = ReadFromSrcArg(instr->src2, src2Bytes, length, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
 					//Write Result to Dest
 					bool equal = !memcmp(src1Bytes, src2Bytes, length);
-					resType = WriteToDestArg(execFrame, instr->dest, DataVariant(equal ? (byte)1 : (byte)0), _info);
+					resType = WriteToDestArg(instr->dest, DataVariant(equal ? (byte)1 : (byte)0), _info);
 					delete[] src2Bytes;
 					delete[] src1Bytes;
 					if (IsErrorResult(resType))
@@ -295,7 +294,7 @@ namespace ramvm {
 						DataVariant pushVal(instr->dataType);
 
 						//Read Value
-						resType = ReadFromSrcArg(execFrame, src, pushVal, _info);
+						resType = ReadFromSrcArg(src, pushVal, _info);
 						if (IsErrorResult(resType))
 							return resType;
 
@@ -309,7 +308,7 @@ namespace ramvm {
 					DataVariant amt(DataType::INT);
 
 					//Read Amount
-					resType = ReadFromSrcArg(execFrame, instr->amt, amt, _info);
+					resType = ReadFromSrcArg(instr->amt, amt, _info);
 					if (IsErrorResult(resType))
 						return resType;
 
@@ -324,11 +323,11 @@ namespace ramvm {
 				default: return ResultType::ERR_UNKNOWNINSTR;
 			}
 
-			ip++;
+			instrPtr++;
 		}
 	}
 
-	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument* _arg, DataVariant& _value, ResultInfo& _info)
+	ResultType VM::ReadFromSrcArg(Argument* _arg, DataVariant& _value, ResultInfo& _info)
 	{
 		switch (_arg->GetType())
 		{
@@ -337,40 +336,37 @@ namespace ramvm {
 				return ResultType::SUCCESS;
 			}
 			case ArgType::REGISTER: {
-				int index = ((RegisterArgument*)_arg)->GetIndex();
-
-				switch (((RegisterArgument*)_arg)->GetReadType())
+				switch (((RegisterArgument*)_arg)->GetRegType())
 				{
-					case RegisterArgType::REGULAR: return _execFrame.ReadRegister(index, _value, _info);
-					case RegisterArgType::STACK: {
-						DataVariant pos(DataType::INT);
-						ResultType res = _execFrame.ReadRegister(index, pos, _info);
-
-						if (IsErrorResult(res)) { return res; }
-						else { return ReadStack(pos.I(), _value); }
-					}
-					case RegisterArgType::SP: {
+					case RegisterType::SP: {
 						_value = DataVariant(GetSP());
 						return ResultType::SUCCESS;
 					}
-					default: throw std::runtime_error("VM::ReadFromSrcArg() - RegisterReadMode not handled!");
+					case RegisterType::FP: {
+						_value = DataVariant(execFrames.back().GetFramePtr());
+						return ResultType::SUCCESS;
+					}
+					case RegisterType::GP: {
+						_value = DataVariant(globalPtr);
+						return ResultType::SUCCESS;
+					}
+					default: ASSERT_MSG(false, "VM::ReadFromSrcArg - RegisterType not handled!");
 				}
 			}
 			case ArgType::STACK: {
-				int value = ((StackArgument*)_arg)->GetValue();
+				StackArgument* stackArg = (StackArgument*)_arg;
 
-				switch (((StackArgument*)_arg)->GetReadType())
-				{
-					case StackArgType::ABSOLUTE: return ReadStack(value, _value);
-					case StackArgType::SP_OFFSETED: return ReadStack(GetSP() + value, _value);
-					default: throw std::runtime_error("VM::ReadFromSrcArg() - StackReadMode not handled!");
-				}
+				DataVariant pos(DataType::INT);
+				ResultType res = ReadFromSrcArg(stackArg->GetPosSrc(), pos, _info);
+
+				if (IsErrorResult(res)) { return res; }
+				else { return ReadStack(pos.I() + stackArg->GetOffset(), _value); }
 			}
 			case ArgType::MEMORY: {
 				MemoryArgument* memArg = (MemoryArgument*)_arg;
 
 				DataVariant addr(DataType::INT);
-				ResultType res = ReadFromSrcArg(_execFrame, memArg->GetAddrSrc(), addr, _info);
+				ResultType res = ReadFromSrcArg(memArg->GetAddrSrc(), addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return memory.Read(addr.I() + memArg->GetOffset(), _value, _info); }
@@ -379,40 +375,24 @@ namespace ramvm {
 		}
 	}
 
-	ResultType VM::ReadFromSrcArg(ExecutionFrame& _execFrame, Argument* _arg, byte* _buffer, int _length, ResultInfo& _info)
+	ResultType VM::ReadFromSrcArg(Argument* _arg, byte* _buffer, int _length, ResultInfo& _info)
 	{
 		switch (_arg->GetType())
 		{
-			case ArgType::REGISTER: {
-				int index = ((RegisterArgument*)_arg)->GetIndex();
-
-				switch (((RegisterArgument*)_arg)->GetReadType())
-				{
-					case RegisterArgType::STACK: {
-						DataVariant pos(DataType::INT);
-						ResultType res = _execFrame.ReadRegister(index, pos, _info);
-
-						if (IsErrorResult(res)) { return res; }
-						else { return ReadStack(pos.I(), _length, _buffer); }
-					}
-					default: throw std::runtime_error("VM::ReadFromSrcArg() - RegisterReadMode not handled!");
-				}
-			}
 			case ArgType::STACK: {
-				int value = ((StackArgument*)_arg)->GetValue();
+				StackArgument* stackArg = (StackArgument*)_arg;
 
-				switch (((StackArgument*)_arg)->GetReadType())
-				{
-					case StackArgType::ABSOLUTE: return ReadStack(value, _length, _buffer);
-					case StackArgType::SP_OFFSETED: return ReadStack(GetSP() + value, _length, _buffer);
-					default: throw std::runtime_error("VM::ReadFromSrcArg() - StackReadMode not handled!");
-				}
+				DataVariant pos(DataType::INT);
+				ResultType res = ReadFromSrcArg(stackArg->GetPosSrc(), pos, _info);
+
+				if (IsErrorResult(res)) { return res; }
+				else { return ReadStack(pos.I() + stackArg->GetOffset(), _length, _buffer); }
 			}
 			case ArgType::MEMORY: {
 				MemoryArgument* memArg = (MemoryArgument*)_arg;
 
 				DataVariant addr(DataType::INT);
-				ResultType res = ReadFromSrcArg(_execFrame, memArg->GetAddrSrc(), addr, _info);
+				ResultType res = ReadFromSrcArg(memArg->GetAddrSrc(), addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return memory.ReadBuffer(addr.I() + memArg->GetOffset(), _length, _buffer, _info); }
@@ -421,48 +401,42 @@ namespace ramvm {
 		}
 	}
 
-	ResultType VM::WriteToDestArg(ExecutionFrame& _execFrame, Argument* _arg, DataVariant _value, ResultInfo& _info)
+	ResultType VM::WriteToDestArg(Argument* _arg, DataVariant _value, ResultInfo& _info)
 	{
 		switch (_arg->GetType())
 		{
 			case ArgType::REGISTER: {
-				int index = ((RegisterArgument*)_arg)->GetIndex();
-
-				switch (((RegisterArgument*)_arg)->GetReadType())
+				switch (((RegisterArgument*)_arg)->GetRegType())
 				{
-					case RegisterArgType::REGULAR: return _execFrame.WriteRegister(index, _value, _info);
-					case RegisterArgType::STACK: {
-						DataVariant pos(DataType::INT);
-						ResultType res = _execFrame.ReadRegister(index, pos, _info);
-
-						if (IsErrorResult(res)) { return res; }
-						else { return WriteStack(pos.I(), _value); }
+					case RegisterType::GP: {
+						globalPtr = _value.I();
+						return ResultType::SUCCESS;
 					}
-					default: throw std::runtime_error("VM::WriteToDestArg() - RegisterReadMode not handled!");
+					default: ASSERT_MSG(false, "VM::WriteToSrcArg - RegisterType not handled!");
 				}
 			}
 			case ArgType::STACK: {
-				int value = ((StackArgument*)_arg)->GetValue();
+				StackArgument* stackArg = (StackArgument*)_arg;
 
-				switch (((StackArgument*)_arg)->GetReadType())
+				if (stackArg->IsStackTop())
 				{
-					case StackArgType::ABSOLUTE: return WriteStack(value, _value);
-					case StackArgType::SP_OFFSETED: {
-						if (_arg->IsStackTop())
-						{
-							stack.insert(stack.end(), _value.Bytes(), _value.Bytes() + _value.GetSize());
-							return ResultType::SUCCESS;
-						}
-						else { return WriteStack(GetSP() + value, _value); }
-					}
-					default: throw std::runtime_error("VM::ReadFromSrcArg() - StackReadMode not handled!");
+					stack.insert(stack.end(), _value.Bytes(), _value.Bytes() + _value.GetSize());
+					return ResultType::SUCCESS;
+				}
+				else
+				{
+					DataVariant pos(DataType::INT);
+					ResultType res = ReadFromSrcArg(stackArg->GetPosSrc(), pos, _info);
+
+					if (IsErrorResult(res)) { return res; }
+					else { return WriteStack(pos.I() + stackArg->GetOffset(), _value); }
 				}
 			}
 			case ArgType::MEMORY: {
 				MemoryArgument* memArg = (MemoryArgument*)_arg;
 
 				DataVariant addr(DataType::INT);
-				ResultType res = ReadFromSrcArg(_execFrame, memArg->GetAddrSrc(), addr, _info);
+				ResultType res = ReadFromSrcArg(memArg->GetAddrSrc(), addr, _info);
 
 				if (IsErrorResult(res)) { return res; }
 				else { return memory.Write(addr.I() + memArg->GetOffset(), _value, _info); }
@@ -510,17 +484,28 @@ namespace ramvm {
 		else { return -1; }
 	}
 
-	void VM::PrintCurRegisters()
+	void VM::PrintRegisters()
 	{
-		if (execFrames.empty()) { topLevelExecFrame.PrintRegisters(); }
-		else { return execFrames.back().PrintRegisters(); }
+		std::cout << "---------------------REGISTERS---------------------" << std::endl;
+
+		for (int i = 0; i < (int)registers.size(); i++)
+		{
+			std::cout << "R" << i << ": " << ToHexString(registers[i].l) << ", ";
+			std::cout << (int)registers[i].b << "b, ";
+			std::cout << registers[i].i << "i, ";
+			std::cout << registers[i].f << "f, ";
+			std::cout << registers[i].d << "d, ";
+			std::cout << registers[i].l << "l" << std::endl;
+		}
+
+		std::cout << "---------------------------------------------------" << std::endl;
 	}
 
 	void VM::PrintMemory()
 	{
 		std::cout << "---------------------MEMORY---------------------" << std::endl;
 
-		memory.PrintAllocatedBlocks();
+		memory.PrintAllocatedBlocks(8);
 
 		std::cout << "---------------------------------------------------" << std::endl;
 	}

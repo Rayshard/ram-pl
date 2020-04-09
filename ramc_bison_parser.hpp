@@ -460,7 +460,6 @@ namespace ramc { namespace bison {
       // "double"
       // "long"
       // "string"
-      // "void"
       // TYPE
       char dummy20[sizeof (Type*)];
 
@@ -586,18 +585,17 @@ namespace ramc { namespace bison {
         KW_DOUBLE = 316,
         KW_LONG = 317,
         KW_STRING = 318,
-        KW_VOID = 319,
-        KW_LET = 320,
-        KW_IF = 321,
-        KW_THEN = 322,
-        KW_ELSE = 323,
-        KW_WHILE = 324,
-        KW_FOR = 325,
-        KW_DO = 326,
-        KW_FUNC = 327,
-        KW_BREAK = 328,
-        KW_CONTINUE = 329,
-        KW_RETURN = 330
+        KW_LET = 319,
+        KW_IF = 320,
+        KW_THEN = 321,
+        KW_ELSE = 322,
+        KW_WHILE = 323,
+        KW_FOR = 324,
+        KW_DO = 325,
+        KW_FUNC = 326,
+        KW_BREAK = 327,
+        KW_CONTINUE = 328,
+        KW_RETURN = 329
       };
     };
 
@@ -968,11 +966,11 @@ namespace ramc { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 102: // ARRAY_INIT
+      case 101: // ARRAY_INIT
         value.template destroy< ASTArrayInit* > ();
         break;
 
-      case 81: // ASSIGNMENT
+      case 80: // ASSIGNMENT
         value.template destroy< ASTAssignment* > ();
         break;
 
@@ -989,20 +987,20 @@ switch (yytype)
         value.template destroy< ASTDoubleLit* > ();
         break;
 
-      case 86: // EXPR
-      case 87: // EXPR1
-      case 88: // EXPR2
-      case 89: // EXPR3
-      case 90: // EXPR4
-      case 91: // EXPR5
-      case 92: // EXPR6
-      case 93: // EXPR7
-      case 94: // EXPR8
-      case 95: // EXPR9
-      case 96: // EXPR10
-      case 97: // EXPR11
-      case 98: // EXPR12
-      case 99: // ATOM
+      case 85: // EXPR
+      case 86: // EXPR1
+      case 87: // EXPR2
+      case 88: // EXPR3
+      case 89: // EXPR4
+      case 90: // EXPR5
+      case 91: // EXPR6
+      case 92: // EXPR7
+      case 93: // EXPR8
+      case 94: // EXPR9
+      case 95: // EXPR10
+      case 96: // EXPR11
+      case 97: // EXPR12
+      case 98: // ATOM
         value.template destroy< ASTExpr* > ();
         break;
 
@@ -1010,15 +1008,15 @@ switch (yytype)
         value.template destroy< ASTFloatLit* > ();
         break;
 
-      case 101: // FUNC_CALL
+      case 100: // FUNC_CALL
         value.template destroy< ASTFuncCallExpr* > ();
         break;
 
-      case 83: // FUNCDECL
+      case 82: // FUNCDECL
         value.template destroy< ASTFuncDecl* > ();
         break;
 
-      case 100: // IDENTIFIER
+      case 99: // IDENTIFIER
         value.template destroy< ASTIdentifier* > ();
         break;
 
@@ -1030,15 +1028,15 @@ switch (yytype)
         value.template destroy< ASTLongLit* > ();
         break;
 
-      case 77: // PROGRAM
+      case 76: // PROGRAM
         value.template destroy< ASTProgram* > ();
         break;
 
-      case 78: // STMT
-      case 79: // OPEN_STMT
-      case 80: // CLOSED_STMT
-      case 84: // WHILE_STMT
-      case 85: // FOR_STMT
+      case 77: // STMT
+      case 78: // OPEN_STMT
+      case 79: // CLOSED_STMT
+      case 83: // WHILE_STMT
+      case 84: // FOR_STMT
         value.template destroy< ASTStmt* > ();
         break;
 
@@ -1046,31 +1044,31 @@ switch (yytype)
         value.template destroy< ASTStringLit* > ();
         break;
 
-      case 82: // VARDECL
+      case 81: // VARDECL
         value.template destroy< ASTVarDecl* > ();
         break;
 
-      case 108: // OP_ASSIGN
+      case 107: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
-      case 113: // PARAM
+      case 112: // PARAM
         value.template destroy< Param > ();
         break;
 
       case 38: // "{"
       case 40: // "["
-      case 65: // "let"
-      case 66: // "if"
-      case 67: // "then"
-      case 68: // "else"
-      case 69: // "while"
-      case 70: // "for"
-      case 71: // "do"
-      case 72: // "func"
-      case 73: // "break"
-      case 74: // "continue"
-      case 75: // "return"
+      case 64: // "let"
+      case 65: // "if"
+      case 66: // "then"
+      case 67: // "else"
+      case 68: // "while"
+      case 69: // "for"
+      case 70: // "do"
+      case 71: // "func"
+      case 72: // "break"
+      case 73: // "continue"
+      case 74: // "return"
         value.template destroy< Position > ();
         break;
 
@@ -1081,8 +1079,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 64: // "void"
-      case 110: // TYPE
+      case 109: // TYPE
         value.template destroy< Type* > ();
         break;
 
@@ -1090,29 +1087,29 @@ switch (yytype)
         value.template destroy< std::pair<std::string, Position> > ();
         break;
 
-      case 106: // EXPR_STAR
-      case 107: // EXPR_PLUS
+      case 105: // EXPR_STAR
+      case 106: // EXPR_PLUS
         value.template destroy< std::vector<ASTExpr*> > ();
         break;
 
-      case 104: // TL_FUNCDECLS
+      case 103: // TL_FUNCDECLS
         value.template destroy< std::vector<ASTFuncDecl*> > ();
         break;
 
-      case 105: // STMTS
+      case 104: // STMTS
         value.template destroy< std::vector<ASTStmt*> > ();
         break;
 
-      case 103: // VARDECLS
+      case 102: // VARDECLS
         value.template destroy< std::vector<ASTVarDecl*> > ();
         break;
 
-      case 111: // PARAM_STAR
-      case 112: // PARAM_PLUS
+      case 110: // PARAM_STAR
+      case 111: // PARAM_PLUS
         value.template destroy< std::vector<Param> > ();
         break;
 
-      case 109: // TYPE_PLUS
+      case 108: // TYPE_PLUS
         value.template destroy< std::vector<Type*> > ();
         break;
 
@@ -1306,13 +1303,13 @@ switch (yytype)
       symbol_type (int tok, Type* v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING || tok == token::KW_VOID);
+        YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING);
       }
 #else
       symbol_type (int tok, const Type*& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING || tok == token::KW_VOID);
+        YY_ASSERT (tok == token::KW_BYTE || tok == token::KW_BOOL || tok == token::KW_INT || tok == token::KW_FLOAT || tok == token::KW_DOUBLE || tok == token::KW_LONG || tok == token::KW_STRING);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2297,21 +2294,6 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_KW_VOID (Type* v)
-      {
-        return symbol_type (token::KW_VOID, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_KW_VOID (const Type*& v)
-      {
-        return symbol_type (token::KW_VOID, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
       make_KW_LET (Position v)
       {
         return symbol_type (token::KW_LET, std::move (v));
@@ -2543,7 +2525,7 @@ switch (yytype)
     // number is the opposite.  If YYTABLE_NINF, syntax error.
     static const unsigned char yytable_[];
 
-    static const short yycheck_[];
+    static const unsigned char yycheck_[];
 
     // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
     // symbol of state STATE-NUM.
@@ -2800,10 +2782,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 240,     ///< Last index in yytable_.
+      yylast_ = 235,     ///< Last index in yytable_.
       yynnts_ = 45,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
-      yyntokens_ = 76  ///< Number of tokens.
+      yyntokens_ = 75  ///< Number of tokens.
     };
 
 
@@ -2855,10 +2837,9 @@ switch (yytype)
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
-      65,    66,    67,    68,    69,    70,    71,    72,    73,    74,
-      75
+      65,    66,    67,    68,    69,    70,    71,    72,    73,    74
     };
-    const int user_token_number_max_ = 330;
+    const int user_token_number_max_ = 329;
 
     if (t <= 0)
       return yyeof_;
@@ -2877,11 +2858,11 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 102: // ARRAY_INIT
+      case 101: // ARRAY_INIT
         value.move< ASTArrayInit* > (std::move (that.value));
         break;
 
-      case 81: // ASSIGNMENT
+      case 80: // ASSIGNMENT
         value.move< ASTAssignment* > (std::move (that.value));
         break;
 
@@ -2898,20 +2879,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (std::move (that.value));
         break;
 
-      case 86: // EXPR
-      case 87: // EXPR1
-      case 88: // EXPR2
-      case 89: // EXPR3
-      case 90: // EXPR4
-      case 91: // EXPR5
-      case 92: // EXPR6
-      case 93: // EXPR7
-      case 94: // EXPR8
-      case 95: // EXPR9
-      case 96: // EXPR10
-      case 97: // EXPR11
-      case 98: // EXPR12
-      case 99: // ATOM
+      case 85: // EXPR
+      case 86: // EXPR1
+      case 87: // EXPR2
+      case 88: // EXPR3
+      case 89: // EXPR4
+      case 90: // EXPR5
+      case 91: // EXPR6
+      case 92: // EXPR7
+      case 93: // EXPR8
+      case 94: // EXPR9
+      case 95: // EXPR10
+      case 96: // EXPR11
+      case 97: // EXPR12
+      case 98: // ATOM
         value.move< ASTExpr* > (std::move (that.value));
         break;
 
@@ -2919,15 +2900,15 @@ switch (yytype)
         value.move< ASTFloatLit* > (std::move (that.value));
         break;
 
-      case 101: // FUNC_CALL
+      case 100: // FUNC_CALL
         value.move< ASTFuncCallExpr* > (std::move (that.value));
         break;
 
-      case 83: // FUNCDECL
+      case 82: // FUNCDECL
         value.move< ASTFuncDecl* > (std::move (that.value));
         break;
 
-      case 100: // IDENTIFIER
+      case 99: // IDENTIFIER
         value.move< ASTIdentifier* > (std::move (that.value));
         break;
 
@@ -2939,15 +2920,15 @@ switch (yytype)
         value.move< ASTLongLit* > (std::move (that.value));
         break;
 
-      case 77: // PROGRAM
+      case 76: // PROGRAM
         value.move< ASTProgram* > (std::move (that.value));
         break;
 
-      case 78: // STMT
-      case 79: // OPEN_STMT
-      case 80: // CLOSED_STMT
-      case 84: // WHILE_STMT
-      case 85: // FOR_STMT
+      case 77: // STMT
+      case 78: // OPEN_STMT
+      case 79: // CLOSED_STMT
+      case 83: // WHILE_STMT
+      case 84: // FOR_STMT
         value.move< ASTStmt* > (std::move (that.value));
         break;
 
@@ -2955,31 +2936,31 @@ switch (yytype)
         value.move< ASTStringLit* > (std::move (that.value));
         break;
 
-      case 82: // VARDECL
+      case 81: // VARDECL
         value.move< ASTVarDecl* > (std::move (that.value));
         break;
 
-      case 108: // OP_ASSIGN
+      case 107: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
-      case 113: // PARAM
+      case 112: // PARAM
         value.move< Param > (std::move (that.value));
         break;
 
       case 38: // "{"
       case 40: // "["
-      case 65: // "let"
-      case 66: // "if"
-      case 67: // "then"
-      case 68: // "else"
-      case 69: // "while"
-      case 70: // "for"
-      case 71: // "do"
-      case 72: // "func"
-      case 73: // "break"
-      case 74: // "continue"
-      case 75: // "return"
+      case 64: // "let"
+      case 65: // "if"
+      case 66: // "then"
+      case 67: // "else"
+      case 68: // "while"
+      case 69: // "for"
+      case 70: // "do"
+      case 71: // "func"
+      case 72: // "break"
+      case 73: // "continue"
+      case 74: // "return"
         value.move< Position > (std::move (that.value));
         break;
 
@@ -2990,8 +2971,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 64: // "void"
-      case 110: // TYPE
+      case 109: // TYPE
         value.move< Type* > (std::move (that.value));
         break;
 
@@ -2999,29 +2979,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (std::move (that.value));
         break;
 
-      case 106: // EXPR_STAR
-      case 107: // EXPR_PLUS
+      case 105: // EXPR_STAR
+      case 106: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (std::move (that.value));
         break;
 
-      case 104: // TL_FUNCDECLS
+      case 103: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (std::move (that.value));
         break;
 
-      case 105: // STMTS
+      case 104: // STMTS
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
         break;
 
-      case 103: // VARDECLS
+      case 102: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
         break;
 
-      case 111: // PARAM_STAR
-      case 112: // PARAM_PLUS
+      case 110: // PARAM_STAR
+      case 111: // PARAM_PLUS
         value.move< std::vector<Param> > (std::move (that.value));
         break;
 
-      case 109: // TYPE_PLUS
+      case 108: // TYPE_PLUS
         value.move< std::vector<Type*> > (std::move (that.value));
         break;
 
@@ -3039,11 +3019,11 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 102: // ARRAY_INIT
+      case 101: // ARRAY_INIT
         value.copy< ASTArrayInit* > (YY_MOVE (that.value));
         break;
 
-      case 81: // ASSIGNMENT
+      case 80: // ASSIGNMENT
         value.copy< ASTAssignment* > (YY_MOVE (that.value));
         break;
 
@@ -3060,20 +3040,20 @@ switch (yytype)
         value.copy< ASTDoubleLit* > (YY_MOVE (that.value));
         break;
 
-      case 86: // EXPR
-      case 87: // EXPR1
-      case 88: // EXPR2
-      case 89: // EXPR3
-      case 90: // EXPR4
-      case 91: // EXPR5
-      case 92: // EXPR6
-      case 93: // EXPR7
-      case 94: // EXPR8
-      case 95: // EXPR9
-      case 96: // EXPR10
-      case 97: // EXPR11
-      case 98: // EXPR12
-      case 99: // ATOM
+      case 85: // EXPR
+      case 86: // EXPR1
+      case 87: // EXPR2
+      case 88: // EXPR3
+      case 89: // EXPR4
+      case 90: // EXPR5
+      case 91: // EXPR6
+      case 92: // EXPR7
+      case 93: // EXPR8
+      case 94: // EXPR9
+      case 95: // EXPR10
+      case 96: // EXPR11
+      case 97: // EXPR12
+      case 98: // ATOM
         value.copy< ASTExpr* > (YY_MOVE (that.value));
         break;
 
@@ -3081,15 +3061,15 @@ switch (yytype)
         value.copy< ASTFloatLit* > (YY_MOVE (that.value));
         break;
 
-      case 101: // FUNC_CALL
+      case 100: // FUNC_CALL
         value.copy< ASTFuncCallExpr* > (YY_MOVE (that.value));
         break;
 
-      case 83: // FUNCDECL
+      case 82: // FUNCDECL
         value.copy< ASTFuncDecl* > (YY_MOVE (that.value));
         break;
 
-      case 100: // IDENTIFIER
+      case 99: // IDENTIFIER
         value.copy< ASTIdentifier* > (YY_MOVE (that.value));
         break;
 
@@ -3101,15 +3081,15 @@ switch (yytype)
         value.copy< ASTLongLit* > (YY_MOVE (that.value));
         break;
 
-      case 77: // PROGRAM
+      case 76: // PROGRAM
         value.copy< ASTProgram* > (YY_MOVE (that.value));
         break;
 
-      case 78: // STMT
-      case 79: // OPEN_STMT
-      case 80: // CLOSED_STMT
-      case 84: // WHILE_STMT
-      case 85: // FOR_STMT
+      case 77: // STMT
+      case 78: // OPEN_STMT
+      case 79: // CLOSED_STMT
+      case 83: // WHILE_STMT
+      case 84: // FOR_STMT
         value.copy< ASTStmt* > (YY_MOVE (that.value));
         break;
 
@@ -3117,31 +3097,31 @@ switch (yytype)
         value.copy< ASTStringLit* > (YY_MOVE (that.value));
         break;
 
-      case 82: // VARDECL
+      case 81: // VARDECL
         value.copy< ASTVarDecl* > (YY_MOVE (that.value));
         break;
 
-      case 108: // OP_ASSIGN
+      case 107: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
-      case 113: // PARAM
+      case 112: // PARAM
         value.copy< Param > (YY_MOVE (that.value));
         break;
 
       case 38: // "{"
       case 40: // "["
-      case 65: // "let"
-      case 66: // "if"
-      case 67: // "then"
-      case 68: // "else"
-      case 69: // "while"
-      case 70: // "for"
-      case 71: // "do"
-      case 72: // "func"
-      case 73: // "break"
-      case 74: // "continue"
-      case 75: // "return"
+      case 64: // "let"
+      case 65: // "if"
+      case 66: // "then"
+      case 67: // "else"
+      case 68: // "while"
+      case 69: // "for"
+      case 70: // "do"
+      case 71: // "func"
+      case 72: // "break"
+      case 73: // "continue"
+      case 74: // "return"
         value.copy< Position > (YY_MOVE (that.value));
         break;
 
@@ -3152,8 +3132,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 64: // "void"
-      case 110: // TYPE
+      case 109: // TYPE
         value.copy< Type* > (YY_MOVE (that.value));
         break;
 
@@ -3161,29 +3140,29 @@ switch (yytype)
         value.copy< std::pair<std::string, Position> > (YY_MOVE (that.value));
         break;
 
-      case 106: // EXPR_STAR
-      case 107: // EXPR_PLUS
+      case 105: // EXPR_STAR
+      case 106: // EXPR_PLUS
         value.copy< std::vector<ASTExpr*> > (YY_MOVE (that.value));
         break;
 
-      case 104: // TL_FUNCDECLS
+      case 103: // TL_FUNCDECLS
         value.copy< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 105: // STMTS
+      case 104: // STMTS
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 103: // VARDECLS
+      case 102: // VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 111: // PARAM_STAR
-      case 112: // PARAM_PLUS
+      case 110: // PARAM_STAR
+      case 111: // PARAM_PLUS
         value.copy< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
-      case 109: // TYPE_PLUS
+      case 108: // TYPE_PLUS
         value.copy< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
@@ -3209,11 +3188,11 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 102: // ARRAY_INIT
+      case 101: // ARRAY_INIT
         value.move< ASTArrayInit* > (YY_MOVE (s.value));
         break;
 
-      case 81: // ASSIGNMENT
+      case 80: // ASSIGNMENT
         value.move< ASTAssignment* > (YY_MOVE (s.value));
         break;
 
@@ -3230,20 +3209,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (YY_MOVE (s.value));
         break;
 
-      case 86: // EXPR
-      case 87: // EXPR1
-      case 88: // EXPR2
-      case 89: // EXPR3
-      case 90: // EXPR4
-      case 91: // EXPR5
-      case 92: // EXPR6
-      case 93: // EXPR7
-      case 94: // EXPR8
-      case 95: // EXPR9
-      case 96: // EXPR10
-      case 97: // EXPR11
-      case 98: // EXPR12
-      case 99: // ATOM
+      case 85: // EXPR
+      case 86: // EXPR1
+      case 87: // EXPR2
+      case 88: // EXPR3
+      case 89: // EXPR4
+      case 90: // EXPR5
+      case 91: // EXPR6
+      case 92: // EXPR7
+      case 93: // EXPR8
+      case 94: // EXPR9
+      case 95: // EXPR10
+      case 96: // EXPR11
+      case 97: // EXPR12
+      case 98: // ATOM
         value.move< ASTExpr* > (YY_MOVE (s.value));
         break;
 
@@ -3251,15 +3230,15 @@ switch (yytype)
         value.move< ASTFloatLit* > (YY_MOVE (s.value));
         break;
 
-      case 101: // FUNC_CALL
+      case 100: // FUNC_CALL
         value.move< ASTFuncCallExpr* > (YY_MOVE (s.value));
         break;
 
-      case 83: // FUNCDECL
+      case 82: // FUNCDECL
         value.move< ASTFuncDecl* > (YY_MOVE (s.value));
         break;
 
-      case 100: // IDENTIFIER
+      case 99: // IDENTIFIER
         value.move< ASTIdentifier* > (YY_MOVE (s.value));
         break;
 
@@ -3271,15 +3250,15 @@ switch (yytype)
         value.move< ASTLongLit* > (YY_MOVE (s.value));
         break;
 
-      case 77: // PROGRAM
+      case 76: // PROGRAM
         value.move< ASTProgram* > (YY_MOVE (s.value));
         break;
 
-      case 78: // STMT
-      case 79: // OPEN_STMT
-      case 80: // CLOSED_STMT
-      case 84: // WHILE_STMT
-      case 85: // FOR_STMT
+      case 77: // STMT
+      case 78: // OPEN_STMT
+      case 79: // CLOSED_STMT
+      case 83: // WHILE_STMT
+      case 84: // FOR_STMT
         value.move< ASTStmt* > (YY_MOVE (s.value));
         break;
 
@@ -3287,31 +3266,31 @@ switch (yytype)
         value.move< ASTStringLit* > (YY_MOVE (s.value));
         break;
 
-      case 82: // VARDECL
+      case 81: // VARDECL
         value.move< ASTVarDecl* > (YY_MOVE (s.value));
         break;
 
-      case 108: // OP_ASSIGN
+      case 107: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
-      case 113: // PARAM
+      case 112: // PARAM
         value.move< Param > (YY_MOVE (s.value));
         break;
 
       case 38: // "{"
       case 40: // "["
-      case 65: // "let"
-      case 66: // "if"
-      case 67: // "then"
-      case 68: // "else"
-      case 69: // "while"
-      case 70: // "for"
-      case 71: // "do"
-      case 72: // "func"
-      case 73: // "break"
-      case 74: // "continue"
-      case 75: // "return"
+      case 64: // "let"
+      case 65: // "if"
+      case 66: // "then"
+      case 67: // "else"
+      case 68: // "while"
+      case 69: // "for"
+      case 70: // "do"
+      case 71: // "func"
+      case 72: // "break"
+      case 73: // "continue"
+      case 74: // "return"
         value.move< Position > (YY_MOVE (s.value));
         break;
 
@@ -3322,8 +3301,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 64: // "void"
-      case 110: // TYPE
+      case 109: // TYPE
         value.move< Type* > (YY_MOVE (s.value));
         break;
 
@@ -3331,29 +3309,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (YY_MOVE (s.value));
         break;
 
-      case 106: // EXPR_STAR
-      case 107: // EXPR_PLUS
+      case 105: // EXPR_STAR
+      case 106: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (YY_MOVE (s.value));
         break;
 
-      case 104: // TL_FUNCDECLS
+      case 103: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 105: // STMTS
+      case 104: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
         break;
 
-      case 103: // VARDECLS
+      case 102: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 111: // PARAM_STAR
-      case 112: // PARAM_PLUS
+      case 110: // PARAM_STAR
+      case 111: // PARAM_PLUS
         value.move< std::vector<Param> > (YY_MOVE (s.value));
         break;
 
-      case 109: // TYPE_PLUS
+      case 108: // TYPE_PLUS
         value.move< std::vector<Type*> > (YY_MOVE (s.value));
         break;
 
@@ -3412,7 +3390,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 3416 "ramc_bison_parser.hpp"
+#line 3394 "ramc_bison_parser.hpp"
 
 
 

@@ -22,7 +22,6 @@ namespace ramvm {
             case TokenType::FLOAT_LIT: str += "Float Literal: " + value; break;
             case TokenType::DOUBLE_LIT: str += "Double Literal: " + value; break;
             case TokenType::LONG_LIT: str += "Long Literal: " + value; break;
-            case TokenType::REGISTER: str += "Register: " + value; break;
             case TokenType::LABEL: str += "Label: " + value; break;
 
             case TokenType::SINGLE_TYPE: str += "Single Type: " + value; break;
@@ -40,7 +39,10 @@ namespace ramvm {
             case TokenType::PLUS: str += "+"; break;
             case TokenType::MINUS: str += "-"; break;
             
-            case TokenType::KW_SP: str += "SP"; break;
+            case TokenType::REG_SP: str += "$SP"; break;
+            case TokenType::REG_FP: str += "$FP"; break;
+            case TokenType::REG_GP: str += "$GP"; break;
+
             case TokenType::KW_HALT: str += "HALT"; break;
             case TokenType::KW_MOV: str += "MOV"; break;
             case TokenType::KW_RET: str += "RET"; break;

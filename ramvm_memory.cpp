@@ -111,7 +111,7 @@ namespace ramvm {
 					if (endAddr >= itBlock->first)
 						break;
 				}
-				else if (_start >= itBlock->first)
+				else if (_start >= itBlock->first && _start < itBlock->first + itBlock->second.size)
 				{
 					if (itBlock->second.free)
 						return ResultType::ERR_MEMREAD;
@@ -164,7 +164,7 @@ namespace ramvm {
 					if (endAddr >= itBlock->first)
 						break;
 				}
-				else if (_start >= itBlock->first)
+				else if (_start >= itBlock->first && _start < itBlock->first + itBlock->second.size)
 				{
 					if (itBlock->second.free)
 						return ResultType::ERR_MEMWRITE;
@@ -252,7 +252,7 @@ namespace ramvm {
 		else { return WriteBuffer(_addr, _value.GetSize(), _value.Bytes(), _info); }
 	}
 
-	void Memory::PrintAllocatedBlocks()
+	void Memory::PrintAllocatedBlocks(int _bytesPerRow)
 	{
 		int startAddr = 0;
 
@@ -262,8 +262,17 @@ namespace ramvm {
 
 			if (!block.free)
 			{
+				std::cout << "Address " << startAddr << ":";
+
 				for (int i = 0; i < block.size; i++)
-					std::cout << startAddr + i << ": " << std::to_string(block.data[i]) << std::endl;
+				{
+					if (i % _bytesPerRow == 0)
+						std::cout << std::endl;
+					
+					std::cout << ToHexString(block.data[i]) << "  ";
+				}
+
+				std::cout << std::endl;
 			}
 
 			startAddr += block.size;

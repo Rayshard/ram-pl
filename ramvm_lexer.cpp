@@ -27,7 +27,7 @@ namespace ramvm {
 	}
 
 	const std::unordered_map<std::string, TokenType> KEYWORDS = {
-		{ "SP", TokenType::KW_SP }, { "HALT", TokenType::KW_HALT }, { "MOV", TokenType::KW_MOV },
+		{ "HALT", TokenType::KW_HALT }, { "MOV", TokenType::KW_MOV },
 		{ "RET", TokenType::KW_RET}, { "MALLOC", TokenType::KW_MALLOC }, { "FREE", TokenType::KW_FREE },
 		{ "PUSH", TokenType::KW_PUSH }, { "POP", TokenType::KW_POP }, { "PRINT", TokenType::KW_PRINT },
 		{ "JUMP", TokenType::KW_JUMP }, { "JUMPT", TokenType::KW_JUMPT }, { "JUMPF", TokenType::KW_JUMPF },
@@ -223,27 +223,29 @@ namespace ramvm {
 				else { return LexerResult::GenError(LexerResultType::INVAILD_TYPE_POSTFIX, "<" + typeConcat + ">", tokStartPos); }
 			}
 			case '$': {
-				std::string index;
+				std::string reg;
 
-				while (isdigit((char)PeekNextChar()))
-					index += (char)ReadNextChar();
+				while (isalpha(PeekNextChar()))
+					reg += (char)ReadNextChar();
 
-				if (index.empty()) { return LexerResult::GenError(LexerResultType::INVALID_REGISTER, "$" + std::string(1, (char)PeekNextChar()), tokStartPos); }
-				else { return LexerResult::GenSuccess(Token(TokenType::REGISTER, tokStartPos, index)); }
+				if (reg == "SP") { return LexerResult::GenSuccess(Token(TokenType::REG_SP, tokStartPos, "")); }
+				else if (reg == "FP") { return LexerResult::GenSuccess(Token(TokenType::REG_FP, tokStartPos, "")); }
+				else if (reg == "GP") { return LexerResult::GenSuccess(Token(TokenType::REG_GP, tokStartPos, "")); }
+				else { return LexerResult::GenError(LexerResultType::INVALID_REGISTER, "$" + std::string(1, (char)PeekNextChar()), tokStartPos); }
 			}
 			case '0': {
 				if ((char)PeekNextChar() == 'x')
 				{
 					ReadNextChar();
 
-					if (isxdigit((char)PeekNextChar())) { return LexHexLiteral(this, (char)ReadNextChar(), tokStartPos); }
+					if (isxdigit(PeekNextChar())) { return LexHexLiteral(this, (char)ReadNextChar(), tokStartPos); }
 					else { return LexerResult::GenExpectationError("hex digit", std::string(1, (char)PeekNextChar()), tokStartPos); }
 				}
 			} break;
 		}
 
 		if (isdigit(firstChar)) { return LexNumericLiteral(this, firstChar, tokStartPos); }
-		else if (isalpha(firstChar) || firstChar == '_') { return LexKeyword(this, firstChar, tokStartPos); }
+		else if (isalpha(firstChar)) { return LexKeyword(this, firstChar, tokStartPos); }
 		else { return LexerResult::GenError(LexerResultType::UNKNOWN_TOKEN, std::string(1, firstChar), position); }
 	}
 

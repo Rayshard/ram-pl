@@ -2,19 +2,26 @@ let k : long = 0l;
 let t : float = 1234.7809;
 let p : byte = 4b;
 
-func ArrayTest: () = {
-	let array: [int] = [4, 5, 9, 14];
-}
-
-func Factorial: (i: int, acc: long) -> long = {
+`func Factorial: (i: int, acc: long) -> long = {
 	if i == 0 then return acc
 	else return Factorial(i - 1, acc * i);
-}
+}`
 
 func Main: () = {
-	k = Factorial(5, 1l);
+	let myVar : int = 90;
 
-	for i: byte = 0b: while i < 5 do {
+	if myVar > 0 then {
+		myVar += 5;
+
+		let other : int = 19;
+	};
+
+	let ol = 10;
+	k += ol;
+
+	`for i: byte = 0b: while i < 5 do {
 		p += i;
 	} then i += 1b;
+
+	let _ = ArrayTest();`
 }

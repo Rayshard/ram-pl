@@ -401,7 +401,6 @@ namespace ramvm { namespace bison {
       char dummy11[sizeof (float)];
 
       // "int"
-      // "reg"
       char dummy12[sizeof (int)];
 
       // "long"
@@ -470,42 +469,43 @@ namespace ramvm { namespace bison {
         TOK_SINGLE_TYPE = 274,
         TOK_DOUBLE_TYPE = 275,
         TOK_TRIPLE_TYPE = 276,
-        TOK_REG = 277,
-        TOK_LABEL = 278,
-        TOK_SP = 279,
-        TOK_HALT = 280,
-        TOK_MALLOC = 281,
-        TOK_FREE = 282,
-        TOK_CALL = 283,
-        TOK_RET = 284,
-        TOK_COMPARE = 285,
-        TOK_PRINT = 286,
-        TOK_JUMP = 287,
-        TOK_JUMPT = 288,
-        TOK_JUMPF = 289,
-        TOK_MOV = 290,
-        TOK_POP = 291,
-        TOK_STORE = 292,
-        TOK_PUSH = 293,
-        TOK_ADD = 294,
-        TOK_SUB = 295,
-        TOK_MUL = 296,
-        TOK_DIV = 297,
-        TOK_MOD = 298,
-        TOK_POW = 299,
-        TOK_LSHIFT = 300,
-        TOK_RSHIFT = 301,
-        TOK_AND = 302,
-        TOK_OR = 303,
-        TOK_XOR = 304,
-        TOK_LT = 305,
-        TOK_GT = 306,
-        TOK_LTEQ = 307,
-        TOK_GTEQ = 308,
-        TOK_EQ = 309,
-        TOK_NEQ = 310,
-        TOK_NEG = 311,
-        TOK_NOT = 312
+        TOK_LABEL = 277,
+        TOK_REG_SP = 278,
+        TOK_REG_FP = 279,
+        TOK_REG_GP = 280,
+        TOK_HALT = 281,
+        TOK_MALLOC = 282,
+        TOK_FREE = 283,
+        TOK_CALL = 284,
+        TOK_RET = 285,
+        TOK_COMPARE = 286,
+        TOK_PRINT = 287,
+        TOK_JUMP = 288,
+        TOK_JUMPT = 289,
+        TOK_JUMPF = 290,
+        TOK_MOV = 291,
+        TOK_POP = 292,
+        TOK_STORE = 293,
+        TOK_PUSH = 294,
+        TOK_ADD = 295,
+        TOK_SUB = 296,
+        TOK_MUL = 297,
+        TOK_DIV = 298,
+        TOK_MOD = 299,
+        TOK_POW = 300,
+        TOK_LSHIFT = 301,
+        TOK_RSHIFT = 302,
+        TOK_AND = 303,
+        TOK_OR = 304,
+        TOK_XOR = 305,
+        TOK_LT = 306,
+        TOK_GT = 307,
+        TOK_LTEQ = 308,
+        TOK_GTEQ = 309,
+        TOK_EQ = 310,
+        TOK_NEQ = 311,
+        TOK_NEG = 312,
+        TOK_NOT = 313
       };
     };
 
@@ -744,11 +744,11 @@ namespace ramvm { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 62: // ARGUMENT
+      case 63: // ARGUMENT
         value.template destroy< Argument* > ();
         break;
 
-      case 63: // BINOP
+      case 64: // BINOP
         value.template destroy< Binop > ();
         break;
 
@@ -768,11 +768,11 @@ switch (yytype)
         value.template destroy< DataValue > ();
         break;
 
-      case 61: // STMT
+      case 62: // STMT
         value.template destroy< Instruction* > ();
         break;
 
-      case 64: // UNOP
+      case 65: // UNOP
         value.template destroy< Unop > ();
         break;
 
@@ -789,7 +789,6 @@ switch (yytype)
         break;
 
       case 5: // "int"
-      case 22: // "reg"
         value.template destroy< int > ();
         break;
 
@@ -797,11 +796,11 @@ switch (yytype)
         value.template destroy< rLong > ();
         break;
 
-      case 23: // "LABEL"
+      case 22: // "LABEL"
         value.template destroy< std::string > ();
         break;
 
-      case 60: // ARGUMENTS
+      case 61: // ARGUMENTS
         value.template destroy< std::vector<Argument*> > ();
         break;
 
@@ -878,13 +877,13 @@ switch (yytype)
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_REG_SP || tok == token::TOK_REG_FP || tok == token::TOK_REG_GP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
       }
 #else
       symbol_type (int tok)
         : super_type(token_type (tok))
       {
-        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_SP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
+        YY_ASSERT (tok == token::TOK_END_OF_FILE || tok == token::TOK_LSBRACKET || tok == token::TOK_RSBRACKET || tok == token::TOK_LCBRACKET || tok == token::TOK_RCBRACKET || tok == token::TOK_LPAREN || tok == token::TOK_RPAREN || tok == token::TOK_SEMICOLON || tok == token::TOK_COMMA || tok == token::TOK_PLUS || tok == token::TOK_MINUS || tok == token::TOK_REG_SP || tok == token::TOK_REG_FP || tok == token::TOK_REG_GP || tok == token::TOK_HALT || tok == token::TOK_MALLOC || tok == token::TOK_FREE || tok == token::TOK_CALL || tok == token::TOK_RET || tok == token::TOK_COMPARE || tok == token::TOK_PRINT || tok == token::TOK_JUMP || tok == token::TOK_JUMPT || tok == token::TOK_JUMPF || tok == token::TOK_MOV || tok == token::TOK_POP || tok == token::TOK_STORE || tok == token::TOK_PUSH || tok == token::TOK_ADD || tok == token::TOK_SUB || tok == token::TOK_MUL || tok == token::TOK_DIV || tok == token::TOK_MOD || tok == token::TOK_POW || tok == token::TOK_LSHIFT || tok == token::TOK_RSHIFT || tok == token::TOK_AND || tok == token::TOK_OR || tok == token::TOK_XOR || tok == token::TOK_LT || tok == token::TOK_GT || tok == token::TOK_LTEQ || tok == token::TOK_GTEQ || tok == token::TOK_EQ || tok == token::TOK_NEQ || tok == token::TOK_NEG || tok == token::TOK_NOT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -982,13 +981,13 @@ switch (yytype)
       symbol_type (int tok, int v)
         : super_type(token_type (tok), std::move (v))
       {
-        YY_ASSERT (tok == token::TOK_INT_LIT || tok == token::TOK_REG);
+        YY_ASSERT (tok == token::TOK_INT_LIT);
       }
 #else
       symbol_type (int tok, const int& v)
         : super_type(token_type (tok), v)
       {
-        YY_ASSERT (tok == token::TOK_INT_LIT || tok == token::TOK_REG);
+        YY_ASSERT (tok == token::TOK_INT_LIT);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1356,21 +1355,6 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_REG (int v)
-      {
-        return symbol_type (token::TOK_REG, std::move (v));
-      }
-#else
-      static
-      symbol_type
-      make_TOK_REG (const int& v)
-      {
-        return symbol_type (token::TOK_REG, v);
-      }
-#endif
-#if 201103L <= YY_CPLUSPLUS
-      static
-      symbol_type
       make_TOK_LABEL (std::string v)
       {
         return symbol_type (token::TOK_LABEL, std::move (v));
@@ -1386,16 +1370,46 @@ switch (yytype)
 #if 201103L <= YY_CPLUSPLUS
       static
       symbol_type
-      make_TOK_SP ()
+      make_TOK_REG_SP ()
       {
-        return symbol_type (token::TOK_SP);
+        return symbol_type (token::TOK_REG_SP);
       }
 #else
       static
       symbol_type
-      make_TOK_SP ()
+      make_TOK_REG_SP ()
       {
-        return symbol_type (token::TOK_SP);
+        return symbol_type (token::TOK_REG_SP);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_REG_FP ()
+      {
+        return symbol_type (token::TOK_REG_FP);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_REG_FP ()
+      {
+        return symbol_type (token::TOK_REG_FP);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_TOK_REG_GP ()
+      {
+        return symbol_type (token::TOK_REG_GP);
+      }
+#else
+      static
+      symbol_type
+      make_TOK_REG_GP ()
+      {
+        return symbol_type (token::TOK_REG_GP);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -2219,10 +2233,10 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 147,     ///< Last index in yytable_.
+      yylast_ = 142,     ///< Last index in yytable_.
       yynnts_ = 8,  ///< Number of nonterminal symbols.
       yyfinal_ = 40, ///< Termination state number.
-      yyntokens_ = 58  ///< Number of tokens.
+      yyntokens_ = 59  ///< Number of tokens.
     };
 
 
@@ -2274,9 +2288,9 @@ switch (yytype)
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
-      55,    56,    57
+      55,    56,    57,    58
     };
-    const int user_token_number_max_ = 312;
+    const int user_token_number_max_ = 313;
 
     if (t <= 0)
       return yyeof_;
@@ -2295,11 +2309,11 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 62: // ARGUMENT
+      case 63: // ARGUMENT
         value.move< Argument* > (std::move (that.value));
         break;
 
-      case 63: // BINOP
+      case 64: // BINOP
         value.move< Binop > (std::move (that.value));
         break;
 
@@ -2319,11 +2333,11 @@ switch (yytype)
         value.move< DataValue > (std::move (that.value));
         break;
 
-      case 61: // STMT
+      case 62: // STMT
         value.move< Instruction* > (std::move (that.value));
         break;
 
-      case 64: // UNOP
+      case 65: // UNOP
         value.move< Unop > (std::move (that.value));
         break;
 
@@ -2340,7 +2354,6 @@ switch (yytype)
         break;
 
       case 5: // "int"
-      case 22: // "reg"
         value.move< int > (std::move (that.value));
         break;
 
@@ -2348,11 +2361,11 @@ switch (yytype)
         value.move< rLong > (std::move (that.value));
         break;
 
-      case 23: // "LABEL"
+      case 22: // "LABEL"
         value.move< std::string > (std::move (that.value));
         break;
 
-      case 60: // ARGUMENTS
+      case 61: // ARGUMENTS
         value.move< std::vector<Argument*> > (std::move (that.value));
         break;
 
@@ -2370,11 +2383,11 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 62: // ARGUMENT
+      case 63: // ARGUMENT
         value.copy< Argument* > (YY_MOVE (that.value));
         break;
 
-      case 63: // BINOP
+      case 64: // BINOP
         value.copy< Binop > (YY_MOVE (that.value));
         break;
 
@@ -2394,11 +2407,11 @@ switch (yytype)
         value.copy< DataValue > (YY_MOVE (that.value));
         break;
 
-      case 61: // STMT
+      case 62: // STMT
         value.copy< Instruction* > (YY_MOVE (that.value));
         break;
 
-      case 64: // UNOP
+      case 65: // UNOP
         value.copy< Unop > (YY_MOVE (that.value));
         break;
 
@@ -2415,7 +2428,6 @@ switch (yytype)
         break;
 
       case 5: // "int"
-      case 22: // "reg"
         value.copy< int > (YY_MOVE (that.value));
         break;
 
@@ -2423,11 +2435,11 @@ switch (yytype)
         value.copy< rLong > (YY_MOVE (that.value));
         break;
 
-      case 23: // "LABEL"
+      case 22: // "LABEL"
         value.copy< std::string > (YY_MOVE (that.value));
         break;
 
-      case 60: // ARGUMENTS
+      case 61: // ARGUMENTS
         value.copy< std::vector<Argument*> > (YY_MOVE (that.value));
         break;
 
@@ -2453,11 +2465,11 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 62: // ARGUMENT
+      case 63: // ARGUMENT
         value.move< Argument* > (YY_MOVE (s.value));
         break;
 
-      case 63: // BINOP
+      case 64: // BINOP
         value.move< Binop > (YY_MOVE (s.value));
         break;
 
@@ -2477,11 +2489,11 @@ switch (yytype)
         value.move< DataValue > (YY_MOVE (s.value));
         break;
 
-      case 61: // STMT
+      case 62: // STMT
         value.move< Instruction* > (YY_MOVE (s.value));
         break;
 
-      case 64: // UNOP
+      case 65: // UNOP
         value.move< Unop > (YY_MOVE (s.value));
         break;
 
@@ -2498,7 +2510,6 @@ switch (yytype)
         break;
 
       case 5: // "int"
-      case 22: // "reg"
         value.move< int > (YY_MOVE (s.value));
         break;
 
@@ -2506,11 +2517,11 @@ switch (yytype)
         value.move< rLong > (YY_MOVE (s.value));
         break;
 
-      case 23: // "LABEL"
+      case 22: // "LABEL"
         value.move< std::string > (YY_MOVE (s.value));
         break;
 
-      case 60: // ARGUMENTS
+      case 61: // ARGUMENTS
         value.move< std::vector<Argument*> > (YY_MOVE (s.value));
         break;
 
@@ -2569,7 +2580,7 @@ switch (yytype)
 
 #line 8 "ramvm_grammar.yy"
 } } // ramvm::bison
-#line 2573 "ramvm_bison_parser.hpp"
+#line 2584 "ramvm_bison_parser.hpp"
 
 
 

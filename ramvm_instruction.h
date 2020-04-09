@@ -53,7 +53,7 @@ namespace ramvm {
 		InstrMove(DataType _dataType, Argument* _src, Argument* _dest);
 		~InstrMove();
 
-		std::string ToString() override { return "MOV<" + std::string(1, DataTypeToChar(dataType)) + "> " + src->ToString() + " " + dest->ToString(); }
+		std::string ToString() override { return "MOV<" + std::string(1, DataTypeToChar(dataType)) + ">(" + src->ToString() + ", " + dest->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -93,12 +93,12 @@ namespace ramvm {
 #pragma region Call
 	struct InstrCall : Instruction {
 		std::string label;
-		Argument* regCnt, * argsByteLength; //argsByteLength: The amount of bytes to push onto the stack for the new execution frame
+		Argument* argsByteLength; //argsByteLength: The amount of bytes to push onto the stack for the new execution frame
 
-		InstrCall(std::string _label, Argument* _regCnt, Argument* _argsByteLen);
+		InstrCall(std::string _label, Argument* _argsByteLen);
 		~InstrCall();
 
-		std::string ToString() override { return "CALL %" + label + " " + regCnt->ToString() + " " + argsByteLength->ToString(); }
+		std::string ToString() override;
 	};
 #pragma endregion
 
@@ -122,7 +122,7 @@ namespace ramvm {
 		InstrCompare(Argument* _src1, Argument* _src2, Argument* _len, Argument* _dest);
 		~InstrCompare();
 
-		std::string ToString() override { return "COMPARE " + src1->ToString() + " " + src2->ToString() + " " + length->ToString() + " " + dest->ToString(); }
+		std::string ToString() override { return "COMPARE(" + src1->ToString() + ", " + src2->ToString() + ", " + length->ToString() + ", " + dest->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -133,7 +133,7 @@ namespace ramvm {
 		InstrReturn(Argument* _amt);
 		~InstrReturn();
 
-		std::string ToString() override { return "RET " + amt->ToString(); }
+		std::string ToString() override { return "RET(" + amt->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -143,7 +143,7 @@ namespace ramvm {
 
 		InstrJump(std::string _label);
 
-		std::string ToString() override { return "JUMP %" + label; }
+		std::string ToString() override { return "JUMP(%" + label + ")"; }
 	};
 #pragma endregion
 
@@ -156,7 +156,7 @@ namespace ramvm {
 		InstrCJump(std::string _label, Argument* _cond, bool _jumpOnFalse);
 		~InstrCJump();
 
-		std::string ToString() override { return (jumpOnFalse ? "JUMPF %" : "JUMPT %") + label + " " + cond->ToString(); }
+		std::string ToString() override { return (jumpOnFalse ? "JUMPF(%" : "JUMPT(%") + label + ", " + cond->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -167,7 +167,7 @@ namespace ramvm {
 		InstrPrint(Argument* _start, Argument* _len);
 		~InstrPrint();
 
-		std::string ToString() override { return "PRINT " + start->ToString() + " " + length->ToString(); }
+		std::string ToString() override { return "PRINT(" + start->ToString() + ", " + length->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -178,7 +178,7 @@ namespace ramvm {
 		InstrMalloc(Argument* _size, Argument* _dest);
 		~InstrMalloc();
 
-		std::string ToString() override { return "MALLOC " + size->ToString() + " " + dest->ToString(); }
+		std::string ToString() override { return "MALLOC(" + size->ToString() + ", " + dest->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -189,7 +189,7 @@ namespace ramvm {
 		InstrFree(Argument* _addr);
 		~InstrFree();
 
-		std::string ToString() override { return "FREE " + addr->ToString(); }
+		std::string ToString() override { return "FREE(" + addr->ToString() + ")"; }
 	};
 #pragma endregion
 
@@ -214,7 +214,7 @@ namespace ramvm {
 		~InstrPop();
 		bool IsSinglePop();
 
-		std::string ToString() override { return "POP<" + std::string(1, DataTypeToChar(GetDataType())) + "> " + amt->ToString(); }
+		std::string ToString() override { return "POP<" + std::string(1, DataTypeToChar(GetDataType())) + ">(" + amt->ToString() + ")"; }
 
 		constexpr DataType GetDataType()
 		{

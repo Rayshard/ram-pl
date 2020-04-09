@@ -3,44 +3,12 @@
 #include "ramc_typesystem.h"
 
 namespace ramc {
-	void Environment::SetMaxNumVarRegNeeded(int _val)
-	{
-		if (_val > numRegNeeded)
-			numRegNeeded = _val;
+	int Environment::varGPOffset = 0;
 
-		if (parent)
-		{
-			auto search = parent->subEnvs.find(this);
-			if (search->second)
-				parent->SetMaxNumVarRegNeeded(_val);
-		}
-	}
-
-	Environment::Environment(Environment* _parent, bool _incrParentRegCnt)
+	Environment::Environment(Environment* _parent)
 	{
 		parent = _parent;
-		nextGlobalStackPos = 0;
-
-		if (parent != 0)
-		{
-			numRegNeeded = _parent->numRegNeeded;
-
-			if (_incrParentRegCnt)
-			{
-				nextRegIdx = parent->nextRegIdx;
-				parent->subEnvs.insert_or_assign(this, true);
-			}
-			else
-			{
-				nextRegIdx = 0;
-				parent->subEnvs.insert_or_assign(this, false);
-			}
-		}
-		else
-		{
-			nextRegIdx = 0;
-			numRegNeeded = 0;
-		}
+		varFPOffset = parent ? parent->varFPOffset : 0;
 	}
 
 	Environment::~Environment()
@@ -55,7 +23,7 @@ namespace ramc {
 		}
 	}
 
-	TypeResult Environment::AddVariable(std::string _id, Type* _type, Argument* _source, Position _exePos)
+	TypeResult Environment::AddVariable(std::string _id, Type* _type, Argument* _src, Position _exePos)
 	{
 		auto search = variables.find(_id);
 		if (search != variables.end()) { return TypeResult::GenRedefinition(_id, _exePos); }
@@ -63,10 +31,8 @@ namespace ramc {
 		{
 			VarInfo info;
 			info.type = _type->GetCopy();
-			info.source = _source;
-
-			SetMaxNumVarRegNeeded(nextRegIdx);
-
+			info.source = _src->GetCopy();
+		
 			variables.insert_or_assign(_id, info);
 			return TypeResult::GenSuccess(nullptr);
 		}
@@ -91,10 +57,10 @@ namespace ramc {
 		else { return TypeResult::GenSuccess(search->second.type->GetCopy()); }
 	}
 
-	Argument* Environment::GetVarSource(std::string _id)
+	Argument* Environment::GetVariableSource(std::string _id)
 	{
 		auto search = variables.find(_id);
-		if (search == variables.end()) { return parent ? parent->GetVarSource(_id) : nullptr; }
+		if (search == variables.end()) { return parent ? parent->GetVariableSource(_id) : nullptr; }
 		else { return search->second.source; }
 	}
 
@@ -124,10 +90,20 @@ namespace ramc {
 		if (search == functions.end()) { return parent ? parent->GetFunctionRetType(_id, _paramsType, _execPos) : TypeResult::GenFuncIDParamsTypePairNotFound(_id, _paramsType, _execPos); }
 		else { return TypeResult::GenSuccess(((FuncType*)search->second.type)->GetRetType()->GetCopy()); }
 	}
-	
-	std::string Environment::GenFuncLabel(std::string _name, Type* _paramsType)
+
+	int Environment::GetNextVarFPOffset(Type* _varType)
 	{
-		std::string postfix = StrReplace(_paramsType->ToString(0), "(,)", '_');
-		return "%FUNC_" + _name + "_" + postfix;
+		int offset = varFPOffset;
+		varFPOffset += _varType->GetByteSize();
+		return  offset;
 	}
+
+	int Environment::GetNextVarGPOffset(Type* _varType)
+	{
+		int offset = varGPOffset;
+		varGPOffset += _varType->GetByteSize();
+		return  offset;
+	}
+
+	std::string Environment::GenFuncLabel(std::string _name, Type* _paramsType) { return "FUNC_" + _name + "_" + StrReplace(_paramsType->ToString(0), "(,)", '_'); }
 }

@@ -3,11 +3,14 @@
 - in the instruction constructors, assert that their arguments are of the correct type
 - in the argument constructors, assert that their arguments are of the correct type
 
+-Do we need to pass the environment to the GenerateCode method?
+-Delete ResultType from ramvm
+-Create PrimitiveType and migrate them into that
 -start github documentation
--command line arguments
 -arrays/strings
 -structs
 -COMpiler implement ability to have hex literals
+-command line arguments
 
 Optimizations:
 	VM:

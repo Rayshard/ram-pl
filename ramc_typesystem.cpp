@@ -17,7 +17,6 @@ namespace ramc {
 			case TypeSystemType::BOOL: return "BOOL";
 			case TypeSystemType::DOUBLE: return "DOUBLE";
 			case TypeSystemType::LONG: return "LONG";
-			case TypeSystemType::VOID: return "VOID";
 			case TypeSystemType::UNIT: return "UNIT";
 			default: return "Type::ToString - Type not handled!";
 		}
@@ -34,7 +33,6 @@ namespace ramc {
 			case TypeSystemType::DOUBLE: return DOUBLE_SIZE;
 			case TypeSystemType::LONG: return LONG_SIZE;
 			case TypeSystemType::STRING: throw std::runtime_error("Type::GetByteSize - String not handled!");
-			case TypeSystemType::VOID: return 0;
 			case TypeSystemType::UNIT: return 0;
 			default: throw std::runtime_error("Type::GetByteSize - TypeSystemType not handled!");
 		}
@@ -50,10 +48,9 @@ namespace ramc {
 			case TypeSystemType::BOOL: return BOOL();
 			case TypeSystemType::DOUBLE: return DOUBLE();
 			case TypeSystemType::LONG: return LONG();
-			case TypeSystemType::STRING: throw std::runtime_error("Type::GetCopy - String not handled!");
-			case TypeSystemType::VOID: return VOID();
+			case TypeSystemType::STRING: ASSERT_MSG(false, "Type::GetCopy - String not handled!");
 			case TypeSystemType::UNIT: return UNIT();
-			default: throw std::runtime_error("Type::GetCopy - TypeSystemType not handled!");
+			default: ASSERT_MSG(false, "Type::GetCopy - TypeSystemType not handled!");
 		}
 	}
 
@@ -164,19 +161,22 @@ namespace ramc {
 #pragma endregion
 
 #pragma region ArrayType
-	ArrayType::ArrayType(Type* _storageType)
-		: Type(TypeSystemType::ARRAY), storageType(_storageType) { }
+	ArrayType::ArrayType(Type* _storageType, int _numElems)
+		: Type(TypeSystemType::ARRAY), storageType(_storageType), numElems(_numElems) { }
 
 	ArrayType::~ArrayType() { delete storageType; }
-
-	std::string ArrayType::ToString(int _indentLvl) { return CreateIndent(_indentLvl) + "[" + storageType->ToString(0) + "]"; }
-	int ArrayType::GetByteSize() { return POINTER_SIZE; }
-	Type* ArrayType::GetCopy() { return new ArrayType(storageType->GetCopy()); }
+	std::string ArrayType::ToString(int _indentLvl) { return CreateIndent(_indentLvl) + storageType->ToString(0) + "[" + std::to_string(numElems) + "]"; }
+	int ArrayType::GetByteSize() { return storageType->GetByteSize() * numElems; }
+	Type* ArrayType::GetCopy() { return new ArrayType(storageType->GetCopy(), numElems); }
 
 	bool ArrayType::Matches(Type* _t)
 	{
 		if (_t->GetType() != TypeSystemType::ARRAY) { return false; }
-		else { return storageType->Matches(((ArrayType*)_t)->storageType); }
+		else
+		{
+			ArrayType* other = (ArrayType*)_t;
+			return storageType->Matches(other->storageType) && numElems == other->numElems;
+		}
 	}
 
 #pragma endregion

@@ -10,7 +10,7 @@ namespace ramc {
 	typedef std::vector<Type*> TypeList;
 
 	enum class TypeSystemType {
-		VOID, BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING,
+		BOOL, BYTE, INT, FLOAT, DOUBLE, LONG, STRING,
 		TUPLE, FUNC, UNIT, ARRAY
 	};
 
@@ -20,8 +20,6 @@ namespace ramc {
 	protected:
 		Type(TypeSystemType _type) : type(_type) { }
 	public:
-		static const int POINTER_SIZE = INT_SIZE;
-
 		static Type* BOOL() { return new Type(TypeSystemType::BOOL); }
 		static Type* BYTE() { return new Type(TypeSystemType::BYTE); }
 		static Type* INT() { return new Type(TypeSystemType::INT); }
@@ -29,7 +27,6 @@ namespace ramc {
 		static Type* DOUBLE() { return new Type(TypeSystemType::DOUBLE); }
 		static Type* LONG() { return new Type(TypeSystemType::LONG); }
 		static Type* STRING() { return new Type(TypeSystemType::STRING); }
-		static Type* VOID() { return new Type(TypeSystemType::VOID); }
 		static Type* UNIT() { return new Type(TypeSystemType::UNIT); }
 
 		virtual std::string ToString(int _indentLvl);
@@ -77,9 +74,12 @@ namespace ramc {
 #pragma region ArrayType
 	class ArrayType : public Type {
 		Type* storageType;
+		int numElems;
 	public:
-		ArrayType(Type* _storageType);
+		ArrayType(Type* _storageType, int _numElems);
 		~ArrayType();
+
+		Type* GetStorageType() { return storageType; }
 
 		std::string ToString(int _indentLvl) override;
 		int GetByteSize() override;

@@ -1,23 +1,14 @@
 #pragma once
 
 namespace ramvm {
-	struct Argument;
-
 	class ExecutionFrame
 	{
-	private:
-		std::vector<DataValue> registers;
-		int retIP, retSP;
-
+		int retIP, framePtr;
 	public:
-		ExecutionFrame();
-		ExecutionFrame(int _retIP, int _retSP, int _numRegs);
+		ExecutionFrame() = default;
+		ExecutionFrame(int _retIP, int _framePtr);
 
-		ResultType ReadRegister(int _regIndex, DataVariant& _value, ResultInfo& _info);
-		ResultType WriteRegister(int _regIndex, DataVariant _value, ResultInfo& _info);
-		int GetRetIP() { return retIP; }
-		int GetRetSP() { return retSP; }
-
-		void PrintRegisters();
+		int GetRetIP();
+		int GetFramePtr();
 	};
 }

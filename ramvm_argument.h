@@ -3,86 +3,80 @@
 namespace ramvm
 {
 	enum class ArgType { VALUE, REGISTER, STACK, MEMORY };
-	enum class RegisterArgType { REGULAR, STACK, SP };
-	enum class StackArgType { ABSOLUTE, SP_OFFSETED };
+	enum class RegisterType { SP, FP, GP };
 
 	class Argument
 	{
 		ArgType type;
 	protected:
-		Argument(ArgType _type) : type(_type) { }
+		Argument(ArgType _type);
 	public:
+		ArgType GetType();
+		std::shared_ptr<Argument> GetSharedCopy();
+
 		bool IsStackTop();
 		bool IsStackCur();
 		bool IsStackPrev();
 
 		virtual std::string ToString() = 0;
 		virtual Argument* GetCopy() = 0;
-
-		ArgType GetType() { return type; }
 	};
 
 	class ValueArgument : public Argument {
 		DataValue value;
 	public:
-		ValueArgument(DataValue _value) :
-			Argument(ArgType::VALUE), value(_value) { }
+		ValueArgument(DataValue _value);
 
-		DataValue GetValue() { return value; }
-		std::string ToString() override { return ToHexString(value.bytes, LONG_SIZE); }
-		Argument* GetCopy() override { return new ValueArgument(value); }
+		DataValue GetValue();
+
+		std::string ToString() override;
+		Argument* GetCopy() override;
 	};
 
 	class RegisterArgument : public Argument {
-		RegisterArgType readType;
-		int index;
-
-		RegisterArgument(RegisterArgType _readType, int _index)
-			: Argument(ArgType::REGISTER), readType(_readType), index(_index) { }
+		RegisterType regType;
 	public:
-		int GetIndex() { return index; }
-		RegisterArgType GetReadType() { return readType; }
-		Argument* GetCopy() override { return new RegisterArgument(readType, index); }
+		RegisterArgument(RegisterType _regType);
+		
+		RegisterType GetRegType();
 
+		Argument* GetCopy() override;
 		std::string ToString() override;
-
-		static RegisterArgument* CreateRegular(int _index) { return new RegisterArgument(RegisterArgType::REGULAR, _index); }
-		static RegisterArgument* CreateStack(int _index) { return new RegisterArgument(RegisterArgType::STACK, _index); }
-		static RegisterArgument* CreateSP() { return new RegisterArgument(RegisterArgType::SP, 0); }
 	};
 
 	class StackArgument : public Argument {
-		StackArgType readType;
-		int value; //Could be the absolute value or offset
+		Argument* posSrc;
+		int offset;
 	public:
-		StackArgument(StackArgType _readType, int _value);
+		StackArgument(Argument* _posSrc, int _offset);
+		~StackArgument();
 
-		int GetValue() { return value; }
-		StackArgType GetReadType() { return readType; }
-		Argument* GetCopy() override { return new StackArgument(readType, value); }
-		bool IsStackTop() { return readType == StackArgType::SP_OFFSETED && value == 1; }
-		bool IsStackCur() { return readType == StackArgType::SP_OFFSETED && value == 0; }
-		bool IsStackPrev() { return readType == StackArgType::SP_OFFSETED && value == -1; }
+		Argument* GetPosSrc();
+		int GetOffset();
 
+		bool IsStackTop();
+		bool IsStackCur();
+		bool IsStackPrev();
+
+		Argument* GetCopy() override;
 		std::string ToString() override;
 
-		static StackArgument* GenStackTop() { return new StackArgument(StackArgType::SP_OFFSETED, 1); };
-		static StackArgument* GenStackCur() { return new StackArgument(StackArgType::SP_OFFSETED, 0); };
-		static StackArgument* GenStackPrev() { return new StackArgument(StackArgType::SP_OFFSETED, -1); };
+		static StackArgument* GenStackTop();
+		static StackArgument* GenStackCur();
+		static StackArgument* GenStackPrev();
 	};
 
 	class MemoryArgument : public Argument {
 		Argument* addrSrc;
 		int offset;
 	public:
-		MemoryArgument(Argument* _addrSrc, int _offset = 0)
-			: Argument(ArgType::MEMORY), addrSrc(_addrSrc), offset(_offset) { }
-		
-		~MemoryArgument() { delete addrSrc; }
-		Argument* GetAddrSrc() { return addrSrc; }
-		int GetOffset() { return offset; }
-		Argument* GetCopy() override { return new MemoryArgument(addrSrc->GetCopy(), offset); }
-		
+		MemoryArgument(Argument* _addrSrc, int _offset);
+		~MemoryArgument();
+
+		Argument* GetAddrSrc();
+		int GetOffset();
+
+		Argument* GetCopy() override;
 		std::string ToString() override;
 	};
 }

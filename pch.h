@@ -147,6 +147,17 @@ inline std::string DataTypeToString(DataType _type)
 	}
 }
 
+inline std::string ToHexString(byte _byte)
+{
+	static const char* digits = "0123456789ABCDEF";
+
+	std::string result = "0x";
+	result += digits[(_byte & 0xF0) >> 4];
+	result += digits[(_byte & 0x0F) >> 0];
+
+	return result;
+}
+
 inline std::string ToHexString(byte* _buffer, int _length)
 {
 	static const char* digits = "0123456789ABCDEF";
@@ -155,11 +166,12 @@ inline std::string ToHexString(byte* _buffer, int _length)
 	for (int i = _length - 1; i >= 0; i--)
 	{
 		byte b = _buffer[i];
+
 		str.push_back(digits[(b & 0xF0) >> 4]);
 		str.push_back(digits[(b & 0x0F) >> 0]);
 	}
 
-	return "0x" + str;
+	return "0x" + str.erase(0, std::min(str.find_first_not_of('0'), str.size() - 2));;
 }
 
 template <typename T> inline std::string ToHexString(T _value) { return ToHexString((byte*)&_value, sizeof(T)); }

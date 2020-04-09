@@ -66,9 +66,11 @@
                     case TokenType::DOUBLE_TYPE: return Parser::make_TOK_DOUBLE_TYPE(CharsToDataTypes(value[0], value[1]));
                     case TokenType::TRIPLE_TYPE: return Parser::make_TOK_TRIPLE_TYPE(CharsToDataTypes(value[0], value[1], value[2]));
 
-					case TokenType::REGISTER: return Parser::make_TOK_REG(std::stoi(value));
 					case TokenType::LABEL: return Parser::make_TOK_LABEL(value);
-					case TokenType::KW_SP: return Parser::make_TOK_SP();
+					
+					case TokenType::REG_SP: return Parser::make_TOK_REG_SP();
+					case TokenType::REG_FP: return Parser::make_TOK_REG_FP();
+					case TokenType::REG_GP: return Parser::make_TOK_REG_GP();
 
 					case TokenType::KW_HALT: return Parser::make_TOK_HALT();
 					case TokenType::KW_COMPARE: return Parser::make_TOK_COMPARE();
@@ -140,9 +142,11 @@
 %token <DataTypeDouble> TOK_DOUBLE_TYPE "<TT>"
 %token <DataTypeTriple> TOK_TRIPLE_TYPE "<TTT>"
 
-%token <int> TOK_REG "reg"
 %token <std::string> TOK_LABEL "LABEL"
-%token TOK_SP "SP"
+
+%token TOK_REG_SP "$SP"
+%token TOK_REG_FP "$FP"
+%token TOK_REG_GP "$GP"
 
 %token TOK_HALT "HALT"
 %token TOK_MALLOC "MALLOC"
@@ -208,10 +212,10 @@ STMT:
 	|	"JUMP" "(" "LABEL" ")"												{ $$ = new InstrJump($3); }
 	|	"JUMPT" "(" "LABEL" "," ARGUMENT ")"								{ $$ = new InstrCJump($3, $5, false); }
 	|	"JUMPF" "(" "LABEL" "," ARGUMENT ")"								{ $$ = new InstrCJump($3, $5, true); }
-	|	"CALL" "(" "LABEL" "," ARGUMENT "," ARGUMENT ")"					{ $$ = new InstrCall($3, $5, $7); }
+	|	"CALL" "(" "LABEL" "," ARGUMENT ")"									{ $$ = new InstrCall($3, $5); }
 	|	"PUSH" "<T>" "(" ARGUMENTS ")"										{ $$ = new InstrPush($2, $4); }
 	|	"POP" "<T>" "(" ARGUMENT ")"										{ $$ = new InstrPop($2, $4); }
-	|	"STORE" "<T>" "(" ARGUMENTS ")"		 								{ $$ = new InstrStore($2, $4, $4.back()); }
+	|	"STORE" "<T>" "(" ARGUMENTS ")"		 								{ $$ = new InstrStore($2, std::vector<Argument*>($4.begin(), $4.begin() + ($4.size() - 1)), $4.back()); }
 	|	"COMPARE" "(" ARGUMENT "," ARGUMENT "," ARGUMENT "," ARGUMENT ")"	{ $$ = new InstrCompare($3, $5, $7, $9); }
 	|	BINOP "<TTT>" "(" ARGUMENT "," ARGUMENT "," ARGUMENT ")"			{ $$ = new InstrBinop($1, $2, $4, $6, $8); }
 	|	UNOP "<TT>" "(" ARGUMENT "," ARGUMENT ")"							{ $$ = new InstrUnop($1, $2, $4, $6); }
@@ -229,13 +233,12 @@ ARGUMENT:
 	|	"float"						{ $$ = new ValueArgument($1); }
 	|	"double"					{ $$ = new ValueArgument($1); }
 	|	"long"						{ $$ = new ValueArgument($1); }
-	|	"reg"						{ $$ = RegisterArgument::CreateRegular($1); }
-	|	"SP"						{ $$ = RegisterArgument::CreateSP(); }
-	|	"[" "reg" "]"				{ $$ = RegisterArgument::CreateStack($2); }
-	|	"[" "SP" "]"				{ $$ = new StackArgument(StackArgType::SP_OFFSETED, 0); }
-	|	"[" "+" "]"					{ $$ = new StackArgument(StackArgType::SP_OFFSETED, 1); }
-	|	"[" "SP" "-" "int" "]"		{ $$ = new StackArgument(StackArgType::SP_OFFSETED, -$4); }
-	|	"[" "int" "]"				{ $$ = new StackArgument(StackArgType::ABSOLUTE, $2); }
+	|	"$SP"						{ $$ = new RegisterArgument(RegisterType::SP); }
+	|	"$FP"						{ $$ = new RegisterArgument(RegisterType::FP); }
+	|	"$GP"						{ $$ = new RegisterArgument(RegisterType::GP); }
+	|	"[" ARGUMENT "]"			{ $$ = new StackArgument($2, 0); }
+	|	"[" ARGUMENT "+" "int" "]"	{ $$ = new StackArgument($2, $4); }
+	|	"[" ARGUMENT "-" "int" "]"	{ $$ = new StackArgument($2, -$4); }
 	|	"{" ARGUMENT "}"			{ $$ = new MemoryArgument($2, 0); }
 	|	"{" ARGUMENT "+" "int" "}"	{ $$ = new MemoryArgument($2, $4); }
 	|	"{" ARGUMENT "-" "int" "}"	{ $$ = new MemoryArgument($2, -$4); }

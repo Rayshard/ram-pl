@@ -57,7 +57,6 @@
 				case TokenType::KW_DOUBLE: {const  Type* type = Type::DOUBLE(); return Parser::make_KW_DOUBLE(type); }
 				case TokenType::KW_LONG: { const Type* type = Type::LONG(); return Parser::make_KW_LONG(type); }
 				case TokenType::KW_STRING: { const Type* type = Type::STRING(); return Parser::make_KW_STRING(type); }
-				case TokenType::KW_VOID: { const Type* type = Type::VOID(); return Parser::make_KW_VOID(type); }
 
 				case TokenType::KW_LET: return Parser::make_KW_LET(token.position);
 				case TokenType::KW_FUNC: return Parser::make_KW_FUNC(token.position);
@@ -188,7 +187,6 @@
 %token <Type*> KW_DOUBLE "double"
 %token <Type*> KW_LONG "long"
 %token <Type*> KW_STRING "string"
-%token <Type*> KW_VOID "void"
 %token <Position> KW_LET "let"
 %token <Position> KW_IF "if"
 %token <Position> KW_THEN "then"
@@ -281,7 +279,7 @@ OPEN_STMT: "if" EXPR1 "then" STMT					        { $$ = new ASTIfStmt($2, $4, nullp
 
 CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 		   | VARDECL											{ $$ = $1; }
-		   | "{" STMT ";" STMTS "}"								{ $4.insert($4.begin(), $2); $$ = new ASTBlock($4, $1);}
+		   | "{" STMT ";" STMTS "}"								{ $4.insert($4.begin(), $2); $$ = new ASTBlock($4, $1); }
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
 		   | "break"											{ IsInLoop ? $$ = new ASTBreakContinueStmt(true, $1) : throw std::runtime_error("Cannot have 'break' outside of a loop!"); }
@@ -291,12 +289,12 @@ CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 
 WHILE_STMT: "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; $$ = new ASTWhileStmt($2, $5, $1); }
 
-FOR_STMT: "for" IDENTIFIER ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, $6, false, $1), $9, $12, $15, $1); }
-		| "for" IDENTIFIER "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2, $4, false, $1), $7, $10, $13, $1); }
+FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2.first, $4, $6, false, $1), $9, $12, $15, $1); }
+		| "for" "ID" "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true; } STMT { IsInLoop = false; } "then" CLOSED_STMT { $$ = new ASTForStmt(new ASTVarDecl($2.first, $4, false, $1), $7, $10, $13, $1); }
 
 VARDECL:
-    "let" IDENTIFIER "=" EXPR             { $$ = new ASTVarDecl($2, $4, InTopLvl, $1); }
-  | "let" IDENTIFIER ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2, $4, $6, InTopLvl, $1); }
+    "let" "ID" "=" EXPR             { $$ = new ASTVarDecl($2.first, $4, InTopLvl, $1); }
+  | "let" "ID" ":" TYPE "=" EXPR    { $$ = new ASTVarDecl($2.first, $4, $6, InTopLvl, $1); }
   | "let" "_" "=" EXPR					  { !InTopLvl ? $$ = new ASTVarDecl($4, $1) : throw std::runtime_error("Cannot declare throw away in top level!"); }
 ;
 
@@ -305,15 +303,14 @@ TYPE_PLUS: TYPE			      { $$ = { $1 }; }
 ;
 
 TYPE:
-    "byte"			{ $$ = $1; }
-  | "bool"			{ $$ = $1; }
-  | "int"			{ $$ = $1; }
-  | "float"			{ $$ = $1; }
-  | "double"		{ $$ = $1; }
-  | "long"			{ $$ = $1; }
-  | "string"		{ $$ = $1; }
-  | "void"			{ $$ = $1; }
-  | "[" TYPE "]"    { $$ = new ArrayType($2); }
+    "byte"					{ $$ = $1; }
+  | "bool"					{ $$ = $1; }
+  | "int"					{ $$ = $1; }
+  | "float"					{ $$ = $1; }
+  | "double"				{ $$ = $1; }
+  | "long"					{ $$ = $1; }
+  | "string"				{ $$ = $1; }
+  | TYPE "[" "INT_LIT" "]"  { $$ = new ArrayType($1, $3->GetValue()); delete $3; }
 ;
 
 ASSIGNMENT: IDENTIFIER OP_ASSIGN EXPR { $$ = new ASTAssignment($1, $3, $2); };
@@ -341,8 +338,8 @@ EXPR_PLUS: EXPR			      { $$ = { $1 }; }
 ;
 
 EXPR:
-        EXPR1                                 { $$ = $1; }
-    |   "if" EXPR1 "then" EXPR "else" EXPR    { $$ = new ASTIfExpr($2, $4, $6, $1); }
+        EXPR1                               { $$ = $1; }
+    |   "if" EXPR1 "then" EXPR "else" EXPR  { $$ = new ASTIfExpr($2, $4, $6, $1); }
 ;        
 
 EXPR1:
@@ -416,18 +413,19 @@ EXPR12:
 ;
 
 ATOM:
-    "INT_LIT"		{ $$ = $1; }
-  | "FLOAT_LIT"		{ $$ = $1; }
-  | "BYTE_LIT"		{ $$ = $1; }
-  | "DOUBLE_LIT"	{ $$ = $1; }
-  | "LONG_LIT"		{ $$ = $1; }
-  | "STRING_LIT"	{ $$ = $1; }
-  | "true"			{ $$ = $1; }
-  | "false"			{ $$ = $1; }
-  | IDENTIFIER		{ $$ = $1; }
-  | FUNC_CALL		{ $$ = $1; }
-  | "(" EXPR ")"	{ $$ = $2; }
-  | ARRAY_INIT		{ $$ = $1; }
+    "INT_LIT"			{ $$ = $1; }
+  | "FLOAT_LIT"			{ $$ = $1; }
+  | "BYTE_LIT"			{ $$ = $1; }
+  | "DOUBLE_LIT"		{ $$ = $1; }
+  | "LONG_LIT"			{ $$ = $1; }
+  | "STRING_LIT"		{ $$ = $1; }
+  | "true"				{ $$ = $1; }
+  | "false"				{ $$ = $1; }
+  | IDENTIFIER			{ $$ = $1; }
+  | FUNC_CALL			{ $$ = $1; }
+  | "(" EXPR ")"		{ $$ = $2; }
+  | ARRAY_INIT			{ $$ = $1; }
+  | ATOM "[" EXPR "]"	{ $$ = new ASTBinopExpr($1, $3, BinopType::INDEX); }
 ;
 
 IDENTIFIER: "ID"					{ $$ = new ASTIdentifier($1.first, $1.second); }

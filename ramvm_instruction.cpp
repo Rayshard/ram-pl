@@ -603,10 +603,13 @@ namespace ramvm {
 	std::string InstrBinop::ToString()
 	{
 		std::stringstream ss;
-		ss << BinopToString(op) << '<' << DataTypeToChar(std::get<0>(argDataTypes)) << DataTypeToChar(std::get<1>(argDataTypes)) << DataTypeToChar(std::get<2>(argDataTypes)) << "> ";
-		ss << src1->ToString() << " ";
-		ss << src2->ToString() << " ";
-		ss << dest->ToString();
+		ss << BinopToString(op) << '<';
+		ss << DataTypeToChar(std::get<0>(argDataTypes));
+		ss << DataTypeToChar(std::get<1>(argDataTypes));
+		ss << DataTypeToChar(std::get<2>(argDataTypes)) << ">(";
+		ss << src1->ToString() << ", ";
+		ss << src2->ToString() << ", ";
+		ss << dest->ToString() << ")";
 		return ss.str();
 	}
 #pragma endregion
@@ -659,22 +662,20 @@ namespace ramvm {
 	std::string InstrUnop::ToString()
 	{
 		std::stringstream ss;
-		ss << UnopToString(op) << '<' << DataTypeToChar(argDataTypes.first) << DataTypeToChar(argDataTypes.second) << "> ";
-		ss << src->ToString() << " ";
-		ss << dest->ToString();
+		ss << UnopToString(op) << '<';
+		ss << DataTypeToChar(argDataTypes.first);
+		ss << DataTypeToChar(argDataTypes.second) << ">(";
+		ss << src->ToString() << ", ";
+		ss << dest->ToString() << ")";
 		return ss.str();
 	}
 #pragma endregion
 
 #pragma region Call
-	InstrCall::InstrCall(std::string _label, Argument* _regCnt, Argument* _argsByteLen)
-		: Instruction(InstructionType::CALL), label(_label), regCnt(_regCnt), argsByteLength(_argsByteLen) { }
-
-	InstrCall::~InstrCall()
-	{
-		delete regCnt;
-		delete argsByteLength;
-	}
+	InstrCall::InstrCall(std::string _label, Argument* _argsByteLen)
+		: Instruction(InstructionType::CALL), label(_label), argsByteLength(_argsByteLen) { }
+	InstrCall::~InstrCall() { delete argsByteLength; }
+	std::string InstrCall::ToString() { return "CALL(%" + label + ", " + argsByteLength->ToString() + ")"; }
 #pragma endregion
 
 #pragma region Store
@@ -692,12 +693,12 @@ namespace ramvm {
 	std::string InstrStore::ToString()
 	{
 		std::stringstream ss;
-		ss << "STORE<" << DataTypeToChar(dataType) << ">";
+		ss << "STORE<" << DataTypeToChar(dataType) << ">(";
 
 		for (auto src : srcs)
-			ss << " " << src->ToString();
+			ss << src->ToString() << ", ";
 
-		ss << " " << dest->ToString();
+		ss << dest->ToString() << ")";
 		return ss.str();
 	}
 #pragma endregion
@@ -776,11 +777,13 @@ namespace ramvm {
 	std::string InstrPush::ToString()
 	{
 		std::stringstream ss;
-		ss << "PUSH<" << DataTypeToChar(dataType) << ">";
+		ss << "PUSH<" << DataTypeToChar(dataType) << ">(";
 
 		for (auto src : srcs)
-			ss << " " << src->ToString();
+			ss << src->ToString() << ", ";
 
+		ss.seekp(-1, ss.cur);
+		ss << '}';
 		return ss.str();
 	}
 #pragma endregion

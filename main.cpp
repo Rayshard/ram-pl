@@ -110,7 +110,7 @@ int CompilerMain()
 	using namespace ramc;
 
 	std::ifstream stream("Tests/Compiler/test_lex.ram");
-	ParseResult result = ParseFile(&stream, "test_lex.ram", 4);
+	ParseResult result = ParseFile(&stream, "test.ram", 4);
 
 	if (!result.IsSuccess()) { std::cout << "Parse Error: " << result.ToString() << std::endl; }
 	else
@@ -119,7 +119,7 @@ int CompilerMain()
 
 		std::cout << "Program AST:" << std::endl << prog->ToString(1) << std::endl;
 
-		Environment env(0, false);
+		Environment env(0);
 		TypeResult typeRes = prog->TypeCheck(&env);
 
 		if (!typeRes.IsSuccess())
@@ -149,13 +149,13 @@ int CompilerMain()
 			std::cout << i << "\t" << instr->ToString() << std::endl;
 		}
 
-		return 0;
+		//return 0;
 		//Run VM
 		using namespace ramvm;
 
 		try
 		{
-			VM vm = VM(env.GetNumRegNeeded(), 1024, instrs, progInfo.GetLabels(instrs));
+			VM vm = VM(1024, instrs, progInfo.GetLabels(instrs));
 
 			ResultInfo resInfo;
 			ResultType result = vm.Run(resInfo);
@@ -163,7 +163,7 @@ int CompilerMain()
 			if (IsErrorResult(result)) { PrintResult(result); }
 			else
 			{
-				vm.PrintCurRegisters();
+				vm.PrintRegisters();
 				vm.PrintMemory();
 				vm.PrintStack();
 			}
@@ -205,7 +205,7 @@ int VMMain()
 	try
 	{
 		auto program = result.GetInstructionSet();
-		VM vm = VM(4, 1024, program, result.GetLabels());
+		VM vm = VM(1024, program, result.GetLabels());
 
 		ResultInfo resInfo;
 		ResultType result = vm.Run(resInfo);
@@ -213,7 +213,7 @@ int VMMain()
 		if (IsErrorResult(result)) { PrintResult(result); }
 		else
 		{
-			vm.PrintCurRegisters();
+			vm.PrintRegisters();
 			vm.PrintMemory();
 			vm.PrintStack();
 		}
