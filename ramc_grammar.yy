@@ -31,7 +31,7 @@
 			LexerResult readRes = _lexer.GetNextToken();
 
 			if (!readRes.IsSuccess())
-				throw std::runtime_error(readRes.ToString(false));
+				ASSERT_MSG(false, readRes.ToString(false));
 
 			Token token = readRes.GetValue();
 			_pos = token.position;
@@ -115,7 +115,7 @@
 				case TokenType::COMMA: return Parser::make_COMMA();
 				case TokenType::GOES_TO: return Parser::make_GOES_TO();
 				case TokenType::END_OF_FILE: return Parser::make_END_OF_FILE();
-				default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
+				default: ASSERT_MSG(false, token.ToString(true) + " is not parasble!");
 			}
 		}
     }
@@ -297,7 +297,7 @@ FOR_STMT: "for" "ID" ":" TYPE "=" EXPR ":" "while" EXPR1 "do" { IsInLoop = true;
 
 VARDECL: "let" "ID" "=" EXPR            { $$ = new ASTVarDecl($2.first, $4, InTopLvl, $1); }
 	   | "let" "ID" ":" TYPE "=" EXPR   { $$ = new ASTVarDecl($2.first, $4, $6, InTopLvl, $1); }
-	   | "let" "_" "=" EXPR				{ !InTopLvl ? $$ = new ASTVarDecl($4, $1) : throw std::runtime_error("Cannot declare throw away in top level!"); }
+	   | "let" "_" "=" EXPR				{ ASSERT_MSG(!InTopLvl, "Cannot declare throw away in top level!"); $$ = new ASTVarDecl($4, $1); }
 ;
 
 TYPE_PLUS: TYPE			      { $$ = { $1 }; }
@@ -440,7 +440,7 @@ namespace ramc {
 		// Report an error to the user.
 		auto Parser::error(const std::string& _msg) -> void
 		{
-			throw std::runtime_error(_msg);
+			ASSERT_MSG(false, _msg);
 		}
 	}
 }

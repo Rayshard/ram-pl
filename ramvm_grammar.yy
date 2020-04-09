@@ -35,7 +35,7 @@
 				if (!readRes.IsSuccess())
 				{
 					_pos = readRes.GetErrorPosition();
-					throw std::runtime_error(readRes.ToString(false));
+					ASSERT_MSG(false, readRes.ToString(false));
 				}
 
 				Token token = readRes.GetValue();
@@ -108,7 +108,7 @@
 					case TokenType::KW_NOT: return Parser::make_TOK_NOT();
 
 					case TokenType::END_OF_FILE: return Parser::make_TOK_END_OF_FILE();
-					default: throw std::runtime_error(token.ToString(true) + " is not parasble!");
+					default: ASSERT_MSG(false, token.ToString(true) + " is not parasble!");
 				}
 			}
 		}
@@ -274,7 +274,7 @@ namespace ramvm {
 		// Report an error to the user.
 		auto Parser::error(const std::string& _msg) -> void
 		{
-			throw std::runtime_error(_msg);
+			ASSERT_MSG(false, _msg);
 		}
 	}
 }

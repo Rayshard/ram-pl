@@ -128,7 +128,7 @@ int CompilerMain()
 			return 0;
 		}
 
-		auto instrs = prog->GenerateCode(&env);
+		auto instrs = prog->GenerateCode();
 		std::cout << "Program Instructions (Unoptimized): " << std::to_string(instrs.size()) << " Instructions" << std::endl;
 
 		ProgramInfo progInfo = prog->GetInfo();

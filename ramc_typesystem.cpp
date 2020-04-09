@@ -32,9 +32,9 @@ namespace ramc {
 			case TypeSystemType::BOOL: return BYTE_SIZE;
 			case TypeSystemType::DOUBLE: return DOUBLE_SIZE;
 			case TypeSystemType::LONG: return LONG_SIZE;
-			case TypeSystemType::STRING: throw std::runtime_error("Type::GetByteSize - String not handled!");
+			case TypeSystemType::STRING: ASSERT_MSG(false, "Type::GetByteSize - String not handled!");
 			case TypeSystemType::UNIT: return 0;
-			default: throw std::runtime_error("Type::GetByteSize - TypeSystemType not handled!");
+			default: ASSERT_MSG(false, "Type::GetByteSize - TypeSystemType not handled!");
 		}
 	}
 

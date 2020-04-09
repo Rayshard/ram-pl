@@ -109,7 +109,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Environment* _env);
+		InstructionSet GenerateCode();
 
 		ProgramInfo GetInfo() { return info; }
 	};
@@ -132,7 +132,7 @@ namespace ramc {
 		std::string ToString(int _indentLvl, std::string _prefix = "") override;
 		ASTNode* GetCopy() override;
 		TypeResult _TypeCheck(Environment* _env) override;
-		InstructionSet GenerateCode(Environment* _env, ProgramInfo& _progInfo);
+		InstructionSet GenerateCode(ProgramInfo& _progInfo);
 
 		std::string GetLabel();
 	};

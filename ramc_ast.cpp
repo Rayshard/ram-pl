@@ -143,7 +143,7 @@ namespace ramc {
 		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
-	InstructionSet ASTProgram::GenerateCode(Environment* _env)
+	InstructionSet ASTProgram::GenerateCode()
 	{
 		InstructionSet instrs;
 
@@ -175,7 +175,7 @@ namespace ramc {
 		//Add Top Level Functions
 		for (auto const& funcDecl : funcDecls)
 		{
-			auto declInstrs = funcDecl->GenerateCode(_env, info);
+			auto declInstrs = funcDecl->GenerateCode(info);
 			instrs.insert(instrs.end(), declInstrs.begin(), declInstrs.end());
 		}
 
@@ -273,7 +273,7 @@ namespace ramc {
 		return TypeResult::GenSuccess(Type::UNIT());
 	}
 
-	InstructionSet ASTFuncDecl::GenerateCode(Environment* _env, ProgramInfo& _progInfo)
+	InstructionSet ASTFuncDecl::GenerateCode(ProgramInfo& _progInfo)
 	{
 		//Add body instructions
 		InstructionSet instrs = body->GenerateCode(_progInfo);
@@ -1528,7 +1528,7 @@ namespace ramc {
 			case UnopType::LOG_NOT: instrs.push_back(new InstrUnop(Unop::NOT, opDataTypes, src, stackDest)); break;
 			case UnopType::NEG: instrs.push_back(new InstrUnop(Unop::NEG, opDataTypes, src, stackDest)); break;
 			case UnopType::BIN_NOT: instrs.push_back(new InstrUnop(Unop::NOT, opDataTypes, src, stackDest)); break;
-			default: throw std::runtime_error("UnopExpr::GenerateCode - UnopType not handled!");
+			default: ASSERT_MSG(false, "UnopExpr::GenerateCode - UnopType not handled!");
 		}
 
 		//Create Pop to remove the bytes past the result if any
