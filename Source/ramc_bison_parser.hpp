@@ -1,4 +1,4 @@
-// A Bison parser, made by GNU Bison 3.5.
+// A Bison parser, made by GNU Bison 3.5.0.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
 
@@ -372,15 +372,18 @@ namespace ramc { namespace bison {
       // ASSIGNMENT
       char dummy2[sizeof (ASTAssignment*)];
 
+      // BLOCK
+      char dummy3[sizeof (ASTBlock*)];
+
       // "true"
       // "false"
-      char dummy3[sizeof (ASTBoolLit*)];
+      char dummy4[sizeof (ASTBoolLit*)];
 
       // "BYTE_LIT"
-      char dummy4[sizeof (ASTByteLit*)];
+      char dummy5[sizeof (ASTByteLit*)];
 
       // "DOUBLE_LIT"
-      char dummy5[sizeof (ASTDoubleLit*)];
+      char dummy6[sizeof (ASTDoubleLit*)];
 
       // EXPR
       // EXPR1
@@ -396,47 +399,47 @@ namespace ramc { namespace bison {
       // EXPR11
       // EXPR12
       // ATOM
-      char dummy6[sizeof (ASTExpr*)];
+      char dummy7[sizeof (ASTExpr*)];
 
       // "FLOAT_LIT"
-      char dummy7[sizeof (ASTFloatLit*)];
+      char dummy8[sizeof (ASTFloatLit*)];
 
       // FUNC_CALL
-      char dummy8[sizeof (ASTFuncCallExpr*)];
+      char dummy9[sizeof (ASTFuncCallExpr*)];
 
       // FUNCDECL
-      char dummy9[sizeof (ASTFuncDecl*)];
+      char dummy10[sizeof (ASTFuncDecl*)];
 
       // IDENTIFIER
-      char dummy10[sizeof (ASTIdentifier*)];
+      char dummy11[sizeof (ASTIdentifier*)];
 
       // "INT_LIT"
-      char dummy11[sizeof (ASTIntLit*)];
+      char dummy12[sizeof (ASTIntLit*)];
 
       // "LONG_LIT"
-      char dummy12[sizeof (ASTLongLit*)];
+      char dummy13[sizeof (ASTLongLit*)];
 
       // PROGRAM
-      char dummy13[sizeof (ASTProgram*)];
+      char dummy14[sizeof (ASTProgram*)];
 
       // STMT
       // OPEN_STMT
       // CLOSED_STMT
       // WHILE_STMT
       // FOR_STMT
-      char dummy14[sizeof (ASTStmt*)];
+      char dummy15[sizeof (ASTStmt*)];
 
       // "STRING_LIT"
-      char dummy15[sizeof (ASTStringLit*)];
+      char dummy16[sizeof (ASTStringLit*)];
 
       // VARDECL
-      char dummy16[sizeof (ASTVarDecl*)];
+      char dummy17[sizeof (ASTVarDecl*)];
 
       // OP_ASSIGN
-      char dummy17[sizeof (AssignmentType)];
+      char dummy18[sizeof (AssignmentType)];
 
       // PARAM
-      char dummy18[sizeof (Param)];
+      char dummy19[sizeof (Param)];
 
       // "{"
       // "["
@@ -451,7 +454,7 @@ namespace ramc { namespace bison {
       // "break"
       // "continue"
       // "return"
-      char dummy19[sizeof (Position)];
+      char dummy20[sizeof (Position)];
 
       // "byte"
       // "bool"
@@ -461,30 +464,30 @@ namespace ramc { namespace bison {
       // "long"
       // "string"
       // TYPE
-      char dummy20[sizeof (Type*)];
+      char dummy21[sizeof (Type*)];
 
       // "ID"
-      char dummy21[sizeof (std::pair<std::string, Position>)];
+      char dummy22[sizeof (std::pair<std::string, Position>)];
 
       // EXPR_STAR
       // EXPR_PLUS
-      char dummy22[sizeof (std::vector<ASTExpr*>)];
+      char dummy23[sizeof (std::vector<ASTExpr*>)];
 
       // TL_FUNCDECLS
-      char dummy23[sizeof (std::vector<ASTFuncDecl*>)];
+      char dummy24[sizeof (std::vector<ASTFuncDecl*>)];
 
       // STMTS
-      char dummy24[sizeof (std::vector<ASTStmt*>)];
+      char dummy25[sizeof (std::vector<ASTStmt*>)];
 
       // VARDECLS
-      char dummy25[sizeof (std::vector<ASTVarDecl*>)];
+      char dummy26[sizeof (std::vector<ASTVarDecl*>)];
 
       // PARAM_STAR
       // PARAM_PLUS
-      char dummy26[sizeof (std::vector<Param>)];
+      char dummy27[sizeof (std::vector<Param>)];
 
       // TYPE_PLUS
-      char dummy27[sizeof (std::vector<Type*>)];
+      char dummy28[sizeof (std::vector<Type*>)];
     };
 
     /// The size of the largest semantic type.
@@ -664,6 +667,17 @@ namespace ramc { namespace bison {
       {}
 #else
       basic_symbol (typename Base::kind_type t, const ASTAssignment*& v)
+        : Base (t)
+        , value (v)
+      {}
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, ASTBlock*&& v)
+        : Base (t)
+        , value (std::move (v))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const ASTBlock*& v)
         : Base (t)
         , value (v)
       {}
@@ -966,12 +980,16 @@ namespace ramc { namespace bison {
         // Type destructor.
 switch (yytype)
     {
-      case 101: // ARRAY_INIT
+      case 102: // ARRAY_INIT
         value.template destroy< ASTArrayInit* > ();
         break;
 
       case 80: // ASSIGNMENT
         value.template destroy< ASTAssignment* > ();
+        break;
+
+      case 82: // BLOCK
+        value.template destroy< ASTBlock* > ();
         break;
 
       case 55: // "true"
@@ -987,20 +1005,20 @@ switch (yytype)
         value.template destroy< ASTDoubleLit* > ();
         break;
 
-      case 85: // EXPR
-      case 86: // EXPR1
-      case 87: // EXPR2
-      case 88: // EXPR3
-      case 89: // EXPR4
-      case 90: // EXPR5
-      case 91: // EXPR6
-      case 92: // EXPR7
-      case 93: // EXPR8
-      case 94: // EXPR9
-      case 95: // EXPR10
-      case 96: // EXPR11
-      case 97: // EXPR12
-      case 98: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.template destroy< ASTExpr* > ();
         break;
 
@@ -1008,15 +1026,15 @@ switch (yytype)
         value.template destroy< ASTFloatLit* > ();
         break;
 
-      case 100: // FUNC_CALL
+      case 101: // FUNC_CALL
         value.template destroy< ASTFuncCallExpr* > ();
         break;
 
-      case 82: // FUNCDECL
+      case 83: // FUNCDECL
         value.template destroy< ASTFuncDecl* > ();
         break;
 
-      case 99: // IDENTIFIER
+      case 100: // IDENTIFIER
         value.template destroy< ASTIdentifier* > ();
         break;
 
@@ -1035,8 +1053,8 @@ switch (yytype)
       case 77: // STMT
       case 78: // OPEN_STMT
       case 79: // CLOSED_STMT
-      case 83: // WHILE_STMT
-      case 84: // FOR_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.template destroy< ASTStmt* > ();
         break;
 
@@ -1048,11 +1066,11 @@ switch (yytype)
         value.template destroy< ASTVarDecl* > ();
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.template destroy< AssignmentType > ();
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.template destroy< Param > ();
         break;
 
@@ -1079,7 +1097,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 109: // TYPE
+      case 110: // TYPE
         value.template destroy< Type* > ();
         break;
 
@@ -1087,29 +1105,29 @@ switch (yytype)
         value.template destroy< std::pair<std::string, Position> > ();
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.template destroy< std::vector<ASTExpr*> > ();
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.template destroy< std::vector<ASTFuncDecl*> > ();
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.template destroy< std::vector<ASTStmt*> > ();
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.template destroy< std::vector<ASTVarDecl*> > ();
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.template destroy< std::vector<Param> > ();
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.template destroy< std::vector<Type*> > ();
         break;
 
@@ -2782,8 +2800,8 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 235,     ///< Last index in yytable_.
-      yynnts_ = 45,  ///< Number of nonterminal symbols.
+      yylast_ = 234,     ///< Last index in yytable_.
+      yynnts_ = 46,  ///< Number of nonterminal symbols.
       yyfinal_ = 3, ///< Termination state number.
       yyntokens_ = 75  ///< Number of tokens.
     };
@@ -2858,12 +2876,16 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 101: // ARRAY_INIT
+      case 102: // ARRAY_INIT
         value.move< ASTArrayInit* > (std::move (that.value));
         break;
 
       case 80: // ASSIGNMENT
         value.move< ASTAssignment* > (std::move (that.value));
+        break;
+
+      case 82: // BLOCK
+        value.move< ASTBlock* > (std::move (that.value));
         break;
 
       case 55: // "true"
@@ -2879,20 +2901,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (std::move (that.value));
         break;
 
-      case 85: // EXPR
-      case 86: // EXPR1
-      case 87: // EXPR2
-      case 88: // EXPR3
-      case 89: // EXPR4
-      case 90: // EXPR5
-      case 91: // EXPR6
-      case 92: // EXPR7
-      case 93: // EXPR8
-      case 94: // EXPR9
-      case 95: // EXPR10
-      case 96: // EXPR11
-      case 97: // EXPR12
-      case 98: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.move< ASTExpr* > (std::move (that.value));
         break;
 
@@ -2900,15 +2922,15 @@ switch (yytype)
         value.move< ASTFloatLit* > (std::move (that.value));
         break;
 
-      case 100: // FUNC_CALL
+      case 101: // FUNC_CALL
         value.move< ASTFuncCallExpr* > (std::move (that.value));
         break;
 
-      case 82: // FUNCDECL
+      case 83: // FUNCDECL
         value.move< ASTFuncDecl* > (std::move (that.value));
         break;
 
-      case 99: // IDENTIFIER
+      case 100: // IDENTIFIER
         value.move< ASTIdentifier* > (std::move (that.value));
         break;
 
@@ -2927,8 +2949,8 @@ switch (yytype)
       case 77: // STMT
       case 78: // OPEN_STMT
       case 79: // CLOSED_STMT
-      case 83: // WHILE_STMT
-      case 84: // FOR_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.move< ASTStmt* > (std::move (that.value));
         break;
 
@@ -2940,11 +2962,11 @@ switch (yytype)
         value.move< ASTVarDecl* > (std::move (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (std::move (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (std::move (that.value));
         break;
 
@@ -2971,7 +2993,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (std::move (that.value));
         break;
 
@@ -2979,29 +3001,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (std::move (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (std::move (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (std::move (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (std::move (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (std::move (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (std::move (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (std::move (that.value));
         break;
 
@@ -3019,12 +3041,16 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 101: // ARRAY_INIT
+      case 102: // ARRAY_INIT
         value.copy< ASTArrayInit* > (YY_MOVE (that.value));
         break;
 
       case 80: // ASSIGNMENT
         value.copy< ASTAssignment* > (YY_MOVE (that.value));
+        break;
+
+      case 82: // BLOCK
+        value.copy< ASTBlock* > (YY_MOVE (that.value));
         break;
 
       case 55: // "true"
@@ -3040,20 +3066,20 @@ switch (yytype)
         value.copy< ASTDoubleLit* > (YY_MOVE (that.value));
         break;
 
-      case 85: // EXPR
-      case 86: // EXPR1
-      case 87: // EXPR2
-      case 88: // EXPR3
-      case 89: // EXPR4
-      case 90: // EXPR5
-      case 91: // EXPR6
-      case 92: // EXPR7
-      case 93: // EXPR8
-      case 94: // EXPR9
-      case 95: // EXPR10
-      case 96: // EXPR11
-      case 97: // EXPR12
-      case 98: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.copy< ASTExpr* > (YY_MOVE (that.value));
         break;
 
@@ -3061,15 +3087,15 @@ switch (yytype)
         value.copy< ASTFloatLit* > (YY_MOVE (that.value));
         break;
 
-      case 100: // FUNC_CALL
+      case 101: // FUNC_CALL
         value.copy< ASTFuncCallExpr* > (YY_MOVE (that.value));
         break;
 
-      case 82: // FUNCDECL
+      case 83: // FUNCDECL
         value.copy< ASTFuncDecl* > (YY_MOVE (that.value));
         break;
 
-      case 99: // IDENTIFIER
+      case 100: // IDENTIFIER
         value.copy< ASTIdentifier* > (YY_MOVE (that.value));
         break;
 
@@ -3088,8 +3114,8 @@ switch (yytype)
       case 77: // STMT
       case 78: // OPEN_STMT
       case 79: // CLOSED_STMT
-      case 83: // WHILE_STMT
-      case 84: // FOR_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.copy< ASTStmt* > (YY_MOVE (that.value));
         break;
 
@@ -3101,11 +3127,11 @@ switch (yytype)
         value.copy< ASTVarDecl* > (YY_MOVE (that.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.copy< AssignmentType > (YY_MOVE (that.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.copy< Param > (YY_MOVE (that.value));
         break;
 
@@ -3132,7 +3158,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 109: // TYPE
+      case 110: // TYPE
         value.copy< Type* > (YY_MOVE (that.value));
         break;
 
@@ -3140,29 +3166,29 @@ switch (yytype)
         value.copy< std::pair<std::string, Position> > (YY_MOVE (that.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.copy< std::vector<ASTExpr*> > (YY_MOVE (that.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.copy< std::vector<ASTFuncDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.copy< std::vector<ASTStmt*> > (YY_MOVE (that.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.copy< std::vector<ASTVarDecl*> > (YY_MOVE (that.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.copy< std::vector<Param> > (YY_MOVE (that.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.copy< std::vector<Type*> > (YY_MOVE (that.value));
         break;
 
@@ -3188,12 +3214,16 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 101: // ARRAY_INIT
+      case 102: // ARRAY_INIT
         value.move< ASTArrayInit* > (YY_MOVE (s.value));
         break;
 
       case 80: // ASSIGNMENT
         value.move< ASTAssignment* > (YY_MOVE (s.value));
+        break;
+
+      case 82: // BLOCK
+        value.move< ASTBlock* > (YY_MOVE (s.value));
         break;
 
       case 55: // "true"
@@ -3209,20 +3239,20 @@ switch (yytype)
         value.move< ASTDoubleLit* > (YY_MOVE (s.value));
         break;
 
-      case 85: // EXPR
-      case 86: // EXPR1
-      case 87: // EXPR2
-      case 88: // EXPR3
-      case 89: // EXPR4
-      case 90: // EXPR5
-      case 91: // EXPR6
-      case 92: // EXPR7
-      case 93: // EXPR8
-      case 94: // EXPR9
-      case 95: // EXPR10
-      case 96: // EXPR11
-      case 97: // EXPR12
-      case 98: // ATOM
+      case 86: // EXPR
+      case 87: // EXPR1
+      case 88: // EXPR2
+      case 89: // EXPR3
+      case 90: // EXPR4
+      case 91: // EXPR5
+      case 92: // EXPR6
+      case 93: // EXPR7
+      case 94: // EXPR8
+      case 95: // EXPR9
+      case 96: // EXPR10
+      case 97: // EXPR11
+      case 98: // EXPR12
+      case 99: // ATOM
         value.move< ASTExpr* > (YY_MOVE (s.value));
         break;
 
@@ -3230,15 +3260,15 @@ switch (yytype)
         value.move< ASTFloatLit* > (YY_MOVE (s.value));
         break;
 
-      case 100: // FUNC_CALL
+      case 101: // FUNC_CALL
         value.move< ASTFuncCallExpr* > (YY_MOVE (s.value));
         break;
 
-      case 82: // FUNCDECL
+      case 83: // FUNCDECL
         value.move< ASTFuncDecl* > (YY_MOVE (s.value));
         break;
 
-      case 99: // IDENTIFIER
+      case 100: // IDENTIFIER
         value.move< ASTIdentifier* > (YY_MOVE (s.value));
         break;
 
@@ -3257,8 +3287,8 @@ switch (yytype)
       case 77: // STMT
       case 78: // OPEN_STMT
       case 79: // CLOSED_STMT
-      case 83: // WHILE_STMT
-      case 84: // FOR_STMT
+      case 84: // WHILE_STMT
+      case 85: // FOR_STMT
         value.move< ASTStmt* > (YY_MOVE (s.value));
         break;
 
@@ -3270,11 +3300,11 @@ switch (yytype)
         value.move< ASTVarDecl* > (YY_MOVE (s.value));
         break;
 
-      case 107: // OP_ASSIGN
+      case 108: // OP_ASSIGN
         value.move< AssignmentType > (YY_MOVE (s.value));
         break;
 
-      case 112: // PARAM
+      case 113: // PARAM
         value.move< Param > (YY_MOVE (s.value));
         break;
 
@@ -3301,7 +3331,7 @@ switch (yytype)
       case 61: // "double"
       case 62: // "long"
       case 63: // "string"
-      case 109: // TYPE
+      case 110: // TYPE
         value.move< Type* > (YY_MOVE (s.value));
         break;
 
@@ -3309,29 +3339,29 @@ switch (yytype)
         value.move< std::pair<std::string, Position> > (YY_MOVE (s.value));
         break;
 
-      case 105: // EXPR_STAR
-      case 106: // EXPR_PLUS
+      case 106: // EXPR_STAR
+      case 107: // EXPR_PLUS
         value.move< std::vector<ASTExpr*> > (YY_MOVE (s.value));
         break;
 
-      case 103: // TL_FUNCDECLS
+      case 104: // TL_FUNCDECLS
         value.move< std::vector<ASTFuncDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 104: // STMTS
+      case 105: // STMTS
         value.move< std::vector<ASTStmt*> > (YY_MOVE (s.value));
         break;
 
-      case 102: // VARDECLS
+      case 103: // VARDECLS
         value.move< std::vector<ASTVarDecl*> > (YY_MOVE (s.value));
         break;
 
-      case 110: // PARAM_STAR
-      case 111: // PARAM_PLUS
+      case 111: // PARAM_STAR
+      case 112: // PARAM_PLUS
         value.move< std::vector<Param> > (YY_MOVE (s.value));
         break;
 
-      case 108: // TYPE_PLUS
+      case 109: // TYPE_PLUS
         value.move< std::vector<Type*> > (YY_MOVE (s.value));
         break;
 
@@ -3390,7 +3420,7 @@ switch (yytype)
 
 #line 8 "ramc_grammar.yy"
 } } // ramc::bison
-#line 3394 "ramc_bison_parser.hpp"
+#line 3424 "ramc_bison_parser.hpp"
 
 
 

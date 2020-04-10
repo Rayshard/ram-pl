@@ -283,8 +283,8 @@ CLOSED_STMT: ASSIGNMENT											{ $$ = $1; }
 		   | BLOCK												{ $$ = $1; }
 		   | "if" EXPR1 "then" CLOSED_STMT "else" CLOSED_STMT	{ $$ = new ASTIfStmt($2, $4, $6, $1); }
 		   | FOR_STMT											{ $$ = $1; }
-		   | "break"											{ ASSERT(IsInLoop, "Cannot have 'break' outside of a loop!"); $$ = new ASTBreakContinueStmt(true, $1); }
-		   | "continue"											{ ASSERT(IsInLoop, "Cannot have 'continue' outside of a loop!"); $$ = new ASTBreakContinueStmt(false, $1); }
+		   | "break"											{ ASSERT_MSG(IsInLoop, "Cannot have 'break' outside of a loop!"); $$ = new ASTBreakContinueStmt(true, $1); }
+		   | "continue"											{ ASSERT_MSG(IsInLoop, "Cannot have 'continue' outside of a loop!"); $$ = new ASTBreakContinueStmt(false, $1); }
 		   | "return" EXPR_STAR									{ $$ = new ASTReturnStmt($2, $1); }
 ;
 
