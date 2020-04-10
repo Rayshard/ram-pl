@@ -1,0 +1,2 @@
+tools\win_flex_bison-2.5.22\win_bison.exe -d -o ramc_bison_parser.cpp ramc_grammar.yy
+@pause
